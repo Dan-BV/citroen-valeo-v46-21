@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FAP Live — Web Serial</title>
+<style>
+  :root{
+    --bg:#10151B; --surface:#1B242E; --surface2:#243040; --line:#2A3644;
+    --fg:#E7ECF2; --dim:#9BA8B6; --primary:#3DDC97; --accent:#4FA8FF;
+    --warn:#FF6B5E; --off:#44515F;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
+  button{font:inherit;cursor:pointer}
+  .bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  .bar .title{font-weight:600;font-size:16px;margin-right:6px;color:var(--fg);display:flex;align-items:center;gap:8px}
+  .bar .title .g{color:var(--primary)}
+  .status{flex:1;color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .btn{background:transparent;color:var(--fg);border:1px solid var(--off);border-radius:8px;padding:7px 12px}
+  .btn:hover{background:var(--surface2)}
+  .btn.primary{background:var(--primary);color:#06251A;border-color:var(--primary);font-weight:600}
+  .btn.on{border-color:var(--primary);color:var(--primary)}
+  .wrap{max-width:760px;margin:0 auto;padding:10px 10px 40px}
+  .row{background:var(--surface);border-radius:12px;margin-top:8px;padding:12px 16px;display:flex;align-items:center;min-height:56px}
+  .row.num{cursor:pointer}
+  .row.num:hover{background:var(--surface2)}
+  .row .meta{flex:1;min-width:0}
+  .row .label{font-weight:600;font-size:15px}
+  .row .key{font-size:11px;color:var(--dim);margin-top:1px}
+  .row .val{font-size:22px;font-weight:600;color:var(--primary);text-align:right;font-variant-numeric:tabular-nums}
+  .row .unit{font-size:12px;color:var(--dim);margin:0 8px;min-width:38px}
+  .row .chev{font-size:22px;color:var(--dim)}
+  .row .dot{width:14px;height:14px;border-radius:50%;background:var(--off);margin-left:2px}
+  .row.bool .val{color:var(--fg);font-size:15px;min-width:auto}
+  .hint{color:var(--dim);font-size:12px;text-align:center;padding:16px}
+  /* graph overlay */
+  .overlay{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;z-index:20}
+  .overlay.show{display:flex}
+  .ohead{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .ohead .back{font-size:24px;line-height:1;background:none;border:none;color:var(--fg);padding:4px 8px}
+  .ohead .gt{flex:1}
+  .ohead .gt .t{font-size:16px;font-weight:600}
+  .ohead .gt .s{font-size:12px;color:var(--dim)}
+  .ohead .gv{font-size:26px;font-weight:600;color:var(--primary);font-variant-numeric:tabular-nums}
+  #chart{flex:1;width:100%;display:block;touch-action:none}
+  .ofoot{display:flex;gap:8px;align-items:center;justify-content:center;padding:10px;color:var(--dim);font-size:12px;background:var(--surface);border-top:1px solid var(--line)}
+  .ofoot .btn{padding:6px 14px}
+  .desc{color:var(--dim);font-size:12px;padding:8px 16px;background:var(--surface)}
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:30}
+  .modal.show{display:flex}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;width:min(440px,92vw);max-height:88vh;overflow:auto}
+  .card h3{margin:0 0 12px;font-size:17px}
+  .field{margin-top:14px}
+  .field label{display:block;font-weight:600;font-size:13px;margin-bottom:6px}
+  .field select,.field input{width:100%;background:var(--surface2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:inherit}
+  .field .note{color:var(--dim);font-size:11px;margin-top:4px}
+  .card .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--line);color:var(--fg);padding:10px 16px;border-radius:10px;z-index:40;opacity:0;transition:opacity .2s;max-width:90vw;font-size:13px}
+  .toast.show{opacity:1}
+  .banner{background:#3a2320;color:#ffd9d3;border-bottom:1px solid #5a332e;padding:8px 14px;font-size:13px;text-align:center}
+  .banner.hide{display:none}
+</style>
+</head>
+<body>
+  <div id="nosupport" class="banner hide"></div>
+
+  <div class="bar">
+    <div class="title"><span class="g">▚</span> FAP Live</div>
+    <div class="status" id="status">Отключено</div>
+    <button class="btn" id="logBtn">LOG</button>
+    <button class="btn" id="csvBtn">CSV</button>
+    <button class="btn" id="cfgBtn">CFG</button>
+    <button class="btn primary" id="connBtn">Подключить</button>
+  </div>
+
+  <div class="wrap">
+    <div id="list"></div>
+    <div class="hint" id="listHint">Нажмите «Подключить», выберите COM-порт адаптера ELM327 и включите зажигание.</div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="ohead">
+      <button class="back" id="gBack" aria-label="назад">‹</button>
+      <div class="gt"><div class="t" id="gTitle">—</div><div class="s" id="gSub">—</div></div>
+      <div class="gv" id="gVal">—</div>
+    </div>
+    <div class="desc" id="gDesc" style="display:none"></div>
+    <canvas id="chart"></canvas>
+    <div class="ofoot">
+      <button class="btn" id="zOut">− zoom</button>
+      <button class="btn" id="zReset">reset</button>
+      <button class="btn" id="zIn">+ zoom</button>
+      <span>колесо — зум · тащить — панорама · двойной клик — сброс</span>
+    </div>
+  </div>
+
+  <div class="modal" id="cfg">
+    <div class="card">
+      <h3>Настройки подключения</h3>
+      <div class="field">
+        <label>Тип подключения</label>
+        <select id="connType">
+          <option value="serial">Serial — USB / Bluetooth-COM (Web Serial)</option>
+          <option value="ble">Bluetooth LE — GATT (Web Bluetooth)</option>
+        </select>
+        <div class="note">Для адаптеров, которые работают на iPhone по Bluetooth (Konnwei BLE и т.п.), выберите Bluetooth LE. Требует запуск через http://localhost (см. README).</div>
+      </div>
+      <div class="field">
+        <label>Скорость порта (baud) — только для Serial</label>
+        <select id="baud">
+          <option value="38400">38400 (ELM327 по умолчанию)</option>
+          <option value="9600">9600</option>
+          <option value="115200">115200</option>
+          <option value="500000">500000</option>
+        </select>
+        <div class="note">Для Bluetooth-COM значение не важно. Для USB — как в вашем адаптере.</div>
+      </div>
+      <div class="field">
+        <label>Протокол ECU</label>
+        <select id="protocol">
+          <option value="obd2std">CAN OBD-II стандарт (надёжно, без калибровки)</option>
+          <option value="can">CAN PSA — движок 6A8/688 (проприетарные 21Cx)</option>
+          <option value="kline">K-line KWP — ISO 14230-4</option>
+        </select>
+        <div class="note">OBD-II стандарт — корректные значения сразу. CAN PSA — проприетарные FAP-параметры (смещения пока не откалиброваны). K-line — только для адаптера с рабочим K-line.</div>
+      </div>
+      <div class="field">
+        <label>Режим инициализации K-line (только для K-line)</label>
+        <select id="initMode">
+          <option value="AUTO">Авто (fast → 5-baud)</option>
+          <option value="FAST">K-line fast init (ATSP5)</option>
+          <option value="SLOW">K-line 5-baud init (ATSP4)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Сдвиг байтового смещения (тюнинг)</label>
+        <input id="frameShift" type="number" value="0" step="1" />
+        <div class="note">Сдвигает смещение всех параметров разом. Нужен только если значения выглядят неверно относительно живого дампа 21Cx.</div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="cfgCancel">Отмена</button>
+        <button class="btn primary" id="cfgSave">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------------- V46.21 parameter core (ported from ParamDef.kt) ---------------- */
+// fields: k,l,page,sbi,dl,z(scale),d(offset),u(unit),min,max, opt{shift,mask,bool,desc}
+function P(k,l,page,sbi,dl,z,d,u,min,max,opt){opt=opt||{};return{
+  k,l,page,sbi,dl,z,d,u,min,max,
+  shift:opt.shift||0, mask:(opt.mask===undefined?null:opt.mask),
+  bool:!!opt.bool, desc:opt.desc||"",
+  dec:(opt.bool?0:(z>=1?0:z>=0.1?1:z>=0.01?2:3))
+};}
+const PARAMS=[
+  P("Revs","Обороты двигателя","21CB",2,2,1,0,"rpm",0,7000),
+  P("Battery","АКБ","21CB",17,1,0.5,0,"V",0,17),
+  P("Coolant","Темп. ОЖ","21CB",23,1,5,-50,"°C",-50,110),
+  P("FanSpeed","Скорость вентилятора","21CB",41,1,5,0,"%",0,60,{desc:"Задание оборотов вентилятора."}),
+  P("AirCPress","Давление кондиционера","21CB",71,1,0.5,0,"bar",0,16,{desc:"Давление в контуре кондиционера. При 20°C около 6.5 bar."}),
+  P("Speed","Скорость","21CA",29,1,5,0,"km/h",0,200),
+  P("Gear","Передача","21CA",86,1,5,0,"-",0,15,{mask:63,shift:0,desc:"АКПП/роботизированная КПП."}),
+  P("FuelLevel","Уровень топлива","21CA",110,1,5,0,"l",0,100,{desc:"Из BSI."}),
+  P("AirManifold","Темп. во впуск. коллекторе","21C2",20,1,5,-50,"°C",-50,60),
+  P("AtmosphPress","Атм. давление","21CB",173,1,5,500,"mbar",500,1200),
+  P("AccelPedalPos","Педаль газа","21CA",47,1,0.5,0,"%",0,100),
+  P("KnockSensor","Датчик детонации","21CB",137,1,0.5,0,"mV",0,100,{desc:"Уровень шума детонации."}),
+  P("Inj.1Time","Время инж. 1","21C0",26,1,0.05,0,"ms",0,10,{desc:"Время впрыска форсунки 1."}),
+  P("Inj.2Time","Время инж. 2","21C0",32,1,0.05,0,"ms",0,10,{desc:"Время впрыска форсунки 2."}),
+  P("Inj.3Time","Время инж. 3","21C0",38,1,0.05,0,"ms",0,10,{desc:"Время впрыска форсунки 3."}),
+  P("Inj.4Time","Время инж. 4","21C0",44,1,0.05,0,"ms",0,10,{desc:"Время впрыска форсунки 4."}),
+  P("Cyl.Adv","Угол опережения","21C1",32,1,5,-100,"°",-100,180,{desc:"УОЗ по цилиндрам относительно ВМТ."}),
+  P("Cyl.1AdvCorr","Коррекция УОЗ ц.1","21C1",50,1,5,-100,"°",-100,180,{desc:"Коррекция УОЗ против детонации."}),
+  P("Cyl.2AdvCorr","Коррекция УОЗ ц.2","21C1",53,1,5,-100,"°",-100,180,{desc:"Коррекция УОЗ против детонации."}),
+  P("Cyl.3AdvCorr","Коррекция УОЗ ц.3","21C1",56,1,5,-100,"°",-100,180,{desc:"Коррекция УОЗ против детонации."}),
+  P("Cyl.4AdvCorr","Коррекция УОЗ ц.4","21C1",59,1,5,-100,"°",-100,180,{desc:"Коррекция УОЗ против детонации."}),
+  P("UpMixCorr","Коррекция смеси (верх)","21C0",146,2,3.82e-5,-0.25,"-",-0.25,0.25,{desc:"Регулировка богатости по верхнему датчику."}),
+  P("DownMixCorr","Коррекция смеси (низ)","21C0",158,2,3.82e-5,-0.25,"-",-0.25,0.25,{desc:"Регулировка богатости по нижнему датчику."}),
+  P("UpO2Volt","Кислородный (верх)","21C0",86,2,5,0,"mV",0,1800,{desc:"Напряжение верхнего лямбда-зонда."}),
+  P("DownO2Volt","Кислородный (низ)","21C0",110,2,5,0,"mV",0,1800,{desc:"Напряжение нижнего лямбда-зонда."}),
+  P("UpO2Heat","Подогрев O2 (верх)","21C0",122,1,0.5,0,"%",0,120,{desc:"Подогрев верхнего зонда; 0 при неисправности."}),
+  P("DownO2Heat","Подогрев O2 (низ)","21C0",134,1,0.5,0,"%",0,120,{desc:"Подогрев нижнего зонда; 0 при неисправности."}),
+  P("CanisterValve","Клапан адсорбера","21C0",176,1,5,0,"%",0,120,{desc:"Скважность клапана продувки адсорбера."}),
+  P("BrakePress","Давление вакуума тормозов","21CB",179,1,5,0,"mbar",0,1200,{desc:"Давление в вакуумном усилителе."}),
+  P("AirFlowInstr","Расход воздуха (задание)","21C2",161,2,0.5,0,"kg/h",0,500,{desc:"Задание расхода воздуха."}),
+  P("AirFlow","Расход воздуха","21C2",41,2,0.5,0,"kg/h",0,500,{desc:"Измеренный расход воздуха."}),
+  P("IntakeAirPressInstr","Давл. впуска (задание)","21C2",44,1,105,0,"mbar",0,2000,{desc:"Задание давления во впуске."}),
+  P("IntakeAirPress","Давл. впуска","21C2",47,1,105,0,"mbar",0,2000,{desc:"Измеренное давление во впуске."}),
+  P("InCamDephaserInstr","Фазовращатель (задание)","21C2",68,1,5,-100,"°",-100,100,{desc:"Задание положения фазовращателя."}),
+  P("InCamDephaser","Фазовращатель","21C2",74,1,5,-100,"°",-100,100,{desc:"Должен быть близок к заданию."}),
+  P("InCamDephaserValve","Клапан фазовращателя","21C2",80,1,5,0,"%",0,120,{desc:"Положение соленоида фазовращателя."}),
+  P("ExternalTemp","Наружная темп.","21CB",125,1,5,-40,"°C",-40,40),
+  P("BR","Педаль тормоза","21CA",74,1,1,0,"",0,1,{bool:true,desc:"Индикатор — нажата педаль тормоза."}),
+  P("CL","Педаль сцепления","21CA",77,1,1,0,"",0,1,{bool:true,desc:"Индикатор — нажата педаль сцепления."}),
+];
+
+/* ---------------- Standard OBD-II (mode 01) parameter set ----------------
+   Fixed, standardized formulas — no calibration needed. Only PIDs verified
+   supported on this car (0100 -> BE 3E B8 11) are included. One PID per request.
+   marker computed generically (mode+0x40), byte A at sbi=2. */
+function PO(k,l,pid,dl,z,d,u,min,max,dec){return{
+  k,l,page:pid,sbi:2,dl,z,d,u,min,max,shift:0,mask:null,bool:false,desc:"",dec
+};}
+const OBD2=[
+  PO("RPM","Обороты двигателя","010C",2,0.25,0,"rpm",0,7000,0),
+  PO("Load","Нагрузка двигателя","0104",1,0.392157,0,"%",0,100,0),
+  PO("Coolant","Темп. ОЖ","0105",1,1,-40,"°C",-40,130,0),
+  PO("IAT","Темп. впуск. воздуха","010F",1,1,-40,"°C",-40,120,0),
+  PO("MAP","Давл. во впуске (MAP)","010B",1,1,0,"kPa",0,255,0),
+  PO("Throttle","Дроссель","0111",1,0.392157,0,"%",0,100,1),
+  PO("Timing","Опережение зажигания","010E",1,0.5,-64,"°",-64,64,1),
+  PO("Speed","Скорость","010D",1,1,0,"km/h",0,255,0),
+  PO("STFT","Кратк. коррекция топлива","0106",1,0.78125,-100,"%",-30,30,1),
+  PO("LTFT","Долг. коррекция топлива","0107",1,0.78125,-100,"%",-30,30,1),
+  PO("O2S1","Лямбда B1S1","0114",1,0.005,0,"V",0,1.3,3),
+  PO("O2S2","Лямбда B1S2","0115",1,0.005,0,"V",0,1.3,3),
+  PO("Volt","Напряжение ЭБУ","0142",2,0.001,0,"V",0,18,1),
+];
+
+// Active parameter set — swapped by protocol (OBD-II standard vs V46.21 proprietary).
+let ACTIVE = PARAMS;
+function setActiveParams(){ ACTIVE = (typeof session!=="undefined" && session.protocol==="obd2std") ? OBD2 : PARAMS; }
+function pagesOf(){ return [...new Set(ACTIVE.map(p=>p.page))]; }
+function paramsForPage(pg){return ACTIVE.filter(p=>p.page===pg);}
+function byKey(k){return ACTIVE.find(p=>p.k===k);}
+function markerFor(page){
+  const mode=parseInt(page.slice(0,2),16);
+  return (((mode+0x40)&0xFF).toString(16).toUpperCase().padStart(2,"0")) + page.slice(2).toUpperCase();
+}
+
+let FRAME_SHIFT=0;
+function compute(p,raw){
+  if(p.bool) return raw!==0?1:0;
+  let v=raw*p.z;
+  if(p.mask!==null) v=((v|0)>>>p.shift)&p.mask;
+  return v+p.d;
+}
+
+/* ---------------- response parser (ported from ResponseParser.kt) ---------------- */
+function cleanHex(raw){
+  // Handles ELM multiframe output: a length header line ("03B") plus
+  // per-frame lines ("0:61CB..","1:..") that must have their "N:" index stripped.
+  const lines = raw.split(/[\r\n]+/);
+  const hasMulti = lines.some(l=>/^\s*[0-9A-Fa-f]:/.test(l));
+  let out="";
+  for(let ln of lines){
+    ln = ln.trim();
+    if(!ln || ln===">") continue;
+    const m = ln.match(/^([0-9A-Fa-f]):(.*)$/);
+    if(m){ out += m[2].replace(/[^0-9A-Fa-f]/g,""); continue; }
+    if(hasMulti && /^[0-9A-Fa-f]{1,3}$/.test(ln)) continue; // length header
+    out += ln.replace(/[^0-9A-Fa-f]/g,"");
+  }
+  return out.toUpperCase();
+}
+function isError(raw){
+  const u=raw.toUpperCase();
+  return u.includes("NO DATA")||u.includes("ERROR")||u.includes("UNABLE")||u.includes("STOPPED")||u.includes("BUFFER FULL")||u.includes("?");
+}
+function extractRaw(clean,p){
+  const marker=markerFor(p.page);
+  const idx=clean.indexOf(marker);
+  if(idx<0) return null;
+  const startByte=p.sbi+FRAME_SHIFT;
+  if(startByte<0) return null;
+  const start=idx+startByte*2, end=start+p.dl*2;
+  if(end>clean.length||start<idx) return null;
+  const v=parseInt(clean.slice(start,end),16);
+  return Number.isNaN(v)?null:v;
+}
+
+/* ---------------- Web Serial transport ---------------- */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+class ElmSerial{
+  constructor(){this.port=null;this.reader=null;this.writer=null;this.buf="";this.reading=false;this.dec=new TextDecoder();this.enc=new TextEncoder();}
+  async requestAndOpen(baud){
+    this.port=await navigator.serial.requestPort();
+    await this.port.open({baudRate:baud});
+    this.writer=this.port.writable.getWriter();
+    this.reader=this.port.readable.getReader();
+    this.reading=true;
+    this._readLoop();
+  }
+  async _readLoop(){
+    try{
+      while(this.reading){
+        const {value,done}=await this.reader.read();
+        if(done) break;
+        if(value) this.buf+=this.dec.decode(value,{stream:true});
+        if(this.buf.length>20000) this.buf=this.buf.slice(-8000);
+      }
+    }catch(e){/* cancelled on close */}
+  }
+  async write(s){ await this.writer.write(this.enc.encode(s)); }
+  async cmd(s,timeout=1000){
+    this.buf="";
+    await this.write(s+"\r");
+    const dl=Date.now()+timeout;
+    while(Date.now()<dl){
+      if(this.buf.includes(">")) break;
+      await sleep(4);
+    }
+    return this.buf;
+  }
+  async close(){
+    this.reading=false;
+    try{await this.reader.cancel();}catch(e){}
+    try{this.reader.releaseLock();}catch(e){}
+    try{await this.writer.close();}catch(e){}
+    try{this.writer.releaseLock();}catch(e){}
+    try{await this.port.close();}catch(e){}
+    this.port=null;
+  }
+}
+
+/* ---------------- Web Bluetooth (BLE GATT) transport ----------------
+   For BLE ELM327 clones (Konnwei, Vgate, etc.) that create NO COM port.
+   Auto-detects the notify (read) + write characteristic across the
+   common ELM BLE services. Same cmd()/close() interface as ElmSerial. */
+function withTimeout(promise,ms,label){
+  return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error("таймаут: "+label)),ms))]);
+}
+class ElmBle{
+  constructor(){this.device=null;this.server=null;this.rx=null;this.tx=null;this.buf="";this.dec=new TextDecoder();this.enc=new TextEncoder();this.name="";this.onProgress=null;}
+  prog(t){ if(this.onProgress) this.onProgress(t); }
+  async requestAndOpen(){
+    if(!navigator.bluetooth) throw new Error("Web Bluetooth недоступен (запустите через http://localhost, Chrome/Edge)");
+    const SERVICES=[0xFFE0,0xFFF0,0x18F0,0xFFB0,0xFFE5,0xFEE7,0xFDA0,0xFEED,0xFF00,0xFFC0,0xFFD0,
+      "6e400001-b5a3-f393-e0a9-e50e24dcca9e",   // Nordic UART
+      "0000ffe0-0000-1000-8000-00805f9b34fb"];
+    this.prog("Выбор BLE-устройства…");
+    this.device=await navigator.bluetooth.requestDevice({acceptAllDevices:true, optionalServices:SERVICES});
+    this.name=this.device.name||"BLE";
+    this.prog("Подключение к «"+this.name+"» (GATT)…");
+    this.server=await withTimeout(this.device.gatt.connect(),15000,"GATT connect (сопрягите адаптер в настройках Windows Bluetooth)");
+    this.prog("Чтение сервисов…");
+    // Windows-friendly discovery: probe known UUIDs one-by-one (getPrimaryServices()
+    // "get all" often hangs on the Windows BLE stack). Absent UUIDs reject fast;
+    // a real hang => bonding needed.
+    let services=[];
+    for(const u of SERVICES){
+      try{
+        const svc=await withTimeout(this.server.getPrimaryService(u),2500,"сервис "+u);
+        if(svc) services.push(svc);
+      }catch(e){ /* absent or slow — keep going */ }
+    }
+    // Always try the bulk call too (covers services not in our known list)
+    if(services.length===0){
+      this.prog("Полное чтение сервисов…");
+      try{ services=await withTimeout(this.server.getPrimaryServices(),12000,"чтение всех сервисов"); }catch(e){}
+    }
+    if(services.length===0){
+      throw new Error("сервисы не читаются. Узнайте UUID через chrome://bluetooth-internals (см. инструкцию) и пришлите мне — либо сопрягите адаптер в Windows Bluetooth и повторите.");
+    }
+    // Log discovered service UUIDs for diagnostics
+    try{ console.log("BLE services:", services.map(s=>s.uuid)); }catch(e){}
+    let notifyChar=null, writeChar=null, writeInSameSvc=null;
+    for(const svc of services){
+      let chars; try{ chars=await svc.getCharacteristics(); }catch(e){ continue; }
+      for(const ch of chars){
+        const p=ch.properties;
+        if((p.notify||p.indicate) && !notifyChar) notifyChar=ch;
+        if((p.write||p.writeWithoutResponse) && !writeChar) writeChar=ch;
+        // prefer a write char that lives in the same service as the notify char
+        if(notifyChar && ch.service===notifyChar.service && (p.write||p.writeWithoutResponse) && !writeInSameSvc) writeInSameSvc=ch;
+      }
+    }
+    if(writeInSameSvc) writeChar=writeInSameSvc;
+    if(!notifyChar||!writeChar){
+      const uuids=services.map(s=>s.uuid).join(", ")||"(нет доступных сервисов)";
+      throw new Error("не найдены характеристики чтения/записи. Сервисы: "+uuids);
+    }
+    this.prog("Подписка на уведомления…");
+    await this.rx.startNotifications();
+    this.rx.addEventListener("characteristicvaluechanged",e=>{
+      const v=e.target.value; let s="";
+      for(let i=0;i<v.byteLength;i++) s+=String.fromCharCode(v.getUint8(i));
+      this.buf+=s;
+      if(this.buf.length>20000) this.buf=this.buf.slice(-8000);
+    });
+    this.device.addEventListener("gattserverdisconnected",()=>{ this.buf+="\r[BLE disconnected]\r>"; });
+    await sleep(200);
+  }
+  async write(s){
+    const data=this.enc.encode(s);
+    const canNoResp=this.tx.properties.writeWithoutResponse;
+    for(let i=0;i<data.length;i+=20){
+      const chunk=data.slice(i,i+20);
+      try{
+        if(canNoResp && this.tx.writeValueWithoutResponse) await this.tx.writeValueWithoutResponse(chunk);
+        else if(this.tx.writeValueWithResponse) await this.tx.writeValueWithResponse(chunk);
+        else await this.tx.writeValue(chunk);
+      }catch(e){ await this.tx.writeValue(chunk); }
+    }
+  }
+  async cmd(s,timeout=1000){
+    this.buf="";
+    await this.write(s+"\r");
+    const dl=Date.now()+timeout;
+    while(Date.now()<dl){ if(this.buf.includes(">")) break; await sleep(4); }
+    return this.buf;
+  }
+  async close(){
+    try{ if(this.rx) await this.rx.stopNotifications(); }catch(e){}
+    try{ if(this.device && this.device.gatt.connected) this.device.gatt.disconnect(); }catch(e){}
+    this.device=null; this.server=null; this.rx=null; this.tx=null;
+  }
+}
+
+/* ---------------- session (ported from ElmSession.kt) ---------------- */
+const HISTORY_CAP=6000;
+class Session{
+  constructor(){
+    this.elm=null; this.state="DISCONNECTED"; this.running=false;
+    this.values={}; this.history={}; ACTIVE.forEach(p=>this.history[p.k]=[]);
+    this.extended=false; this.lastCmd=0; this.initMode="AUTO"; this.protocol="obd2std";
+    this.onValues=null; this.onStatus=null;
+    this.logging=false; this.logRows=[];
+  }
+  setStatus(t){this.state===t; if(this.onStatus) this.onStatus(t);}
+  async connect(kind,baud){
+    if(this.running) return;
+    setActiveParams(); buildList();
+    this.values={}; this.history={}; ACTIVE.forEach(p=>this.history[p.k]=[]);
+    const ble = kind==="ble";
+    this.elm = ble ? new ElmBle() : new ElmSerial();
+    if(ble) this.elm.onProgress = t => { this.onStatus && this.onStatus(t); };
+    this.state="CONNECTING"; this.onStatus&&this.onStatus(ble?"Выбор BLE-устройства…":"Подключение…");
+    try{
+      if(ble) await this.elm.requestAndOpen(); else await this.elm.requestAndOpen(baud);
+    }catch(e){
+      this.state="ERROR"; this.onStatus&&this.onStatus((ble?"BLE не подключился: ":"Не удалось открыть порт: ")+e.message); this.elm=null; return;
+    }
+    this.onStatus&&this.onStatus((ble?"BLE подключён, инициализация ECU…":"Порт открыт, инициализация ECU…"));
+    let ok=false;
+    try{ ok=await this.initEcu(); }catch(e){ this.onStatus&&this.onStatus("Ошибка инициализации: "+e.message); }
+    if(!ok){
+      this.state="ERROR"; this.onStatus&&this.onStatus("Инициализация ECU не удалась (адаптер / зажигание / протокол).");
+      await this.elm.close(); this.elm=null; return;
+    }
+    this.state="CONNECTED"; this.running=true;
+    this.onStatus&&this.onStatus("Подключено ("+(this.extended?"extended":"default")+" session)");
+    if(this.logging) this.startLog();
+    this.pollLoop();
+  }
+  async disconnect(){
+    this.running=false;
+    if(this.elm){ await this.elm.close(); this.elm=null; }
+    this.state="DISCONNECTED"; this.onStatus&&this.onStatus("Отключено");
+  }
+  async initEcu(){
+    const e=this.elm;
+    await e.cmd("ATZ",2500); await e.cmd("ATD",800); await e.cmd("ATE0",800);
+    await e.cmd("ATL0",800); await e.cmd("ATH0",800); await e.cmd("ATS0",800); await e.cmd("ATAL",800);
+    if(this.protocol==="obd2std") return await this.tryObd2();
+    if(this.protocol==="can") return await this.tryCan();
+    const order = this.initMode==="FAST"?[true]:this.initMode==="SLOW"?[false]:[true,false];
+    for(const fast of order){ if(await this.tryKline(fast)) return true; }
+    return false;
+  }
+  // Standard OBD-II (mode 01) over CAN — functional header 7DF, responses 7E8. Standardized formulas.
+  async tryObd2(){
+    const e=this.elm;
+    await e.cmd("ATSP6",800);
+    await e.cmd("ATSH7DF",600);   // functional broadcast
+    await e.cmd("ATCRA7E8",600);  // accept ECU 7E8
+    await e.cmd("ATFCSH7E0",600); await e.cmd("ATFCSD300000",600); await e.cmd("ATFCSM1",600);
+    this.extended=false;
+    const t=cleanHex(await e.cmd("0100",2500));
+    return t.includes("4100");
+  }
+  // CAN PSA path — engine ECU on 6A8/688 (ISO 15765-4, 11-bit, 500k), verified on a real car.
+  async tryCan(){
+    const e=this.elm;
+    await e.cmd("ATSP6",800);
+    await e.cmd("ATSH6A8",800);      // request header -> engine
+    await e.cmd("ATCRA688",800);     // receive filter <- engine
+    await e.cmd("ATFCSH6A8",800);    // flow-control header
+    await e.cmd("ATFCSD300000",800); // flow-control data 30 00 00
+    await e.cmd("ATFCSM1",800);      // flow-control mode = user
+    await e.cmd("81",2000);          // StartCommunication (returns C1; harmless)
+    // Verify engine actually answers a live page
+    const test=cleanHex(await e.cmd("21CB",2500));
+    this.extended=false;
+    return test.includes("61CB");
+  }
+  async tryKline(fast){
+    const e=this.elm;
+    await e.cmd(fast?"ATSP5":"ATSP4",800);
+    await e.cmd("ATSH8110F1",800);
+    if(fast) await e.cmd("ATFI",1500);
+    await e.cmd("ATSW00",800);
+    const start=cleanHex(await e.cmd("81",3000));
+    if(!start.includes("C1")) return false;
+    const ext=cleanHex(await e.cmd("1003",2000));
+    this.extended=ext.includes("50");
+    await e.cmd("10C0",2000);
+    await e.cmd("10A4",2000);
+    return true;
+  }
+  async pollLoop(){
+    while(this.running){
+      // keep-alive if idle (K-line session only; CAN/OBD-II reads here are stateless)
+      if(this.protocol==="kline" && Date.now()-this.lastCmd>2500){ await this.elm.cmd(this.extended?"3E00":"3E",800); }
+      for(const pg of pagesOf()){
+        if(!this.running) break;
+        const reply=await this.elm.cmd(pg,1200);
+        this.lastCmd=Date.now();
+        const now=Date.now();
+        if(isError(reply)) continue;
+        const cl=cleanHex(reply);
+        for(const p of paramsForPage(pg)){
+          const raw=extractRaw(cl,p);
+          if(raw===null){ this.values[p.k]={v:0,valid:false,t:now}; continue; }
+          const v=compute(p,raw);
+          this.values[p.k]={v,valid:true,t:now};
+          const h=this.history[p.k]; h.push({t:now,v}); if(h.length>HISTORY_CAP) h.shift();
+        }
+      }
+      if(this.onValues) this.onValues(this.values);
+      if(this.logging) this.logRow();
+    }
+  }
+  startLog(){ this.logRows=[]; this.logging=true; }
+  stopLog(){ this.logging=false; }
+  logRow(){
+    const row={t:Date.now()};
+    for(const p of ACTIVE){ const s=this.values[p.k]; row[p.k]=(s&&s.valid)?s.v:""; }
+    this.logRows.push(row);
+  }
+  csv(){
+    const keys=ACTIVE.map(p=>p.k);
+    let out="time_ms,iso,"+keys.join(",")+"\n";
+    for(const r of this.logRows){
+      out+=r.t+","+new Date(r.t).toISOString()+","+keys.map(k=>r[k]).join(",")+"\n";
+    }
+    return out;
+  }
+}
+
+/* ---------------- UI ---------------- */
+const $=id=>document.getElementById(id);
+const session=new Session();
+let rowEls={};
+
+// Storage helpers — localStorage can be disabled (data: URLs, private mode); never let it break the UI.
+function lsGet(k){ try{ return lsGet(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ lsSet(k,v); }catch(e){} }
+function loadPrefs(){
+  const ct=lsGet("connType"); if(ct) $("connType").value=ct;
+  const pr=lsGet("protocol"); if(pr) $("protocol").value=pr;
+  const b=lsGet("baud"); if(b) $("baud").value=b;
+  const im=lsGet("initMode"); if(im) $("initMode").value=im;
+  const fs=lsGet("frameShift"); if(fs!==null){ $("frameShift").value=fs; FRAME_SHIFT=parseInt(fs)||0; }
+  session.initMode=$("initMode").value;
+  session.protocol=$("protocol").value;
+  session.logging=lsGet("logging")==="1";
+  updateLogBtn();
+}
+function updateLogBtn(){ $("logBtn").textContent=session.logging?"LOG ●":"LOG"; $("logBtn").classList.toggle("on",session.logging); }
+
+function buildList(){
+  const list=$("list"); list.innerHTML="";
+  rowEls={};
+  for(const p of ACTIVE){
+    const row=document.createElement("div");
+    row.className="row "+(p.bool?"bool":"num");
+    row.innerHTML=`<div class="meta"><div class="label"></div><div class="key"></div></div>
+      <div class="val">--</div>`+
+      (p.bool?`<div class="dot"></div>`:`<div class="unit"></div><div class="chev">›</div>`);
+    row.querySelector(".label").textContent=p.l;
+    row.querySelector(".key").textContent=p.k+" · "+p.page;
+    if(!p.bool){ row.querySelector(".unit").textContent=p.u; row.onclick=()=>openGraph(p); }
+    list.appendChild(row);
+    rowEls[p.k]={row,val:row.querySelector(".val"),dot:row.querySelector(".dot")};
+  }
+}
+function renderValues(values){
+  for(const p of ACTIVE){
+    const el=rowEls[p.k]; if(!el) continue;
+    const s=values[p.k];
+    if(p.bool){
+      const on=s&&s.valid&&s.v>=0.5;
+      el.val.textContent=(!s||!s.valid)?"--":(on?"ON":"OFF");
+      el.dot.style.background=on?"var(--primary)":"var(--off)";
+    }else{
+      el.val.textContent=(!s||!s.valid)?"--":s.v.toFixed(p.dec);
+    }
+  }
+  if(graph.cur) drawGraph();
+}
+
+session.onStatus=t=>{ $("status").textContent=t; updateConnBtn(); };
+session.onValues=renderValues;
+function updateConnBtn(){
+  const c=session.state==="CONNECTED"||session.state==="CONNECTING";
+  $("connBtn").textContent=c?"Отключить":"Подключить";
+  $("listHint").style.display=(session.state==="CONNECTED")?"none":"block";
+}
+
+/* connect */
+$("connBtn").onclick=async()=>{
+  if(session.state==="CONNECTED"||session.state==="CONNECTING"){ await session.disconnect(); return; }
+  const baud=parseInt($("baud").value)||38400;
+  const kind=$("connType").value;
+  session.initMode=$("initMode").value;
+  session.protocol=$("protocol").value;
+  await session.connect(kind,baud);
+};
+/* logging */
+$("logBtn").onclick=()=>{
+  session.logging=!session.logging;
+  lsSet("logging",session.logging?"1":"0");
+  if(session.state==="CONNECTED"){ if(session.logging) session.startLog(); else session.stopLog(); }
+  updateLogBtn();
+  toast(session.logging?"Запись лога включена":"Запись лога выключена");
+};
+/* csv download */
+$("csvBtn").onclick=()=>{
+  if(!session.logRows.length){ toast("Лог пуст — включите LOG и подключитесь"); return; }
+  const blob=new Blob([session.csv()],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="fap_log_"+new Date().toISOString().replace(/[:.]/g,"-")+".csv";
+  a.click(); URL.revokeObjectURL(a.href);
+  toast(session.logRows.length+" строк сохранено");
+};
+/* settings */
+$("cfgBtn").onclick=()=>$("cfg").classList.add("show");
+$("cfgCancel").onclick=()=>$("cfg").classList.remove("show");
+$("cfgSave").onclick=()=>{
+  lsSet("connType",$("connType").value);
+  lsSet("protocol",$("protocol").value);
+  lsSet("baud",$("baud").value);
+  lsSet("initMode",$("initMode").value);
+  const fs=parseInt($("frameShift").value)||0; FRAME_SHIFT=fs; lsSet("frameShift",fs);
+  session.initMode=$("initMode").value;
+  $("cfg").classList.remove("show");
+  checkSupport();
+  toast("Настройки сохранены");
+};
+
+/* toast */
+let toastT=null;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),2600); }
+
+/* ---------------- graph (ported from ScalableChartView.kt) ---------------- */
+const graph={cur:null,cv:$("chart"),ctx:$("chart").getContext("2d"),
+  auto:true,xMin:0,xMax:1,yMin:0,yMax:1,win:60000,drag:false,lastX:0,lastY:0};
+
+function openGraph(p){
+  graph.cur=p; graph.auto=true;
+  $("gTitle").textContent=p.l; $("gSub").textContent=p.page+" · "+p.u;
+  const d=$("gDesc"); if(p.desc){ d.textContent=p.desc; d.style.display="block"; } else d.style.display="none";
+  $("overlay").classList.add("show");
+  sizeChart(); drawGraph();
+}
+$("gBack").onclick=()=>{ graph.cur=null; $("overlay").classList.remove("show"); };
+$("zIn").onclick=()=>zoomButtons(1/1.5);
+$("zOut").onclick=()=>zoomButtons(1.5);
+$("zReset").onclick=()=>{ graph.auto=true; drawGraph(); };
+
+function sizeChart(){
+  const r=graph.cv.getBoundingClientRect(), dpr=devicePixelRatio||1;
+  graph.cv.width=r.width*dpr; graph.cv.height=r.height*dpr;
+  graph.ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener("resize",()=>{ if(graph.cur){ sizeChart(); drawGraph(); } });
+
+function ensureManual(){ if(graph.auto){ computeAuto(); graph.auto=false; } }
+function computeAuto(){
+  const data=graph.cur?graph.history():[];
+  if(!data.length){ graph.xMin=0;graph.xMax=1;graph.yMin=graph.cur?graph.cur.min:0;graph.yMax=graph.cur?graph.cur.max:1; return; }
+  const last=data[data.length-1].t, first=data[0].t;
+  graph.xMax=last; graph.xMin=Math.max(first,last-graph.win);
+  if(graph.xMax-graph.xMin<1000) graph.xMin=graph.xMax-1000;
+  let lo=Infinity,hi=-Infinity;
+  for(const p of data){ if(p.t>=graph.xMin){ if(p.v<lo)lo=p.v; if(p.v>hi)hi=p.v; } }
+  if(lo===Infinity){ lo=graph.cur.min; hi=graph.cur.max; }
+  if(Math.abs(hi-lo)<1e-6){ lo-=1; hi+=1; }
+  const pad=(hi-lo)*0.12; graph.yMin=lo-pad; graph.yMax=hi+pad;
+}
+graph.history=()=> graph.cur?session.history[graph.cur.k]:[];
+
+function zoomButtons(f){
+  ensureManual();
+  const cx=(graph.xMin+graph.xMax)/2, cy=(graph.yMin+graph.yMax)/2;
+  const xr=(graph.xMax-graph.xMin)*f/2, yr=(graph.yMax-graph.yMin)*f/2;
+  graph.xMin=cx-xr; graph.xMax=cx+xr; graph.yMin=cy-yr; graph.yMax=cy+yr; drawGraph();
+}
+/* wheel zoom around cursor */
+graph.cv.addEventListener("wheel",e=>{
+  if(!graph.cur) return; e.preventDefault();
+  ensureManual();
+  const rect=graph.cv.getBoundingClientRect();
+  const geo=plotGeo(rect.width,rect.height);
+  const f=e.deltaY<0?1/1.15:1.15;
+  const fx=pxToX(e.clientX-rect.left,geo), fy=pyToY(e.clientY-rect.top,geo);
+  graph.xMin=fx-(fx-graph.xMin)*f; graph.xMax=fx+(graph.xMax-fx)*f;
+  graph.yMin=fy-(fy-graph.yMin)*f; graph.yMax=fy+(graph.yMax-fy)*f;
+  drawGraph();
+},{passive:false});
+/* drag pan */
+graph.cv.addEventListener("pointerdown",e=>{ if(!graph.cur)return; graph.drag=true; graph.lastX=e.clientX; graph.lastY=e.clientY; graph.cv.setPointerCapture(e.pointerId); });
+graph.cv.addEventListener("pointermove",e=>{
+  if(!graph.drag||!graph.cur) return; ensureManual();
+  const rect=graph.cv.getBoundingClientRect(); const geo=plotGeo(rect.width,rect.height);
+  const dx=e.clientX-graph.lastX, dy=e.clientY-graph.lastY; graph.lastX=e.clientX; graph.lastY=e.clientY;
+  const xr=(graph.xMax-graph.xMin)/geo.pw, yr=(graph.yMax-graph.yMin)/geo.ph;
+  graph.xMin-=dx*xr; graph.xMax-=dx*xr; graph.yMin+=dy*yr; graph.yMax+=dy*yr; drawGraph();
+});
+graph.cv.addEventListener("pointerup",()=>graph.drag=false);
+graph.cv.addEventListener("dblclick",()=>{ graph.auto=true; drawGraph(); });
+
+function plotGeo(w,h){ const pl=52,pr=14,pt=14,pb=26; return {pl,pr,pt,pb,pw:Math.max(1,w-pl-pr),ph:Math.max(1,h-pt-pb),w,h}; }
+function xToPx(t,g){ return g.pl+(t-graph.xMin)/(graph.xMax-graph.xMin)*g.pw; }
+function yToPy(v,g){ return g.pt+(1-(v-graph.yMin)/(graph.yMax-graph.yMin))*g.ph; }
+function pxToX(px,g){ return graph.xMin+(px-g.pl)/g.pw*(graph.xMax-graph.xMin); }
+function pyToY(py,g){ return graph.yMin+(1-(py-g.pt)/g.ph)*(graph.yMax-graph.yMin); }
+function fmtT(ms){ const d=new Date(ms); return d.toTimeString().slice(0,8); }
+
+function drawGraph(){
+  const p=graph.cur; if(!p) return;
+  if(graph.auto) computeAuto();
+  const ctx=graph.ctx, rect=graph.cv.getBoundingClientRect(), g=plotGeo(rect.width,rect.height);
+  ctx.clearRect(0,0,g.w,g.h);
+  const data=graph.history();
+  const s=session.values[p.k];
+  $("gVal").textContent=(s&&s.valid)?s.v.toFixed(p.dec)+" "+p.u:"--";
+  // grid + Y labels
+  ctx.strokeStyle="#22303C"; ctx.lineWidth=1; ctx.fillStyle="#9BA8B6"; ctx.font="11px system-ui"; ctx.textAlign="right";
+  for(let i=0;i<=5;i++){ const y=g.pt+g.ph*i/5; ctx.beginPath(); ctx.moveTo(g.pl,y); ctx.lineTo(g.w-g.pr,y); ctx.stroke();
+    ctx.fillText((graph.yMax-(graph.yMax-graph.yMin)*i/5).toFixed(p.dec), g.pl-5, y+4); }
+  ctx.textAlign="center";
+  for(let i=0;i<=4;i++){ const x=g.pl+g.pw*i/4; ctx.beginPath(); ctx.moveTo(x,g.pt); ctx.lineTo(x,g.pt+g.ph); ctx.stroke();
+    ctx.fillText(fmtT(graph.xMin+(graph.xMax-graph.xMin)*i/4), x, g.h-8); }
+  ctx.strokeStyle="#44515F"; ctx.beginPath(); ctx.moveTo(g.pl,g.pt); ctx.lineTo(g.pl,g.pt+g.ph); ctx.lineTo(g.w-g.pr,g.pt+g.ph); ctx.stroke();
+  if(!data.length){ ctx.fillStyle="#9BA8B6"; ctx.textAlign="center"; ctx.fillText("ожидание данных…",g.w/2,g.h/2); return; }
+  // clip plot area
+  ctx.save(); ctx.beginPath(); ctx.rect(g.pl,g.pt,g.pw,g.ph); ctx.clip();
+  ctx.beginPath(); let f0=null,l0=null;
+  data.forEach((d,i)=>{ const x=xToPx(d.t,g),y=yToPy(d.v,g); if(i===0){ctx.moveTo(x,y);f0=x;}else ctx.lineTo(x,y); l0=x; });
+  // fill
+  ctx.lineTo(l0,g.pt+g.ph); ctx.lineTo(f0,g.pt+g.ph); ctx.closePath();
+  ctx.fillStyle="rgba(61,220,151,0.13)"; ctx.fill();
+  ctx.beginPath(); data.forEach((d,i)=>{ const x=xToPx(d.t,g),y=yToPy(d.v,g); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.strokeStyle="#3DDC97"; ctx.lineWidth=2; ctx.lineJoin="round"; ctx.stroke();
+  const last=data[data.length-1]; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(xToPx(last.t,g),yToPy(last.v,g),3.5,0,7); ctx.fill();
+  ctx.restore();
+  if(!graph.auto){ ctx.fillStyle="#9BA8B6"; ctx.textAlign="left"; ctx.fillText("ручной масштаб · двойной клик — сброс", g.pl+4, g.pt+12); }
+}
+
+/* ---------------- boot ---------------- */
+function checkSupport(){
+  const hasSerial=("serial" in navigator), hasBle=("bluetooth" in navigator);
+  const b=$("nosupport"); b.classList.add("hide"); $("connBtn").disabled=false;
+  if(!hasSerial && !hasBle){
+    b.classList.remove("hide");
+    b.textContent="Ни Web Serial, ни Web Bluetooth не поддерживаются. Откройте в Chrome/Edge (десктоп).";
+    $("connBtn").disabled=true; return;
+  }
+  const kind=$("connType").value;
+  if(kind==="ble" && !hasBle){
+    b.classList.remove("hide");
+    b.textContent="Bluetooth LE недоступен здесь. Запустите страницу через http://localhost (не file://) в Chrome/Edge — см. README.";
+  } else if(kind==="serial" && !hasSerial){
+    b.classList.remove("hide");
+    b.textContent="Web Serial недоступен в этом браузере. Выберите Chrome/Edge (десктоп).";
+  }
+}
+function boot(){ loadPrefs(); setActiveParams(); buildList(); updateConnBtn(); checkSupport(); }
+boot();
+</script>
+</body>
+</html>
