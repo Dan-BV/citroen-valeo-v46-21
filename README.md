@@ -1,4 +1,4 @@
-# FAP Live
+# Citroën Valeo V46.21
 
 Single-file browser OBD live-data tool for a Citroën/Peugeot Valeo V46.21 engine.
 No dashboard — scrollable parameter list, tap a numeric parameter for a scalable live graph.

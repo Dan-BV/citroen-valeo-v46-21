@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>FAP Live — Web Serial</title>
+<title>Citroën Valeo V46.21</title>
 <style>
   :root{
     --bg:#10151B; --surface:#1B242E; --surface2:#243040; --line:#2A3644;
@@ -15,7 +15,7 @@
   body{background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
   button{font:inherit;cursor:pointer}
   .bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-  .bar .title{font-weight:600;font-size:16px;margin-right:6px;color:var(--fg);display:flex;align-items:center;gap:8px}
+  .bar .title{font-weight:600;font-size:15px;margin-right:6px;color:var(--fg);display:flex;align-items:center;gap:8px;min-width:0;flex-shrink:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
   .bar .title .g{color:var(--primary)}
   .status{flex:1;color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .btn{background:transparent;color:var(--fg);border:1px solid var(--off);border-radius:8px;padding:7px 12px}
@@ -68,7 +68,7 @@
   <div id="nosupport" class="banner hide"></div>
 
   <div class="bar">
-    <div class="title"><span class="g">▚</span> FAP Live</div>
+    <div class="title"><span class="g">▚</span> Citroën Valeo V46.21</div>
     <div class="status" id="status">Отключено</div>
     <button class="btn" id="logBtn">LOG</button>
     <button class="btn" id="csvBtn">CSV</button>
