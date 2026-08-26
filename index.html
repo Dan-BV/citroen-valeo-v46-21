@@ -14,11 +14,14 @@
   html,body{margin:0;height:100%}
   body{background:var(--bg);color:var(--fg);font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif}
   button{font:inherit;cursor:pointer}
-  .bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-  .bar .title{font-weight:600;font-size:15px;margin-right:6px;color:var(--fg);display:flex;align-items:center;gap:8px;min-width:0;flex-shrink:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-  .bar .title .g{color:var(--primary)}
+  .top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+  .bar{display:flex;align-items:center;gap:8px;padding:10px 14px 6px}
+  .subbar{display:flex;align-items:center;gap:6px;padding:0 14px 10px}
+  .bar .title{flex:1;font-weight:600;font-size:16px;color:var(--fg);display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .bar .title .g{color:var(--primary);flex-shrink:0}
   .status{flex:1;color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .btn{background:transparent;color:var(--fg);border:1px solid var(--off);border-radius:8px;padding:7px 12px}
+  .btn.sm{padding:5px 10px;font-size:13px}
   .btn:hover{background:var(--surface2)}
   .btn.primary{background:var(--primary);color:#06251A;border-color:var(--primary);font-weight:600}
   .btn.on{border-color:var(--primary);color:var(--primary)}
@@ -67,13 +70,17 @@
 <body>
   <div id="nosupport" class="banner hide"></div>
 
-  <div class="bar">
-    <div class="title"><span class="g">▚</span> Citroën Valeo V46.21</div>
-    <div class="status" id="status">Отключено</div>
-    <button class="btn" id="logBtn">LOG</button>
-    <button class="btn" id="csvBtn">CSV</button>
-    <button class="btn" id="cfgBtn">CFG</button>
-    <button class="btn primary" id="connBtn">Подключить</button>
+  <div class="top">
+    <div class="bar">
+      <div class="title"><span class="g">▚</span> Citroën Valeo V46.21</div>
+      <button class="btn primary" id="connBtn">Подключить</button>
+    </div>
+    <div class="subbar">
+      <div class="status" id="status">Отключено</div>
+      <button class="btn sm" id="logBtn">LOG</button>
+      <button class="btn sm" id="csvBtn">CSV</button>
+      <button class="btn sm" id="cfgBtn">CFG</button>
+    </div>
   </div>
 
   <div class="wrap">
@@ -764,16 +771,19 @@ function checkSupport(){
   const b=$("nosupport"); b.classList.add("hide"); $("connBtn").disabled=false;
   if(!hasSerial && !hasBle){
     b.classList.remove("hide");
-    b.textContent="Ни Web Serial, ни Web Bluetooth не поддерживаются. Откройте в Chrome/Edge (десктоп).";
+    b.textContent="Ни Web Serial, ни Web Bluetooth не поддерживаются. На iPhone откройте в браузере Bluefy; на ПК — Chrome/Edge.";
     $("connBtn").disabled=true; return;
   }
-  const kind=$("connType").value;
+  // Auto-pick the transport that actually exists (e.g. Bluefy/mobile has BLE but no Serial).
+  let kind=$("connType").value;
+  if(kind==="serial" && !hasSerial && hasBle){ $("connType").value="ble"; kind="ble"; }
+  if(kind==="ble" && !hasBle && hasSerial){ $("connType").value="serial"; kind="serial"; }
   if(kind==="ble" && !hasBle){
     b.classList.remove("hide");
-    b.textContent="Bluetooth LE недоступен здесь. Запустите страницу через http://localhost (не file://) в Chrome/Edge — см. README.";
+    b.textContent="Bluetooth LE недоступен здесь. На iPhone используйте браузер Bluefy; на ПК — Chrome/Edge через http(s).";
   } else if(kind==="serial" && !hasSerial){
     b.classList.remove("hide");
-    b.textContent="Web Serial недоступен в этом браузере. Выберите Chrome/Edge (десктоп).";
+    b.textContent="Web Serial недоступен. Выберите Chrome/Edge (десктоп) или переключите тип на Bluetooth LE.";
   }
 }
 function boot(){ loadPrefs(); setActiveParams(); buildList(); updateConnBtn(); checkSupport(); }
