@@ -128,8 +128,8 @@
       <div class="field">
         <label>Протокол ECU</label>
         <select id="protocol">
-          <option value="obd2std">CAN OBD-II стандарт (надёжно, без калибровки)</option>
-          <option value="can">CAN PSA — движок 6A8/688 (проприетарные 21Cx)</option>
+          <option value="can">CAN PSA — движок 6A8/688 (31 проприетарный, 21CX8001)</option>
+          <option value="obd2std">CAN OBD-II стандарт (13 стандартных PID)</option>
           <option value="kline">K-line KWP — ISO 14230-4</option>
         </select>
         <div class="note">OBD-II стандарт — корректные значения сразу. CAN PSA — 31 проприетарный параметр (запросы 21CX8001), смещения и формулы получены по Bluetooth-снупу приложения FAP + его CSV (R²>0.97). K-line — только для адаптера с рабочим K-line.</div>
@@ -427,7 +427,7 @@ class Session{
   constructor(){
     this.elm=null; this.state="DISCONNECTED"; this.running=false;
     this.values={}; this.history={}; ACTIVE.forEach(p=>this.history[p.k]=[]);
-    this.extended=false; this.lastCmd=0; this.initMode="AUTO"; this.protocol="obd2std";
+    this.extended=false; this.lastCmd=0; this.initMode="AUTO"; this.protocol="can";
     this.onValues=null; this.onStatus=null;
     this.logging=false; this.logRows=[];
   }
