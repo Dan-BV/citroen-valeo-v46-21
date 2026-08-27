@@ -558,8 +558,8 @@ const session=new Session();
 let rowEls={};
 
 // Storage helpers — localStorage can be disabled (data: URLs, private mode); never let it break the UI.
-function lsGet(k){ try{ return lsGet(k); }catch(e){ return null; } }
-function lsSet(k,v){ try{ lsSet(k,v); }catch(e){} }
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function loadPrefs(){
   const ct=lsGet("connType"); if(ct) $("connType").value=ct;
   const pr=lsGet("protocol"); if(pr) $("protocol").value=pr;
