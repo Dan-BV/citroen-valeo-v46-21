@@ -132,7 +132,7 @@
           <option value="can">CAN PSA — движок 6A8/688 (проприетарные 21Cx)</option>
           <option value="kline">K-line KWP — ISO 14230-4</option>
         </select>
-        <div class="note">OBD-II стандарт — корректные значения сразу. CAN PSA — проприетарные: обороты/ОЖ/впуск/напряжение/УОЗ по цилиндрам откалиброваны, форсунки — позиция верна, масштаб ориентировочный. K-line — только для адаптера с рабочим K-line.</div>
+        <div class="note">OBD-II стандарт — корректные значения сразу. CAN PSA — 31 проприетарный параметр (запросы 21CX8001), смещения и формулы получены по Bluetooth-снупу приложения FAP + его CSV (R²>0.97). K-line — только для адаптера с рабочим K-line.</div>
       </div>
       <div class="field">
         <label>Режим инициализации K-line (только для K-line)</label>
@@ -168,24 +168,41 @@ function P(k,l,page,sbi,dl,z,d,u,min,max,opt){opt=opt||{};return{
   dec:(opt.bool?0:(z>=1?0:z>=0.1?1:z>=0.01?2:3))
 };}
 const PARAMS=[
-  // V46.21 proprietary (CAN 6A8/688). Calibrated against live idle+rev + OBD-II ground truth 2026-08-26.
-  P("Revs","Обороты двигателя","21CB",2,2,1,0,"rpm",0,7000),
-  P("Coolant","Темп. ОЖ","21CB",6,1,1,-50,"°C",-50,130),
-  P("IAT","Темп. впуск. воздуха","21CB",5,1,1,-50,"°C",-50,120),
-  P("Battery","Напряжение ЭБУ","21CB",4,1,0.1,0,"V",0,16),
-  P("Cyl.1Adv","УОЗ цилиндр 1","21C1",9,1,1,-100,"°",-30,60,{desc:"Опережение зажигания, цилиндр 1 (raw-100)."}),
-  P("Cyl.2Adv","УОЗ цилиндр 2","21C1",10,1,1,-100,"°",-30,60,{desc:"Опережение зажигания, цилиндр 2."}),
-  P("Cyl.3Adv","УОЗ цилиндр 3","21C1",11,1,1,-100,"°",-30,60,{desc:"Опережение зажигания, цилиндр 3."}),
-  P("Cyl.4Adv","УОЗ цилиндр 4","21C1",12,1,1,-100,"°",-30,60,{desc:"Опережение зажигания, цилиндр 4."}),
-  P("Cyl.Adv","УОЗ общий","21C1",6,1,1,-100,"°",-30,60,{desc:"Общий УОЗ (raw-100); 16°→42° под нагрузкой."}),
-  P("Inj.1","Форсунка 1 (~)","21C0",6,2,0.0125,0,"ms",0,25,{desc:"Позиция подтверждена, масштаб не откалиброван."}),
-  P("Inj.2","Форсунка 2 (~)","21C0",8,2,0.0125,0,"ms",0,25,{desc:"Позиция подтверждена, масштаб не откалиброван."}),
-  P("Inj.3","Форсунка 3 (~)","21C0",10,2,0.0125,0,"ms",0,25,{desc:"Позиция подтверждена, масштаб не откалиброван."}),
-  P("Inj.4","Форсунка 4 (~)","21C0",12,2,0.0125,0,"ms",0,25,{desc:"Позиция подтверждена, масштаб не откалиброван."}),
-  P("InCamDephaser","Фазовращатель впуска","21C2",16,1,1,0,"°",0,45,{desc:"Факт. положение (corr с об/мин +0.75). Масштаб ориентировочный."}),
-  P("InCamDephaserInstr","Фазовращатель (задание)","21C2",15,1,1,0,"°",0,45,{desc:"Задание фазовращателя. Масштаб ориентировочный."}),
-  P("AirFlow","Расход воздуха (отн.)","21CB",43,2,1,0,"",0,60000,{desc:"2-байта, corr с об/мин +0.90. Растёт с нагрузкой; единицы не откалиброваны."}),
-  P("AtmosphPress","Атм. давление","21CB",56,1,5,500,"mbar",0,1200,{desc:"raw*5+500 ≈1020 мбар, стабильно."}),
+  // V46.21 proprietary (CAN 6A8/688), FAP request form 21CX8001 -> response "61 FF 04 ..".
+  // Offsets & formulas recovered by regression against FAP's own Bluetooth-snoop + CSV (2026-08-27),
+  // see out/fap_calib_from_btsnoop.md. 30/31 fit at R²>=0.97 to FAP's displayed values.
+  // NB: offsets are valid ONLY for the 21CX8001 request form (different layout than plain 21CX).
+  P("Revs","Обороты двигателя","21CB8001",2,2,1,0,"rpm",0,7000),
+  P("Speed","Скорость","21CA8001",8,1,1,0,"km/h",0,255),
+  P("Coolant","Темп. ОЖ","21CB8001",6,1,1,-50,"°C",-50,130),
+  P("AirManifold","Темп. воздуха во впуске","21C28001",5,1,1,-50,"°C",-50,120),
+  P("ExternalTemp","Наружная температура","21CB8001",40,1,1,-40,"°C",-40,60),
+  P("Battery","Напряжение ЭБУ","21CB8001",4,1,0.1,0,"V",0,16),
+  P("AtmosphPress","Атм. давление","21CB8001",56,1,1,756,"mbar",600,1100),
+  P("AccelPedalPos","Педаль газа","21CA8001",13,2,0.1,0,"%",0,100),
+  P("Inj.1","Форсунка 1","21C08001",6,2,0.01,0,"ms",0,25),
+  P("Inj.2","Форсунка 2","21C08001",8,2,0.01,0,"ms",0,25),
+  P("Inj.3","Форсунка 3","21C08001",10,2,0.01,0,"ms",0,25),
+  P("Inj.4","Форсунка 4","21C08001",12,2,0.01,0,"ms",0,25),
+  P("Cyl.Adv","УОЗ общий","21C18001",12,1,1,-100,"°",-30,60,{desc:"Опережение зажигания (raw-100)."}),
+  P("UpO2Heat","Подогрев лямбда (верх)","21C08001",38,2,0.1,0,"%",0,100),
+  P("DownO2Heat","Подогрев лямбда (низ)","21C08001",42,2,0.1,0,"%",0,100),
+  P("UpO2Volt","Лямбда (верх)","21C08001",26,2,1,0,"mV",0,1100),
+  P("DownO2Volt","Лямбда (низ)","21C08001",34,2,1,0,"mV",0,1100),
+  P("CanisterValve","Клапан адсорбера","21C08001",57,1,1,0,"%",0,100),
+  P("UpMixCorr","Коррекция смеси (верх)","21C08001",46,2,7.53e-6,-0.246,"",-0.3,0.3),
+  P("DownMixCorr","Коррекция смеси (низ)","21C08001",50,2,7.53e-6,-0.246,"",-0.3,0.3),
+  P("AirFlow","Расход воздуха","21C28001",11,2,0.1,0,"kg/h",0,600),
+  P("AirFlowInstr","Расход воздуха (задание)","21C28001",51,2,0.1,0,"kg/h",0,600),
+  P("IntakeAirPress","Давл. во впуске","21C28001",14,2,0.08,0,"mbar",0,3000),
+  P("IntakeAirPressInstr","Давл. во впуске (задание)","21C28001",13,2,0.08,0,"mbar",0,3000,{desc:"Задание. Смещение провизорное (перекрыто с фактическим — уточнить на переходном режиме)."}),
+  P("InCamDephaserInstr","Фазовр. впуска (задание)","21C28001",21,1,1,-100,"°",-20,60),
+  P("InCamDephaser","Фазовр. впуска (факт)","21C28001",23,1,1,-100,"°",-20,60),
+  P("InCamDephaserValve","Клапан фазовращателя","21C28001",25,1,1,0,"%",0,100),
+  P("KnockSensor","Датчик детонации","21CB8001",43,2,0.1,0,"mV",0,5000),
+  P("AirCPress","Давл. хладагента (кондиц.)","21CB8001",22,1,0.1,0,"bar",0,30),
+  P("BR","Педаль тормоза","21CA8001",23,1,1,0,"",0,1,{bool:true}),
+  P("CL","Педаль сцепления","21CA8001",24,1,1,0,"",0,1,{bool:true}),
 ]
 
 /* ---------------- Standard OBD-II (mode 01) parameter set ----------------
@@ -218,6 +235,9 @@ function pagesOf(){ return [...new Set(ACTIVE.map(p=>p.page))]; }
 function paramsForPage(pg){return ACTIVE.filter(p=>p.page===pg);}
 function byKey(k){return ACTIVE.find(p=>p.k===k);}
 function markerFor(page){
+  // FAP-form proprietary read: "21CX8001" -> response starts "61 FF 04 ..".
+  // Byte0=0x61, byte1=0xFF are constant; byte2 is RPM-hi (varies), so anchor on "61FF" only.
+  if(/8001$/i.test(page)) return "61FF";
   const mode=parseInt(page.slice(0,2),16);
   return (((mode+0x40)&0xFF).toString(16).toUpperCase().padStart(2,"0")) + page.slice(2).toUpperCase();
 }
@@ -473,10 +493,10 @@ class Session{
     await e.cmd("ATFCSD300000",800); // flow-control data 30 00 00
     await e.cmd("ATFCSM1",800);      // flow-control mode = user
     await e.cmd("81",2000);          // StartCommunication (returns C1; harmless)
-    // Verify engine actually answers a live page
-    const test=cleanHex(await e.cmd("21CB",2500));
+    // Verify engine answers a live page in FAP request form (21CX8001 -> 61FF..)
+    const test=cleanHex(await e.cmd("21CB8001",2500));
     this.extended=false;
-    return test.includes("61CB");
+    return test.includes("61FF");
   }
   async tryKline(fast){
     const e=this.elm;
