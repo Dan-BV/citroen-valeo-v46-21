@@ -165,6 +165,7 @@ function P(k,l,page,sbi,dl,z,d,u,min,max,opt){opt=opt||{};return{
   k,l,page,sbi,dl,z,d,u,min,max,
   shift:opt.shift||0, mask:(opt.mask===undefined?null:opt.mask),
   bool:!!opt.bool, desc:opt.desc||"",
+  hdr:opt.hdr||"6A8", cra:opt.cra||"688",
   dec:(opt.bool?0:(z>=1?0:z>=0.1?1:z>=0.01?2:3))
 };}
 const PARAMS=[
@@ -205,6 +206,13 @@ const PARAMS=[
   P("BR","Педаль тормоза","21CA8001",23,1,1,0,"",0,1,{bool:true}),
   P("CL","Педаль сцепления","21CA8001",24,1,1,0,"",0,1,{bool:true}),
   P("FuelLevel","Уровень топлива","21CA8001",35,1,1,0,"L",0,80,{desc:"21CA o35 = значение напрямую. Шумит/дискретно (плескание в баке), 0 — кратковременные дропауты."}),
+  // Standard OBD-II (mode 01, header 7E0) merged into the proprietary view. Poll loop switches
+  // ATSH/ATCRA per param, so these coexist with the 6A8 proprietary reads. Show "--" if unsupported.
+  P("LoadStd","Нагрузка двигателя","0104",2,1,0.392157,0,"%",0,100,{hdr:"7E0",cra:"7E8"}),
+  P("LoadAbs","Абсолютная нагрузка","0143",2,2,0.392157,0,"%",0,255,{hdr:"7E0",cra:"7E8"}),
+  P("OilTemp","Темп. масла двигателя","015C",2,1,1,-40,"°C",-40,200,{hdr:"7E0",cra:"7E8"}),
+  P("FuelRate","Расход топлива","015E",2,2,0.05,0,"L/h",0,100,{hdr:"7E0",cra:"7E8"}),
+  P("RunTime","Время работы двигателя","011F",2,2,1,0,"s",0,65535,{hdr:"7E0",cra:"7E8"}),
 ]
 
 /* ---------------- Standard OBD-II (mode 01) parameter set ----------------
@@ -524,11 +532,21 @@ class Session{
     return true;
   }
   async pollLoop(){
+    let curHdr=null;
     while(this.running){
       // keep-alive if idle (K-line session only; CAN/OBD-II reads here are stateless)
       if(this.protocol==="kline" && Date.now()-this.lastCmd>2500){ await this.elm.cmd(this.extended?"3E00":"3E",800); }
       for(const pg of pagesOf()){
         if(!this.running) break;
+        // CAN PSA view mixes proprietary (6A8) and standard OBD (7E0) params — switch header per group.
+        if(this.protocol==="can"){
+          const p0=paramsForPage(pg)[0];
+          if(p0 && p0.hdr && p0.hdr!==curHdr){
+            await this.elm.cmd("ATSH"+p0.hdr,600);
+            await this.elm.cmd("ATCRA"+p0.cra,600);
+            curHdr=p0.hdr;
+          }
+        }
         const reply=await this.elm.cmd(pg,1200);
         this.lastCmd=Date.now();
         const now=Date.now();
