@@ -1,0 +1,9 @@
+# Adapter binaries (Google platform-tools) — not ours, huge
+platform-tools/
+tools/platform-tools/
+# Decompiled FAP app source — third-party, excluded by request
+fap_src/
+# Full Android bugreports contain broad phone/device data — keep only extracted OBD logs
+tools/btsnoop/data/*.zip
+__pycache__/
+*.pyc
