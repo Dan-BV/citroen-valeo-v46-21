@@ -8,7 +8,8 @@ plain 21CX and FAP's 21CX8001 forms; corroborated by RPM/Coolant/Battery matchin
 
 offset o (0-indexed from response byte0=0x61) -> Car Scanner letter index (o-1); A=byte2.
 """
-import json
+import json, os
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))  # repo root
 
 def L(k):  # 1-based letter index -> Car Scanner column letter (A,B,..,Z,AA,AB,..)
     s = ""
@@ -82,7 +83,7 @@ for i, (snm, nm, unit, cmd, off, w, sc, add, mn, mx, isbool) in enumerate(PIDS):
         "SkipCycles": 0, "ABRPRole": 0,
     })
 
-path = r"C:\_CAR_APP\out\custompids_v46_21_can.csp"
+path = os.path.join(ROOT, "out", "custompids_v46_21_can.csp")
 with open(path, "w", encoding="utf-8") as f:
     json.dump(out, f, ensure_ascii=False, indent=1)
 print(f"wrote {len(out)} PIDs (full) -> {path}")
@@ -92,7 +93,7 @@ print(f"wrote {len(out)} PIDs (full) -> {path}")
 DUP = {"Обороты", "Скорость", "Т ОЖ", "Т впуска", "U ЭБУ", "P атм",
        "УОЗ", "P впуск", "Лямбда B1S1", "Лямбда B1S2"}   # by SNM
 uniq = [p for p in out if p["SNM"] not in DUP]
-path2 = r"C:\_CAR_APP\out\custompids_v46_21_unique.csp"
+path2 = os.path.join(ROOT, "out", "custompids_v46_21_unique.csp")
 with open(path2, "w", encoding="utf-8") as f:
     json.dump(uniq, f, ensure_ascii=False, indent=1)
 print(f"wrote {len(uniq)} PIDs (unique, no standard dups) -> {path2}")

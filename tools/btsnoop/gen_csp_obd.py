@@ -7,7 +7,8 @@ Standard mode-01: request 01XX to engine (HDR 7E0), response "41 XX <data>" from
 Car Scanner strips "41XX" (2 bytes) -> letter A = first data byte. Same o->letter(o-1) rule.
 These are standard formulas (no calibration). Any unsupported PID just returns NO DATA.
 """
-import json
+import json, os
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))  # repo root
 
 def L(k):
     s = ""
@@ -50,7 +51,7 @@ for i, (snm, nm, unit, cmd, w, kind, mn, mx) in enumerate(PIDS):
         "SkipCycles": 0, "ABRPRole": 0,
     })
 
-path = r"C:\_CAR_APP\out\custompids_obd_standard.csp"
+path = os.path.join(ROOT, "out", "custompids_obd_standard.csp")
 with open(path, "w", encoding="utf-8") as f:
     json.dump(out, f, ensure_ascii=False, indent=1)
 print(f"wrote {len(out)} PIDs -> {path}")
