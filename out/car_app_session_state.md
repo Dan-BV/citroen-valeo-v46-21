@@ -241,6 +241,34 @@ found, one of them mine:
 Also: the scan is now refused outside CAN PSA (the address map is CAN-only),
 and the status line moves to its own row below the buttons on narrow screens.
 
+### Poll rate: 1.5 s per cycle -> ~0.25 s
+
+Two logs from the drive (`fap_log_2026-08-31T14-4*.csv`) measured a median
+cycle of **1480 ms**, and showed 18 of the 122 parameters never filling in:
+all 13 of `$C3`, `DONNES_ADAPT` (`$DB`), and the four standard OBD extras
+(`015C` oil temp, `015E` fuel rate, `011F` run time, `0143` absolute load).
+`011F` is not in this ECU's supported-PID map (`0100` answers `BE 3E B8 11`),
+and the 01xx4x/01xx5x PIDs need a `0140` map it does not publish — so six of
+the fourteen polled pages were pure timeout, two of them also forcing a
+6A8 <-> 7E0 header switch each way.
+
+Fixes:
+- **Probe at connect.** Every page is asked once; those that do not answer are
+  remembered in `Session.skip` and left out of the cycle, retried about every
+  20 s in case the failure was transient. Costs ~3 s at connect, shown as
+  "Проверка доступных страниц…".
+- **Tell ELM how many answers to expect.** A request now carries a trailing
+  response count (`21CB80011`), so the adapter returns as soon as the reply is
+  assembled instead of waiting out its timeout. A page that fails with the
+  suffix is retried once without it and remembered in `Session.nodigit`, since
+  some clones mishandle it.
+- Dead pages are greyed in the list and labelled "нет ответа"; the status line
+  now shows the measured cycle time, so the rate is visible.
+
+On a timing model built from the captured replies: 2192 ms -> 217 ms per cycle.
+Expect roughly 1480 -> 250-350 ms on the car; **to be confirmed on the next
+drive.**
+
 **Still to do, in the agreed order:** actuator tests, adaptation resets,
 telecoding read. Optional refinement: match the recognition answer against
 `DSD.IDENTIF` to name ambiguous modules exactly.

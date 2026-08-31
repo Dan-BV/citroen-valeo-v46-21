@@ -60,6 +60,7 @@
   .group{cursor:pointer}
   .group:hover span{color:var(--fg)}
   .group span{font-weight:700}
+  .group.dead span,.group.dead em{opacity:.45}
   .group em{font-style:normal;opacity:.65}
   .hint{color:var(--dim);font-size:12px;text-align:center;padding:16px}
   /* graph overlay */
@@ -496,7 +497,8 @@ class Session{
     this.values={}; this.history={}; ACTIVE.forEach(p=>this.history[p.k]=[]);
     this.extended=false; this.lastCmd=0; this.initMode="AUTO"; this.protocol="can";
     this.chain=null; this.curHdr=null; this.raw={};
-    this.onValues=null; this.onStatus=null;
+    this.skip={}; this.nodigit={};
+    this.onValues=null; this.onStatus=null; this.onProbed=null;
     this.logging=false; this.logRows=[];
   }
   setStatus(t){this.state===t; if(this.onStatus) this.onStatus(t);}
@@ -521,7 +523,11 @@ class Session{
       await this.elm.close(); this.elm=null; return;
     }
     this.state="CONNECTED"; this.running=true;
-    this.onStatus&&this.onStatus("Подключено ("+(this.extended?"extended":"default")+" session)");
+    this.onStatus&&this.onStatus("Проверка доступных страниц…");
+    let dead=[];
+    try{ dead=await this.probePages(); }catch(e){ /* poll anyway */ }
+    this.onProbed&&this.onProbed(dead);
+    this.onStatus&&this.onStatus("Подключено"+(dead.length?" · без ответа: "+dead.length:""));
     if(this.logging) this.startLog();
     this.pollLoop();
   }
@@ -590,6 +596,43 @@ class Session{
     let release;
     this.chain=new Promise(r=>release=r);
     return prev.then(fn).finally(release);
+  }
+  // ELM327 waits out its whole timeout after a reply in case more ECUs answer.
+  // Appending the expected number of responses to a request makes it return as
+  // soon as that many have arrived - the single biggest win in poll rate.
+  // Some clones mishandle it, so a page that fails with the suffix is retried
+  // without it once, at connect.
+  pageCmd(pg){ return this.nodigit[pg] ? pg : pg+"1"; }
+  async setHeaderFor(p0){
+    if(!p0 || !p0.hdr || p0.hdr===this.curHdr) return;
+    await this.elm.cmd("ATSH"+p0.hdr,600);
+    await this.elm.cmd("ATCRA"+p0.cra,600);
+    this.curHdr=p0.hdr;
+  }
+  // Ask every page once and remember the ones this ECU does not answer, so the
+  // poll loop stops paying a timeout for them on every cycle.
+  async probePages(){
+    return this.lock(async()=>{
+      this.skip={}; this.nodigit={}; this.curHdr=null;
+      for(const pg of pagesOf()){
+        const p0=paramsForPage(pg)[0];
+        await this.setHeaderFor(p0);
+        let ok=await this.tryPage(pg,p0);
+        if(!ok){ this.nodigit[pg]=true; ok=await this.tryPage(pg,p0); }
+        if(!ok){ delete this.nodigit[pg]; this.skip[pg]=true; }
+      }
+      this.curHdr=null;
+      await this.useEngineHeader();
+      return Object.keys(this.skip);
+    });
+  }
+  async tryPage(pg,p0){
+    const reply=await this.elm.cmd(this.pageCmd(pg),1500);
+    this.lastCmd=Date.now();
+    const cl=cleanHex(reply);
+    this.raw[pg]={reply:(reply||"").trim(), clean:cl, t:Date.now(),
+                  err:isError(reply)};
+    return !isError(reply) && extractRaw(cl,p0)!==null;
   }
   async useEngineHeader(){
     await this.elm.cmd("ATSH"+V4621.can.req,600);
@@ -708,6 +751,7 @@ class Session{
         await this.lock(()=>this.elm.cmd(this.extended?"3E00":"3E",800));
       }
       this.cycle=(this.cycle||0)+1;
+      const tCycle=Date.now();
       for(const pg of pagesOf()){
         if(!this.running) break;
         // Slow pages (immobiliser, learned values, service stamp) hold still,
@@ -717,16 +761,13 @@ class Session{
         // The header switch and the read must stay together, hence one lock
         // around both: the CAN PSA view mixes proprietary (6A8) and standard
         // OBD (7E0) pages, and DTC reads may cut in between iterations.
+        // Retry a page that failed the probe about every 20 s, in case it was
+        // a transient rather than a page this ECU lacks. Rarely, because each
+        // retry costs a full adapter timeout.
+        if(this.skip[pg] && (this.cycle%100)!==0) continue;
         const reply=await this.lock(async()=>{
-          if(this.protocol==="can"){
-            const p0=paramsForPage(pg)[0];
-            if(p0 && p0.hdr && p0.hdr!==this.curHdr){
-              await this.elm.cmd("ATSH"+p0.hdr,600);
-              await this.elm.cmd("ATCRA"+p0.cra,600);
-              this.curHdr=p0.hdr;
-            }
-          }
-          return await this.elm.cmd(pg,1200);
+          if(this.protocol==="can") await this.setHeaderFor(paramsForPage(pg)[0]);
+          return await this.elm.cmd(this.pageCmd(pg),1200);
         });
         this.lastCmd=Date.now();
         const now=Date.now();
@@ -734,6 +775,7 @@ class Session{
         this.raw[pg]={reply:(reply||"").trim(), clean:cl, t:now,
                       err:isError(reply)};
         if(isError(reply)) continue;
+        if(this.skip[pg]) delete this.skip[pg];
         for(const p of paramsForPage(pg)){
           const raw=extractRaw(cl,p);
           if(raw===null){ this.values[p.k]={v:0,valid:false,t:now}; continue; }
@@ -743,7 +785,9 @@ class Session{
           const h=this.history[p.k]; h.push({t:now,v}); if(h.length>HISTORY_CAP) h.shift();
         }
       }
+      this.cycleMs=Date.now()-tCycle;
       if(this.onValues) this.onValues(this.values);
+      if(this.onStatus) this.onStatus("Подключено · цикл "+this.cycleMs+" мс");
       if(this.logging) this.logRow();
     }
   }
@@ -767,7 +811,7 @@ class Session{
 /* ---------------- UI ---------------- */
 const $=id=>document.getElementById(id);
 const session=new Session();
-let rowEls={};
+let rowEls={}, groupEls={};
 
 // Storage helpers — localStorage can be disabled (data: URLs, private mode); never let it break the UI.
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
@@ -787,7 +831,7 @@ function updateLogBtn(){ $("logBtn").textContent=session.logging?"LOG ●":"LOG"
 
 function buildList(){
   const list=$("list"); list.innerHTML="";
-  rowEls={};
+  rowEls={}; groupEls={};
   let group=null;
   for(const p of ACTIVE){
     if(p.grpTitle && p.grpTitle!==group){
@@ -799,6 +843,7 @@ function buildList(){
       h.querySelector("em").textContent="$"+p.grp;
       h.title="Показать сырой ответ страницы";
       h.onclick=(g=>()=>pageDiag(g))(p.grp);
+      groupEls[p.grp]=h;
       list.appendChild(h);
     }
     const text=!!(p.bool||p.st);
@@ -828,6 +873,17 @@ function renderValues(values){
 
 session.onStatus=t=>{ $("status").textContent=t; updateConnBtn(); };
 session.onValues=renderValues;
+// A page the ECU never answers is worth showing as such rather than leaving a
+// column of dashes with no explanation.
+session.onProbed=()=>{
+  for(const grp in groupEls){
+    const pages=[...new Set(ACTIVE.filter(p=>p.grp===grp).map(p=>p.page))];
+    const dead=pages.length&&pages.every(pg=>session.skip[pg]);
+    const em=groupEls[grp].querySelector("em");
+    em.textContent="$"+grp+(dead?" · нет ответа":"");
+    groupEls[grp].classList.toggle("dead",!!dead);
+  }
+};
 function updateConnBtn(){
   const c=session.state==="CONNECTED"||session.state==="CONNECTING";
   $("connBtn").textContent=c?"Отключить":"Подключить";
