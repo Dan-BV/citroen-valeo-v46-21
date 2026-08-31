@@ -82,6 +82,11 @@ def fix_ru(text):
     return text
 
 
+def cap(text):
+    """Diagbox writes some labels lower-case and some not; make them uniform."""
+    return text[:1].upper() + text[1:] if text else text
+
+
 def lab(d, fallback=''):
     if not d:
         return fallback
@@ -155,8 +160,8 @@ def field(b):
         hi = offset + factor * mask
     out = {
         'k': b['name'][3:] if b['name'].startswith('MP_') else b['name'],
-        'l': RU_NAMES.get(b['name'])
-             or lab(b.get('label')) or b.get('desc') or b['name'],
+        'l': cap(RU_NAMES.get(b['name'])
+                 or lab(b.get('label')) or b.get('desc') or b['name']),
         'o': b['byte_pos'] - 1,          # 0-based offset from the marker
         'n': length,
         'z': round(factor, 10),
