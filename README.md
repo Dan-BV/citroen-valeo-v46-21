@@ -19,12 +19,30 @@ Talks to an ELM327 adapter via **Web Serial** (USB / classic-Bluetooth COM) or *
 
 Requires HTTPS (GitHub Pages provides it) or localhost — Web Bluetooth won't run from `file://`.
 
+## Reference data from Diagbox
+The official Diagbox 9.85 databases were mined for this ECU, so the byte maps no
+longer have to be guessed. Every frame below is what the official tool sends.
+
+- `out/diagbox_v46_21_reference.md` — the main reference: session sequence, all
+  13 services, the 10 live measurement pages with per-byte scaling and enums,
+  identification, fault handling, freeze frames, 16 actuator tests, 14 learned-value
+  resets, security access and the full telecoding read/write layout.
+- `out/diagbox_v46_21_dtc.md` — all 291 fault codes for this ECU.
+- `out/diagbox_b7_ecu_map.md` — every module on the B7 platform with its CAN ids
+  and its init/recognition frames, i.e. a complete scan list.
+- `out/diagbox_extraction_method.md` — how the databases and the `.DU8` string
+  dictionaries were decoded, so this can be repeated for any other ECU.
+- `data/diagbox/*.json` — the machine-readable form, labels in English and Russian.
+- `tools/diagbox/` — the extraction pipeline plus `decode.py`, which replays a
+  recorded transcript through the map (this is how it was verified).
+
 ## Project layout & workflow
 This repo is the single project root (moved here 2026-08-28).
 - `index.html` — the app itself. **Edit it directly; `git push` deploys it** (GitHub Pages serves it).
 - `tools/btsnoop/` — reverse-engineering toolkit: `parse_btsnoop.py` (btsnoop→ELM transcript),
   `calibrate.py` (align transcript+FAP CSV → verify/discover offsets), `gen_csp.py` / `gen_csp_obd.py`
   (emit Car Scanner `.csp`), and its own `README.md`. `data/` holds the reproducible captures.
+- `tools/diagbox/` — Diagbox database extraction (see above).
 - `out/` — calibration docs (`*.md`) and Car Scanner profiles (`*.csp`).
 - `tools/platform-tools/` — adb (git-ignored). Needed to pull a new drive's btsnoop via `adb bugreport`.
 

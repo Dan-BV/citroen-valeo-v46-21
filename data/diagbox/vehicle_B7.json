@@ -1,0 +1,3808 @@
+{
+ "platform": "B7",
+ "source": "Diagbox GPC.FDB + DSD.FDB",
+ "ecu_count": 112,
+ "ecus": [
+  {
+   "family": "AAS",
+   "ecu": "AAS_UDS",
+   "ecuid": 2120,
+   "comm_library": 360,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "75D",
+    "response_id": "65D",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 48,
+   "odx_file": "AAS_AAS_UDS_360_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "ABRASR",
+   "ecu": "ABS81",
+   "ecuid": 2122,
+   "comm_library": 115,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6AD",
+    "response_id": "68D",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 135,
+   "odx_file": "ABRASR_ABS81_115_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "ABRASR",
+   "ecu": "ESP81",
+   "ecuid": 2123,
+   "comm_library": 116,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6AD",
+    "response_id": "68D",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 135,
+   "odx_file": "ABRASR_ESP81_116_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "ABRASR",
+   "ecu": "ESP90",
+   "ecuid": 2124,
+   "comm_library": 474,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "6AD",
+    "response_id": "68D",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 142,
+   "odx_file": "ABRASR_ESP90_474_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "AFFICHEUR",
+   "ecu": "EMF_A_UDS",
+   "ecuid": 2128,
+   "comm_library": 364,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "765",
+    "response_id": "665",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 13,
+   "odx_file": "AFFICHEUR_EMF_A_UDS_364_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "AFFICHEUR",
+   "ecu": "EMF_C_UDS",
+   "ecuid": 2129,
+   "comm_library": 365,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "765",
+    "response_id": "665",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 13,
+   "odx_file": "AFFICHEUR_EMF_C_UDS_365_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "AFFICHEUR_LVDS_BD",
+   "ecu": "EMF_DGT_LVDS_BD",
+   "ecuid": 2130,
+   "comm_library": 560,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "743",
+    "response_id": "643",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 6,
+   "odx_file": "AFFICHEUR_LVDS_BD_EMF_DGT_LVDS_BD_560_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "AIRBAG",
+   "ecu": "RBG_UDS",
+   "ecuid": 2131,
+   "comm_library": 344,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "744",
+    "response_id": "644",
+    "bus": "CAN_CAR",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 42,
+   "odx_file": "AIRBAG_RBG_UDS_344_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "ALARME",
+   "ecu": "ALARME_LIN",
+   "ecuid": 2132,
+   "comm_library": 374,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6E6",
+    "response_id": "626",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 6,
+   "odx_file": "ALARME_ALARME_LIN_374_B7.xml",
+   "frames": {
+    "reco_request": "21D7",
+    "reco_answer": "61D7",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "ALARME",
+   "ecu": "MUS",
+   "ecuid": 2133,
+   "comm_library": 449,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6E6",
+    "response_id": "626",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 4,
+   "odx_file": "ALARME_MUS_449_B7.xml",
+   "frames": {
+    "reco_request": "21D7",
+    "reco_answer": "61D7",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "ALARMES",
+   "ecu": "ALARME",
+   "ecuid": 2134,
+   "comm_library": 106,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "75C",
+    "response_id": "65C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 14,
+   "odx_file": "ALARMES_ALARME_106_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "AMPLHIFI",
+   "ecu": "AMPLI_AUDIO",
+   "ecuid": 2135,
+   "comm_library": 178,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "77D",
+    "response_id": "67D",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 77,
+   "odx_file": "AMPLHIFI_AMPLI_AUDIO_178_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "AUTORADIO",
+   "ecu": "RD45",
+   "ecuid": 2138,
+   "comm_library": 433,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "760",
+    "response_id": "660",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 29,
+   "odx_file": "AUTORADIO_RD45_433_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "AUTORADIO",
+   "ecu": "RD5",
+   "ecuid": 2137,
+   "comm_library": 341,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "760",
+    "response_id": "660",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 31,
+   "odx_file": "AUTORADIO_RD5_341_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "AUTORADIO",
+   "ecu": "RD6_CN",
+   "ecuid": 2139,
+   "comm_library": 587,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "760",
+    "response_id": "660",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 30,
+   "odx_file": "AUTORADIO_RD6_CN_587_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "AVE",
+   "ecu": "AVE",
+   "ecuid": 2143,
+   "comm_library": 379,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "74F",
+    "response_id": "64F",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 10,
+   "odx_file": "AVE_AVE_379_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "BDMC",
+   "ecu": "BDMC",
+   "ecuid": 2144,
+   "comm_library": 153,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "76E",
+    "response_id": "66E",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 76,
+   "odx_file": "BDMC_BDMC_153_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "BECB",
+   "ecu": "BECB_GEN2",
+   "ecuid": 2145,
+   "comm_library": 373,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6C4",
+    "response_id": "604",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 6,
+   "odx_file": "BECB_BECB_GEN2_373_B7.xml",
+   "frames": {
+    "reco_request": "21D7",
+    "reco_answer": "61D7",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "BMF",
+   "ecu": "BSI2010",
+   "ecuid": 2146,
+   "comm_library": 376,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "752",
+    "response_id": "652",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": true,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 458,
+   "odx_file": "BMF_BSI2010_376_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "BML",
+   "ecu": "BML",
+   "ecuid": 2148,
+   "comm_library": 389,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "741",
+    "response_id": "641",
+    "bus": "CAN_CAR",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 28,
+   "odx_file": "BML_BML_389_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "BOITEVIT",
+   "ecu": "BVA_AL4",
+   "ecuid": 2150,
+   "comm_library": 159,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A9",
+    "response_id": "689",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 171,
+   "odx_file": "BOITEVIT_BVA_AL4_159_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "BOITEVIT",
+   "ecu": "BVA_AM6_AT6_EURO5",
+   "ecuid": 2151,
+   "comm_library": 206,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A9",
+    "response_id": "689",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 114,
+   "odx_file": "BOITEVIT_BVA_AM6_AT6_EURO5_206_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "BOITEVIT",
+   "ecu": "BVA_AM6_AT6_UDS",
+   "ecuid": 2153,
+   "comm_library": 620,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A9",
+    "response_id": "689",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 84,
+   "odx_file": "BOITEVIT_BVA_AM6_AT6_UDS_486_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "BOITEVIT",
+   "ecu": "CFC300P",
+   "ecuid": 2152,
+   "comm_library": 181,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A9",
+    "response_id": "689",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 109,
+   "odx_file": "BOITEVIT_CFC300P_181_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "BPGA",
+   "ecu": "BPGA2010",
+   "ecuid": 2158,
+   "comm_library": 370,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "731",
+    "response_id": "711",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 2,
+   "odx_file": "BPGA_BPGA2010_370_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "BSM",
+   "ecu": "BSM_2010",
+   "ecuid": 2159,
+   "comm_library": 349,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "747",
+    "response_id": "647",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 63,
+   "odx_file": "BSM_BSM_2010_349_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "BSR",
+   "ecu": "BSG_2010_RQ",
+   "ecuid": 2161,
+   "comm_library": 367,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "76C",
+    "response_id": "66C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 22,
+   "odx_file": "BSR_BSG_2010_RQ_367_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "CDE",
+   "ecu": "CDE",
+   "ecuid": 2163,
+   "comm_library": 448,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "771",
+    "response_id": "671",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 11,
+   "odx_file": "CDE_CDE_448_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "CLIM",
+   "ecu": "BCC",
+   "ecuid": 2166,
+   "comm_library": 470,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "76D",
+    "response_id": "66D",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 29,
+   "odx_file": "CLIM_BCC_470_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "CLIM",
+   "ecu": "CLIM_REGULEE_UDS",
+   "ecuid": 2165,
+   "comm_library": 356,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "76D",
+    "response_id": "66D",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 14,
+   "odx_file": "CLIM_CLIM_REGULEE_UDS_356_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "COMBINE",
+   "ecu": "COMBINE_UDS",
+   "ecuid": 2168,
+   "comm_library": 368,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "75F",
+    "response_id": "65F",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 19,
+   "odx_file": "COMBINE_COMBINE_UDS_368_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "CORPRO",
+   "ecu": "BEMP",
+   "ecuid": 2170,
+   "comm_library": 541,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6B7",
+    "response_id": "697",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 104,
+   "odx_file": "CORPRO_BEMP_541_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "CORPRO",
+   "ecu": "LADCT",
+   "ecuid": 2169,
+   "comm_library": 202,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6B7",
+    "response_id": "697",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 106,
+   "odx_file": "CORPRO_LADCT_202_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "CPL",
+   "ecu": "PLUIE_LUMINOSITE_UDS",
+   "ecuid": 2171,
+   "comm_library": 343,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "730",
+    "response_id": "710",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 11,
+   "odx_file": "CPL_PLUIE_LUMINOSITE_UDS_343_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "CSR",
+   "ecu": "VCI",
+   "ecuid": 2173,
+   "comm_library": 369,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6C8",
+    "response_id": "628",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 51,
+   "odx_file": "CSR_VCI_369_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "DIRECTN",
+   "ecu": "GEP",
+   "ecuid": 2174,
+   "comm_library": 101,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6B5",
+    "response_id": "695",
+    "bus": "CAN_CAR",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 41,
+   "odx_file": "DIRECTN_GEP_101_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "DMTC",
+   "ecu": "DMTC",
+   "ecuid": 2176,
+   "comm_library": 378,
+   "protocol": "PSA2000",
+   "service_layer": null,
+   "can": {
+    "request_id": "6BC",
+    "response_id": "69C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "DMTC_DMTC_378_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "",
+    "init_answer": "",
+    "stop_request": "",
+    "stop_answer": ""
+   }
+  },
+  {
+   "family": "DMTC",
+   "ecu": "DMTR",
+   "ecuid": 2177,
+   "comm_library": 506,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6BC",
+    "response_id": "69C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 10,
+   "odx_file": "DMTC_DMTR_506_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "",
+    "init_answer": "",
+    "stop_request": "",
+    "stop_answer": ""
+   }
+  },
+  {
+   "family": "DMTC",
+   "ecu": "DMTR_DTC3B",
+   "ecuid": 2178,
+   "comm_library": 554,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6BC",
+    "response_id": "69C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 10,
+   "odx_file": "DMTC_DMTR_DTC3B_554_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "",
+    "init_answer": "",
+    "stop_request": "",
+    "stop_answer": ""
+   }
+  },
+  {
+   "family": "DSG",
+   "ecu": "DSG",
+   "ecuid": 2182,
+   "comm_library": 114,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6AF",
+    "response_id": "68F",
+    "bus": "CAN_IS",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 42,
+   "odx_file": "DSG_DSG_114_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "81",
+    "init_answer": "C1",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "DSG",
+   "ecu": "DSG_UDS",
+   "ecuid": 2183,
+   "comm_library": 505,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "6AF",
+    "response_id": "68F",
+    "bus": "CAN_IS",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 22,
+   "odx_file": "DSG_DSG_UDS_505_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "ECOLE",
+   "ecu": "MAE",
+   "ecuid": 2186,
+   "comm_library": 174,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "75E",
+    "response_id": "65E",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 7,
+   "odx_file": "ECOLE_MAE_174_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "50"
+   }
+  },
+  {
+   "family": "FMUX",
+   "ecu": "FMUX",
+   "ecuid": 2187,
+   "comm_library": 346,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "77B",
+    "response_id": "67B",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 77,
+   "odx_file": "FMUX_FMUX_346_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "FSE",
+   "ecu": "FSE",
+   "ecuid": 2188,
+   "comm_library": 200,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6B3",
+    "response_id": "693",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 53,
+   "odx_file": "FSE_FSE_200_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "HDC",
+   "ecu": "COM2008P",
+   "ecuid": 2191,
+   "comm_library": 345,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "742",
+    "response_id": "642",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 29,
+   "odx_file": "HDC_COM2008P_345_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "HDC",
+   "ecu": "HDC",
+   "ecuid": 2190,
+   "comm_library": 107,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "742",
+    "response_id": "642",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 24,
+   "odx_file": "HDC_HDC_107_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "IDVR",
+   "ecu": "IDVR",
+   "ecuid": 2192,
+   "comm_library": 580,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "763",
+    "response_id": "663",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 17,
+   "odx_file": "IDVR_IDVR_580_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "DCM35_BR2",
+   "ecuid": 2194,
+   "comm_library": 350,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 290,
+   "odx_file": "INJ_DCM35_BR2_350_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "DCM62",
+   "ecuid": 2208,
+   "comm_library": 497,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 507,
+   "odx_file": "INJ_DCM62_497_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "EDC17C10_BR2",
+   "ecuid": 2195,
+   "comm_library": 352,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 349,
+   "odx_file": "INJ_EDC17C10_BR2_352_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "EDC17C60",
+   "ecuid": 2206,
+   "comm_library": 516,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 426,
+   "odx_file": "INJ_EDC17C60_516_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "HDI_SID807_BR2",
+   "ecuid": 2196,
+   "comm_library": 351,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 356,
+   "odx_file": "INJ_HDI_SID807_BR2_351_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "ME745",
+   "ecuid": 2200,
+   "comm_library": 108,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 229,
+   "odx_file": "INJ_ME745_108_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "ME745_EC5",
+   "ecuid": 2201,
+   "comm_library": 459,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 174,
+   "odx_file": "INJ_ME745_EC5_459_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "ME749_EC5",
+   "ecuid": 2210,
+   "comm_library": 435,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 192,
+   "odx_file": "INJ_ME749_EC5_435_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "MED17_4_2",
+   "ecuid": 2198,
+   "comm_library": 353,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 310,
+   "odx_file": "INJ_MED17_4_2_353_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "MED17_4_4",
+   "ecuid": 2207,
+   "comm_library": 533,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 396,
+   "odx_file": "INJ_MED17_4_4_533_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "MEV17_4_2",
+   "ecuid": 2197,
+   "comm_library": 354,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 295,
+   "odx_file": "INJ_MEV17_4_2_354_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "MEVD17_4_2",
+   "ecuid": 2199,
+   "comm_library": 366,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 385,
+   "odx_file": "INJ_MEVD17_4_2_366_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "MEVD17_4_4",
+   "ecuid": 2209,
+   "comm_library": 545,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 403,
+   "odx_file": "INJ_MEVD17_4_4_545_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "MM6KP",
+   "ecuid": 2204,
+   "comm_library": 132,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 216,
+   "odx_file": "INJ_MM6KP_132_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "V46_21",
+   "ecuid": 2202,
+   "comm_library": 458,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 291,
+   "odx_file": "INJ_V46_21_458_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "V46_32",
+   "ecuid": 2203,
+   "comm_library": 493,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 291,
+   "odx_file": "INJ_V46_32_493_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "INJ",
+   "ecu": "VD46",
+   "ecuid": 2205,
+   "comm_library": 518,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 374,
+   "odx_file": "INJ_VD46_518_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "LCE",
+   "ecu": "LCE",
+   "ecuid": 2228,
+   "comm_library": 380,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "745",
+    "response_id": "645",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 10,
+   "odx_file": "LCE_LCE_380_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "MATT",
+   "ecu": "MATT_C_2010",
+   "ecuid": 2229,
+   "comm_library": 361,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "772",
+    "response_id": "672",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 16,
+   "odx_file": "MATT_MATT_C_2010_361_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "MATT",
+   "ecu": "MATT_M_2010",
+   "ecuid": 2230,
+   "comm_library": 361,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "772",
+    "response_id": "672",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 16,
+   "odx_file": "MATT_MATT_M_2010_361_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "MATT",
+   "ecu": "MATT_P_2010",
+   "ecuid": 2231,
+   "comm_library": 361,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "772",
+    "response_id": "672",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 16,
+   "odx_file": "MATT_MATT_P_2010_361_B7.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "MDS",
+   "ecu": "BLVV",
+   "ecuid": 2236,
+   "comm_library": 324,
+   "protocol": "PSA2000",
+   "service_layer": null,
+   "can": {
+    "request_id": "77C",
+    "response_id": "67C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 26,
+   "odx_file": "MDS_BLVV_324_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "81",
+    "init_answer": "C1D08F",
+    "stop_request": "82",
+    "stop_answer": "C2"
+   }
+  },
+  {
+   "family": "MDS",
+   "ecu": "BTA",
+   "ecuid": 2235,
+   "comm_library": 338,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "77C",
+    "response_id": "67C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 17,
+   "odx_file": "MDS_BTA_338_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "MDS",
+   "ecu": "BTA_2",
+   "ecuid": 2238,
+   "comm_library": 548,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "77C",
+    "response_id": "67C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 21,
+   "odx_file": "MDS_BTA_2_548_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "MDS",
+   "ecu": "BTA_3R",
+   "ecuid": 2239,
+   "comm_library": 592,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "77C",
+    "response_id": "67C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 36,
+   "odx_file": "MDS_BTA_3R_592_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "MDS",
+   "ecu": "BTA_3S",
+   "ecuid": 2240,
+   "comm_library": 593,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "77C",
+    "response_id": "67C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 36,
+   "odx_file": "MDS_BTA_3S_593_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "MDS",
+   "ecu": "BTA_CN",
+   "ecuid": 2237,
+   "comm_library": 517,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "77C",
+    "response_id": "67C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 20,
+   "odx_file": "MDS_BTA_CN_517_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "PADDITIVATION",
+   "ecu": "PADDGO_E5",
+   "ecuid": 2247,
+   "comm_library": 323,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6C1",
+    "response_id": "601",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 2,
+   "odx_file": "PADDITIVATION_PADDGO_E5_323_B7.xml",
+   "frames": {
+    "reco_request": "21D7",
+    "reco_answer": "61D7",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "PADDITIVATION",
+   "ecu": "PADDGO_TI_E6",
+   "ecuid": 2248,
+   "comm_library": 507,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "6C1",
+    "response_id": "601",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 8,
+   "odx_file": "PADDITIVATION_PADDGO_TI_E6_507_B7.xml",
+   "frames": {
+    "reco_request": "21D0",
+    "reco_answer": "61D0",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "PORTEC",
+   "ecu": "PDPC",
+   "ecuid": 2249,
+   "comm_library": 195,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "74B",
+    "response_id": "64B",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 41,
+   "odx_file": "PORTEC_PDPC_195_B7.xml",
+   "frames": {
+    "reco_request": "31A00721010000000000",
+    "reco_answer": "71A0072101",
+    "init_request": "1092",
+    "init_answer": "5092",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "RUMBLE",
+   "ecu": "VD46_RUMBLE",
+   "ecuid": 2250,
+   "comm_library": 599,
+   "protocol": "RAW_CAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "708",
+    "response_id": "728",
+    "bus": "CAN_CONF",
+    "line": "C02",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "RUMBLE_VD46_RUMBLE_599_CCP.xml",
+   "frames": null
+  },
+  {
+   "family": "SAM",
+   "ecu": "SAM",
+   "ecuid": 2251,
+   "comm_library": 348,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "75B",
+    "response_id": "65B",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 19,
+   "odx_file": "SAM_SAM_348_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "STL",
+   "ecu": "AFIL",
+   "ecuid": 2253,
+   "comm_library": 188,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "762",
+    "response_id": "662",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 19,
+   "odx_file": "STL_AFIL_188_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "TELEMAT",
+   "ecu": "AIO",
+   "ecuid": 2260,
+   "comm_library": 619,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "764",
+    "response_id": "664",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 39,
+   "odx_file": "TELEMAT_AIO_616_B7.xml",
+   "frames": {
+    "reco_request": "21FE",
+    "reco_answer": "61FE",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "TELEMAT",
+   "ecu": "MRN",
+   "ecuid": 2254,
+   "comm_library": 476,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "764",
+    "response_id": "664",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 38,
+   "odx_file": "TELEMAT_MRN_476_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "TELEMAT",
+   "ecu": "NAC",
+   "ecuid": 2258,
+   "comm_library": 559,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "764",
+    "response_id": "664",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 47,
+   "odx_file": "TELEMAT_NAC_559_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELEMAT",
+   "ecu": "RADIONAV_RNEGC",
+   "ecuid": 2255,
+   "comm_library": 340,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "764",
+    "response_id": "664",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 38,
+   "odx_file": "TELEMAT_RADIONAV_RNEGC_340_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "TELEMAT",
+   "ecu": "RCC",
+   "ecuid": 2259,
+   "comm_library": 579,
+   "protocol": "DIAGONCAN_FIAT",
+   "service_layer": null,
+   "can": {
+    "request_id": "764",
+    "response_id": "664",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 39,
+   "odx_file": "TELEMAT_RCC_579_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELEMAT",
+   "ecu": "RNEG2010",
+   "ecuid": 2256,
+   "comm_library": 342,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "764",
+    "response_id": "664",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 37,
+   "odx_file": "TELEMAT_RNEG2010_342_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "TELEMAT",
+   "ecu": "SMEG_PLUS",
+   "ecuid": 2257,
+   "comm_library": 475,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "764",
+    "response_id": "664",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 39,
+   "odx_file": "TELEMAT_SMEG_PLUS_475_B7.xml",
+   "frames": {
+    "reco_request": "2180",
+    "reco_answer": "6180",
+    "init_request": "10C0",
+    "init_answer": "50C0",
+    "stop_request": "1081",
+    "stop_answer": "5081"
+   }
+  },
+  {
+   "family": "TELE_AAS",
+   "ecu": "AAS_UDS",
+   "ecuid": 2121,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "75D",
+    "response_id": "65D",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_ABRASR",
+   "ecu": "ESP90",
+   "ecuid": 2127,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "6AD",
+    "response_id": "68D",
+    "bus": "CAN_CONF",
+    "line": "C02",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_AUTORADIO",
+   "ecu": "RD5",
+   "ecuid": 2140,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "760",
+    "response_id": "660",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_AUTORADIO",
+   "ecu": "RD6_CN",
+   "ecuid": 2142,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "760",
+    "response_id": "660",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_BMF",
+   "ecu": "BSI2010",
+   "ecuid": 2147,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "752",
+    "response_id": "652",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_BML",
+   "ecu": "BML",
+   "ecuid": 2149,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "741",
+    "response_id": "641",
+    "bus": "CAN_CAR",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_BOITEVIT",
+   "ecu": "BVA_AM6_AT6_UDS",
+   "ecuid": 2157,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "6A9",
+    "response_id": "689",
+    "bus": "CAN_CONF",
+    "line": "C02",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_BSM",
+   "ecu": "BSM_2010",
+   "ecuid": 2160,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "747",
+    "response_id": "647",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_BSR",
+   "ecu": "BSG_2010_RQ",
+   "ecuid": 2162,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "76C",
+    "response_id": "66C",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_CDE",
+   "ecu": "CDE",
+   "ecuid": 2164,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "771",
+    "response_id": "671",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_CLIM",
+   "ecu": "BCC",
+   "ecuid": 2167,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "76D",
+    "response_id": "66D",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_CPL",
+   "ecu": "PLUIE_LUMINOSITE_UDS",
+   "ecuid": 2172,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "730",
+    "response_id": "710",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_DSG",
+   "ecu": "DSG_UDS",
+   "ecuid": 2185,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "6AF",
+    "response_id": "68F",
+    "bus": "CAN_CONF",
+    "line": "C02",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_INJ",
+   "ecu": "DCM62",
+   "ecuid": 2225,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C02",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_INJ",
+   "ecu": "EDC17C60",
+   "ecuid": 2223,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C02",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_INJ",
+   "ecu": "MED17_4_4",
+   "ecuid": 2224,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C02",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_INJ",
+   "ecu": "MEVD17_4_4",
+   "ecuid": 2226,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C02",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_INJ",
+   "ecu": "VD46",
+   "ecuid": 2222,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "6A8",
+    "response_id": "688",
+    "bus": "CAN_CONF",
+    "line": "C02",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_MATT",
+   "ecu": "MATT_C_2010",
+   "ecuid": 2232,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "772",
+    "response_id": "672",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_MATT",
+   "ecu": "MATT_M_2010",
+   "ecuid": 2233,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "772",
+    "response_id": "672",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_MATT",
+   "ecu": "MATT_P_2010",
+   "ecuid": 2234,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "772",
+    "response_id": "672",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F0FE",
+    "reco_answer": "62F0FE",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_SAM",
+   "ecu": "SAM",
+   "ecuid": 2252,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "75B",
+    "response_id": "65B",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_TELEMAT",
+   "ecu": "NAC",
+   "ecuid": 2265,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "764",
+    "response_id": "664",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TELE_TELEMAT",
+   "ecu": "RCC",
+   "ecuid": 2266,
+   "comm_library": 9,
+   "protocol": "DIAGONCAN",
+   "service_layer": "ISO_15765_3_on_ISO_15765_2",
+   "can": {
+    "request_id": "764",
+    "response_id": "664",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TELE_MPM_GEN_UDS.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  },
+  {
+   "family": "TNB",
+   "ecu": "TNB_2010",
+   "ecuid": 2268,
+   "comm_library": 347,
+   "protocol": "DIAGONCAN",
+   "service_layer": null,
+   "can": {
+    "request_id": "730",
+    "response_id": "710",
+    "bus": "CAN_CONF",
+    "line": "C01",
+    "id_type": null,
+    "addressing": null,
+    "padding": null
+   },
+   "is_gateway": false,
+   "timing": {
+    "p2_ms": null,
+    "p3_ms": null,
+    "st_min_ms": null,
+    "ecu_timeout_ms": null
+   },
+   "dtc_count": 0,
+   "odx_file": "TNB_TNB_2010_347_B7.xml",
+   "frames": {
+    "reco_request": "22F080",
+    "reco_answer": "62F080",
+    "init_request": "1001",
+    "init_answer": "5001",
+    "stop_request": "1001",
+    "stop_answer": "5001"
+   }
+  }
+ ]
+}

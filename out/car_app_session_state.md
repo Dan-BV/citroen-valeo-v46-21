@@ -133,3 +133,42 @@ localStorage обёрнут в try/catch (не падает в data:/прива�
 - Живые дампы/находки: `out/calib_captures.md`. Car Scanner CAN PID (17): `out/custompids_v46_21_can.csp`.
 - Осталось ~22 параметра — нужен структурированный ~15-мин заезд с синхронным эталоном (см. протокол в coverage-доке).
 - Критично: `81` перед проприетарными чтениями + `ATAL` для многокадровых (иначе только первый фрейм).
+
+## SESSION 4 END (2026-08-30) — Diagbox database extraction (supersedes the guesswork)
+
+The Diagbox 9.85 installation on this machine was mined directly, so the V46.21
+byte maps no longer come from regression on captures — they come from the same
+data the official tool drives.
+
+- **Where it is:** `AWRoot/dtrd/comm/data/GPC.FDB` + `DSD.FDB` (Firebird 2.5,
+  needs the x64 embedded engine — the bundled one is 32-bit 2.1), labels in
+  `AWRoot/dtrd/trans/*.DU8`. Method: `out/diagbox_extraction_method.md`.
+- **Confirmed from the database:** CAN 6A8/688, KWP2000 on ISO 15765-2, `81`
+  start of communication answering `C1 D0 8F`, request form `21 <LID> 80 01`
+  answering `61 FF ...`. All of it matches what was found by hand.
+- **New ground:** pages `$B0` (supplies + immobiliser), `$C3` (learned/adaptive),
+  `$C4` (torque), `$CF`, `$DB`, identification `$80`/`$FE`/`$82`, freeze frames
+  via `21 87 <DTC>`, 16 actuator tests (`30 <id> 00/01/11`), 14 learned-value
+  resets (`11 C2`..`11 FF`), immobiliser pairing routines, and the full
+  telecoding read `21 A0` / write `34 A0 ...` layout with bit masks.
+- **Corrects earlier calibration:** live-page coolant temperature is `raw - 50`,
+  not `raw - 40` — that is why it could not be found before. The `80 01` suffix
+  does *not* change the byte layout; `21 CB` and `21 CB 80 01` put the payload
+  at the same offsets, only the answer id differs (`61 CB` vs `61 FF`).
+- **Verified:** `tools/diagbox/decode.py` replays `transcript_2026-08-27.json`
+  through the extracted map; every page decodes sensibly. The ECU is PSA part
+  **9804436280**, Valeo, software edition **0E18**, 19425 engine starts.
+- **Docs:** `out/diagbox_v46_21_reference.md` (main), `..._dtc.md` (291 codes),
+  `diagbox_b7_ecu_map.md` (112 modules with CAN ids + init/recognition frames).
+  Machine-readable: `data/diagbox/V46_21_B7.json`, `vehicle_B7.json`.
+- **Platform:** B7 (C4 / C4 Sedan), confirmed by the user. The same ODX
+  definition covers all 11 platforms, so only the DTC list is platform-specific.
+
+**Not done yet (user chose docs first):** folding this into the app. The app
+still uses the 33 regression-calibrated parameters. Next step would be to drive
+it from `data/diagbox/V46_21_B7.json` and add DTC read/clear, actuator tests,
+telecoding and a module scan.
+
+**Not extracted:** the security-access key algorithm for `27 83`/`27 84` — it is
+code inside `AWRoot/dtrd/comm/Cal458.dll`, not data in the databases. Needed for
+writing configuration, not for reading anything.
