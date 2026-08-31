@@ -12,10 +12,18 @@ Talks to an ELM327 adapter via **Web Serial** (USB / classic-Bluetooth COM) or *
   WebBLE browser such as **Bluefy** to use a BLE adapter.
 
 ## Protocols (CFG)
-- **CAN PSA** (default) — 33 calibrated proprietary V46.21 params (FAP request form `21CX8001`),
-  plus standard OBD load/oil-temp/fuel-rate/run-time merged in (poll loop switches header 6A8↔7E0).
+- **CAN PSA** (default) — 118 ECU parameters across 10 read pages, taken straight from the
+  official Diagbox databases (byte offsets, scaling, units and text states are the ECU's own
+  definitions), plus a few standard OBD readings the proprietary pages lack (oil temp, fuel
+  rate, run time, absolute load) — the poll loop switches header 6A8↔7E0. Also **fault codes**
+  (read + clear, 291 descriptions) and **ECU identification** via the ОШИБКИ / ЭБУ buttons.
 - **CAN OBD-II standard** — standardized mode-01 PIDs incl. torque/load, no calibration.
 - **K-line KWP** — for adapters with a working K-line transceiver.
+
+The parameter profile is generated, not hand-written: regenerate it with
+`python tools/diagbox/make_profile.py --ecu-json data/diagbox/V46_21_B7.json --out
+data/diagbox/v46_21_profile.js --inject index.html`, which splices it between the
+`V46.21 PROFILE` markers in `index.html`.
 
 Requires HTTPS (GitHub Pages provides it) or localhost — Web Bluetooth won't run from `file://`.
 

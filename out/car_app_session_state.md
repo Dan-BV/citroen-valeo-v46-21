@@ -151,10 +151,13 @@ data the official tool drives.
   via `21 87 <DTC>`, 16 actuator tests (`30 <id> 00/01/11`), 14 learned-value
   resets (`11 C2`..`11 FF`), immobiliser pairing routines, and the full
   telecoding read `21 A0` / write `34 A0 ...` layout with bit masks.
-- **Corrects earlier calibration:** live-page coolant temperature is `raw - 50`,
-  not `raw - 40` — that is why it could not be found before. The `80 01` suffix
-  does *not* change the byte layout; `21 CB` and `21 CB 80 01` put the payload
-  at the same offsets, only the answer id differs (`61 CB` vs `61 FF`).
+- **Confirms the hand-derived offsets.** Spot-checked against the app's own
+  regression-fitted table: engine speed, voltage, coolant (`raw - 50`), intake
+  air, knock sensor, A/C pressure and fan setpoint all land on the same bytes
+  and formulas. Two genuine corrections: atmospheric pressure is 2 bytes with
+  offset `+500` (the app had 1 byte `+756`), and the `80 01` suffix does *not*
+  change the byte layout — `21 CB` and `21 CB 80 01` put the payload at the
+  same offsets, only the answer id differs (`61 CB` vs `61 FF`).
 - **Verified:** `tools/diagbox/decode.py` replays `transcript_2026-08-27.json`
   through the extracted map; every page decodes sensibly. The ECU is PSA part
   **9804436280**, Valeo, software edition **0E18**, 19425 engine starts.
@@ -164,10 +167,34 @@ data the official tool drives.
 - **Platform:** B7 (C4 / C4 Sedan), confirmed by the user. The same ODX
   definition covers all 11 platforms, so only the DTC list is platform-specific.
 
-**Not done yet (user chose docs first):** folding this into the app. The app
-still uses the 33 regression-calibrated parameters. Next step would be to drive
-it from `data/diagbox/V46_21_B7.json` and add DTC read/clear, actuator tests,
-telecoding and a module scan.
+## SESSION 5 (2026-08-31) — the app now runs on the Diagbox data
+
+Step 1 of the agreed order is done: `index.html` no longer carries hand-fitted
+parameters.
+
+- `tools/diagbox/make_profile.py` renders the extraction down to a 54 kB profile
+  (10 read pages, 118 parameters, 13 identification fields, 291 fault codes) and
+  splices it into `index.html` between the `V46.21 PROFILE` markers. Regenerate
+  rather than edit by hand.
+- The list is grouped by read page and shows enumerated states as text
+  ("closed loop", "rich") instead of raw numbers.
+- New buttons: **ОШИБКИ** reads `17 FF 00`, decodes `57 <count> [code status]`
+  and names each code, with a confirm-gated clear via `14 FF 00`; **ЭБУ** reads
+  `21 80` / `21 FE` / `21 82`.
+- Adapter access is now serialised through `Session.lock()`, so the on-demand
+  reads cannot interleave with the poll loop.
+- Pages that hold still (`$B0`, `$C3`, `$CF`, `$DB`) are read every tenth cycle.
+- Verified offline: the app's own parser was run over
+  `transcript_2026-08-27.json` and decoded 89/89 fields present in that capture,
+  matching `tools/diagbox/decode.py`. Panels checked in a browser with stubbed
+  data. **Not yet tested on the car.**
+- Known unknown: the meaning of the DTC status byte. The databases name three
+  categories (permanent / intermittent / fleeting) but hold no numeric encoding
+  for this ECU, so the app shows the raw byte. Resolve it against a real fault.
+
+**Still to do, in the agreed order:** module scan across the 112 ECUs of B7
+(`data/diagbox/vehicle_B7.json`, note KWP `81`/`2180` vs UDS `1001`/`22F080`),
+actuator tests, adaptation resets, telecoding read.
 
 **Not extracted:** the security-access key algorithm for `27 83`/`27 84` — it is
 code inside `AWRoot/dtrd/comm/Cal458.dll`, not data in the databases. Needed for
