@@ -219,6 +219,28 @@ parameters.
   record layouts) and rendered in a browser with stubbed results.
   **Not yet tested on the car.**
 
+## SESSION 5, first drive on the car (2026-08-31)
+
+First real test of steps 1 and 2. Live parameters read correctly. Two defects
+found, one of them mine:
+
+- **ОШИБКИ / ЭБУ / СКАН hung for ever.** `Session.lock()` was a busy flag, and
+  the poll loop re-takes the lock in the *same tick* it releases it — the
+  release and the re-acquire happen synchronously inside `lock()`, before any
+  waiter's `await sleep(20)` can wake. So a waiting button never observed the
+  flag free. Replaced with a promise chain: callers run in the order they ask
+  and cannot be starved. Reproduced and confirmed fixed offline (a button gets
+  in after 13 ms against a back-to-back poll loop).
+- **Page `$C3` (learned values) shows nothing** while every other page works.
+  Cause not yet known — `$C3` needs 72 bytes, the same as `$C2` which is fine,
+  so length is not it. Most likely this ECU variant answers `7F 21 xx`.
+  Added a diagnostic instead of guessing: tapping a group header shows that
+  page's request, expected marker, required and received byte count, whether
+  the marker was found, and the raw reply. Read `$C3` there on the next drive.
+
+Also: the scan is now refused outside CAN PSA (the address map is CAN-only),
+and the status line moves to its own row below the buttons on narrow screens.
+
 **Still to do, in the agreed order:** actuator tests, adaptation resets,
 telecoding read. Optional refinement: match the recognition answer against
 `DSD.IDENTIF` to name ambiguous modules exactly.

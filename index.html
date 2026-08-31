@@ -17,13 +17,12 @@
   .top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
   .bar{display:flex;align-items:center;gap:8px;padding:10px 14px 6px}
   .subbar{display:flex;align-items:center;gap:6px;padding:0 14px 10px;flex-wrap:wrap}
-  /* Six buttons squeeze the status text off a phone screen; give it its own
-     line there and let the buttons keep their labels. */
-  .status{order:2;flex-basis:100%}
-  @media (min-width:520px){ .status{order:0;flex-basis:auto} }
   .bar .title{flex:1;font-weight:600;font-size:16px;color:var(--fg);display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
   .bar .title .g{color:var(--primary);flex-shrink:0}
-  .status{flex:1;color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Six buttons squeeze the status text off a phone screen, so give it its own
+     line there and put it back beside them when there is room. */
+  .status{flex:1 1 100%;order:2;color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media (min-width:560px){ .status{flex:1 1 auto;order:0} }
   .btn{background:transparent;color:var(--fg);border:1px solid var(--off);border-radius:8px;padding:7px 12px}
   .btn.sm{padding:5px 10px;font-size:13px}
   .btn:hover{background:var(--surface2)}
@@ -58,6 +57,8 @@
   .row.bool .val{color:var(--fg);font-size:14px;min-width:auto;max-width:58%;line-height:1.25;white-space:normal}
   .group{display:flex;align-items:baseline;gap:8px;margin:18px 4px 2px;font-size:12px;
          letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+  .group{cursor:pointer}
+  .group:hover span{color:var(--fg)}
   .group span{font-weight:700}
   .group em{font-style:normal;opacity:.65}
   .hint{color:var(--dim);font-size:12px;text-align:center;padding:16px}
@@ -494,7 +495,7 @@ class Session{
     this.elm=null; this.state="DISCONNECTED"; this.running=false;
     this.values={}; this.history={}; ACTIVE.forEach(p=>this.history[p.k]=[]);
     this.extended=false; this.lastCmd=0; this.initMode="AUTO"; this.protocol="can";
-    this.busy=false; this.curHdr=null;
+    this.chain=null; this.curHdr=null; this.raw={};
     this.onValues=null; this.onStatus=null;
     this.logging=false; this.logRows=[];
   }
@@ -581,10 +582,14 @@ class Session{
   }
   // The poll loop and the on-demand reads share one adapter, so every exchange
   // takes this lock; otherwise their writes and buffers interleave.
-  async lock(fn){
-    while(this.busy) await sleep(20);
-    this.busy=true;
-    try{ return await fn(); } finally{ this.busy=false; }
+  // It must be a queue, not a busy flag: the poll loop re-takes the lock in the
+  // same tick it releases it, so a waiter polling a flag would never catch it
+  // free and would wait for ever. Chaining runs callers in the order they ask.
+  lock(fn){
+    const prev=this.chain||Promise.resolve();
+    let release;
+    this.chain=new Promise(r=>release=r);
+    return prev.then(fn).finally(release);
   }
   async useEngineHeader(){
     await this.elm.cmd("ATSH"+V4621.can.req,600);
@@ -725,8 +730,10 @@ class Session{
         });
         this.lastCmd=Date.now();
         const now=Date.now();
-        if(isError(reply)) continue;
         const cl=cleanHex(reply);
+        this.raw[pg]={reply:(reply||"").trim(), clean:cl, t:now,
+                      err:isError(reply)};
+        if(isError(reply)) continue;
         for(const p of paramsForPage(pg)){
           const raw=extractRaw(cl,p);
           if(raw===null){ this.values[p.k]={v:0,valid:false,t:now}; continue; }
@@ -790,6 +797,8 @@ function buildList(){
       h.innerHTML=`<span></span><em></em>`;
       h.querySelector("span").textContent=group;
       h.querySelector("em").textContent="$"+p.grp;
+      h.title="Показать сырой ответ страницы";
+      h.onclick=(g=>()=>pageDiag(g))(p.grp);
       list.appendChild(h);
     }
     const text=!!(p.bool||p.st);
@@ -867,6 +876,31 @@ $("cfgSave").onclick=()=>{
   toast("Настройки сохранены");
 };
 
+/* What a read page actually answered - the quickest way to tell a page the ECU
+   does not implement from one the app mis-parses. Opened from a group header. */
+function pageDiag(grp){
+  const ps=ACTIVE.filter(p=>p.grp===grp);
+  if(!ps.length) return;
+  const pg=ps[0].page, mk=markerFor(ps[0]);
+  const need=Math.max(...ps.map(p=>p.sbi+p.dl));
+  const r=session.raw&&session.raw[pg];
+  const row=(n,v)=>`<div class="idrow"><span class="n">${esc(n)}</span><span class="v">${esc(v)}</span></div>`;
+  let html=row("Запрос",pg)+row("Маркер ответа",mk)+row("Нужно байт",need);
+  if(!r){
+    html+=`<div class="ok">Ответ ещё не получен — подключитесь и подождите цикл опроса.</div>`;
+  }else{
+    const idx=r.clean.indexOf(mk);
+    html+=row("Получено байт", r.clean.length/2)+
+          row("Маркер найден", idx<0?"нет":"да, смещение "+idx/2)+
+          (r.err?row("Адаптер","ошибка / нет данных"):"")+
+          `<div class="idblk"><h4>Сырой ответ</h4>`+
+          `<div class="idrow"><span class="v" style="word-break:break-all">${esc(r.clean||r.reply||"—")}</span></div></div>`;
+  }
+  const bad=ps.filter(p=>{const v=session.values[p.k]; return !v||!v.valid;});
+  html+=`<div class="s">Не разобрано параметров: ${bad.length} из ${ps.length}</div>`;
+  diagOpen("Страница $"+grp, html, false);
+}
+
 /* ---------------- fault codes and ECU identification ---------------- */
 function diagOpen(title,html,showClear){
   $("diagTitle").textContent=title;
@@ -941,6 +975,9 @@ function scanHtml(res){
 
 $("scanBtn").onclick=async()=>{
   if(!diagReady()) return;
+  // The address list is the CAN diagnostic map of the platform; on K-line
+  // there is nothing to walk.
+  if(session.protocol!=="can"){ toast("Сканирование доступно только в режиме CAN PSA"); return; }
   $("scanBtn").disabled=true;
   diagOpen("Сканирование блоков","<div class=\"ok\">Подготовка…</div>",false);
   try{
