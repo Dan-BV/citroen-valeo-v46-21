@@ -16,14 +16,24 @@ Talks to an ELM327 adapter via **Web Serial** (USB / classic-Bluetooth COM) or *
   official Diagbox databases (byte offsets, scaling, units and text states are the ECU's own
   definitions), plus a few standard OBD readings the proprietary pages lack (oil temp, fuel
   rate, run time, absolute load) — the poll loop switches header 6A8↔7E0. Also **fault codes**
-  (read + clear, 291 descriptions) and **ECU identification** via the ОШИБКИ / ЭБУ buttons.
+  (read + clear, 291 descriptions), **ECU identification** and a **whole-car module scan** via
+  the ОШИБКИ / ЭБУ / СКАН buttons.
 - **CAN OBD-II standard** — standardized mode-01 PIDs incl. torque/load, no calibration.
 - **K-line KWP** — for adapters with a working K-line transceiver.
 
-The parameter profile is generated, not hand-written: regenerate it with
-`python tools/diagbox/make_profile.py --ecu-json data/diagbox/V46_21_B7.json --out
-data/diagbox/v46_21_profile.js --inject index.html`, which splices it between the
-`V46.21 PROFILE` markers in `index.html`.
+**СКАН** walks the 41 diagnostic CAN addresses of the platform, opens a session on each
+(KWP `81`/`2180` and UDS `1001`/`22F080` are both handled), and reads the fault memory of
+whatever answers — `17 FF 00` for KWP modules, `19 02 09` for UDS ones. Several ECUs share
+one address; where the recognition frame cannot tell them apart the result lists every
+candidate rather than picking one. Live values freeze while it runs (~1 minute).
+
+Both embedded profiles are generated, not hand-written; regenerate with:
+```
+python tools/diagbox/make_profile.py --ecu-json data/diagbox/V46_21_B7.json     --out data/diagbox/v46_21_profile.js --inject index.html
+python tools/diagbox/make_scan.py --vehicle-json data/diagbox/vehicle_B7.json     --out data/diagbox/scan_B7.js --inject index.html
+```
+They splice themselves between the `V46.21 PROFILE` and `SCAN PROFILE` markers in
+`index.html`.
 
 Requires HTTPS (GitHub Pages provides it) or localhost — Web Bluetooth won't run from `file://`.
 

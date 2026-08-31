@@ -35,6 +35,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -69,6 +86,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -103,6 +137,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -137,6 +188,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -171,6 +239,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -205,6 +290,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -239,6 +341,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -273,6 +392,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -307,6 +443,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -341,6 +494,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -375,6 +545,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -409,6 +596,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -443,6 +647,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -477,6 +698,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -511,7 +749,8 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
-   }
+   },
+   "faults": null
   },
   {
    "family": "AVE",
@@ -545,6 +784,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -579,6 +835,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54"
+    }
    }
   },
   {
@@ -613,7 +886,8 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
-   }
+   },
+   "faults": null
   },
   {
    "family": "BMF",
@@ -647,7 +921,8 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
-   }
+   },
+   "faults": null
   },
   {
    "family": "BML",
@@ -681,7 +956,8 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
-   }
+   },
+   "faults": null
   },
   {
    "family": "BOITEVIT",
@@ -715,6 +991,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -749,6 +1042,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -783,6 +1093,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190226",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -817,6 +1144,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54"
+    }
    }
   },
   {
@@ -851,6 +1195,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -885,6 +1246,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -919,6 +1297,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -953,6 +1348,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -987,6 +1399,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1021,6 +1450,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1055,6 +1501,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1089,6 +1552,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1123,6 +1603,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1157,7 +1654,8 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
-   }
+   },
+   "faults": null
   },
   {
    "family": "CSR",
@@ -1191,6 +1689,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1225,6 +1740,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1259,7 +1791,8 @@
     "init_answer": "",
     "stop_request": "",
     "stop_answer": ""
-   }
+   },
+   "faults": null
   },
   {
    "family": "DMTC",
@@ -1293,6 +1826,23 @@
     "init_answer": "",
     "stop_request": "",
     "stop_answer": ""
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1327,6 +1877,23 @@
     "init_answer": "",
     "stop_request": "",
     "stop_answer": ""
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1361,6 +1928,23 @@
     "init_answer": "C1",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1395,6 +1979,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1429,6 +2030,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "50"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1463,6 +2081,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1497,6 +2132,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1531,6 +2183,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1565,6 +2234,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1599,6 +2285,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1633,6 +2336,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1667,6 +2387,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190226",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1701,6 +2438,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1735,6 +2489,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "19020E",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1769,6 +2540,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1803,6 +2591,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1837,6 +2642,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1871,6 +2693,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1905,6 +2744,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -1939,6 +2795,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "19020E",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -1973,6 +2846,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2007,6 +2897,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2041,6 +2948,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "19020E",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2075,6 +2999,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2109,6 +3050,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2143,6 +3101,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2177,6 +3152,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190226",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2211,6 +3203,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2245,6 +3254,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2279,6 +3305,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2313,6 +3356,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2347,6 +3407,23 @@
     "init_answer": "C1D08F",
     "stop_request": "82",
     "stop_answer": "C2"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2381,6 +3458,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2415,6 +3509,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2449,6 +3560,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2483,6 +3611,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2517,6 +3662,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2551,6 +3713,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2585,6 +3764,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2619,7 +3815,8 @@
     "init_answer": "5092",
     "stop_request": "1081",
     "stop_answer": "5081"
-   }
+   },
+   "faults": null
   },
   {
    "family": "RUMBLE",
@@ -2646,7 +3843,8 @@
    },
    "dtc_count": 0,
    "odx_file": "RUMBLE_VD46_RUMBLE_599_CCP.xml",
-   "frames": null
+   "frames": null,
+   "faults": null
   },
   {
    "family": "SAM",
@@ -2680,6 +3878,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2714,6 +3929,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54FF00"
+    }
    }
   },
   {
@@ -2748,6 +3980,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDTC",
+     "request": "14FF00",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2782,6 +4031,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2816,6 +4082,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2850,6 +4133,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2884,6 +4184,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2918,6 +4235,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2952,6 +4286,23 @@
     "init_answer": "50C0",
     "stop_request": "1081",
     "stop_answer": "5081"
+   },
+   "faults": {
+    "read": {
+     "header": 2,
+     "record": 3,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 2,
+     "service": "RDSDTC",
+     "request": "17FF00",
+     "answer": "57"
+    },
+    "clear": {
+     "service": "CLRDI",
+     "request": "14FF00",
+     "answer": "54"
+    }
    }
   },
   {
@@ -2986,6 +4337,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3020,6 +4388,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3054,6 +4439,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3088,7 +4490,8 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
-   }
+   },
+   "faults": null
   },
   {
    "family": "TELE_BMF",
@@ -3122,7 +4525,8 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
-   }
+   },
+   "faults": null
   },
   {
    "family": "TELE_BML",
@@ -3156,7 +4560,8 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
-   }
+   },
+   "faults": null
   },
   {
    "family": "TELE_BOITEVIT",
@@ -3190,6 +4595,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190226",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3224,6 +4646,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3258,6 +4697,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3292,6 +4748,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3326,6 +4799,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3360,7 +4850,8 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
-   }
+   },
+   "faults": null
   },
   {
    "family": "TELE_DSG",
@@ -3394,6 +4885,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3428,6 +4936,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190226",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3462,6 +4987,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "19020E",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3496,6 +5038,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "19020E",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3530,6 +5089,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "19020E",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3564,6 +5140,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190226",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3598,6 +5191,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3632,6 +5242,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3666,6 +5293,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3700,6 +5344,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3734,6 +5395,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3768,6 +5446,23 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "read": {
+     "header": 3,
+     "record": 4,
+     "code_at": 0,
+     "code_len": 2,
+     "status_at": 3,
+     "service": "RDDTCS",
+     "request": "190209",
+     "answer": "5902"
+    },
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   },
   {
@@ -3802,6 +5497,13 @@
     "init_answer": "5001",
     "stop_request": "1001",
     "stop_answer": "5001"
+   },
+   "faults": {
+    "clear": {
+     "service": "CDTCI",
+     "request": "14FFFFFF",
+     "answer": "54"
+    }
    }
   }
  ]

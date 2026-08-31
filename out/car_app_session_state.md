@@ -192,9 +192,36 @@ parameters.
   categories (permanent / intermittent / fleeting) but hold no numeric encoding
   for this ECU, so the app shows the raw byte. Resolve it against a real fault.
 
-**Still to do, in the agreed order:** module scan across the 112 ECUs of B7
-(`data/diagbox/vehicle_B7.json`, note KWP `81`/`2180` vs UDS `1001`/`22F080`),
-actuator tests, adaptation resets, telecoding read.
+## SESSION 5, step 2 — whole-car module scan
+
+- `extract_vehicle.py` now also pulls the fault read/clear frames of every ECU
+  on the platform. Two families in play: KWP `17 FF 00` -> `57 <count>` with
+  3-byte records, and UDS `19 02 09` -> `59 02 <mask>` with 4-byte records
+  (code 2 + fault type 1 + status 1). The header lengths are stated in
+  `DTC_LAYOUT` because the databases model the records but not the count or
+  mask byte in front of them.
+- `make_scan.py` renders that into a 10 kB `V4621_SCAN` profile spliced into
+  `index.html`: 57 probes over 41 CAN addresses.
+- **СКАН** button: per address it sets ATSH/ATCRA/ATFCSH, opens a session,
+  sends the recognition frame and, on an answer, reads the fault memory. It
+  shortens the adapter timeout to 200 ms (`ATST32`) for the sweep so absent
+  modules fail fast, and restores `ATSTFF` plus the engine header afterwards.
+  Runs under `Session.lock()`, so live values freeze for the ~1 minute it takes.
+- **Honest limit:** several ECUs share one address *and* the same recognition
+  frame (e.g. ABS81 / ESP81 on 6AD). Only the identification bytes tell them
+  apart, and that fingerprint (`DSD.IDENTIF`, 37k rows) was not extracted, so
+  the result lists every candidate marked "один из" instead of guessing. The
+  engine address is the exception — the loaded profile already names it.
+- Fault codes from other modules are shown as raw codes: the app embeds the
+  291 descriptions of the engine only. All 201k are in `GPC.FDB` if per-module
+  dictionaries are ever wanted.
+- Verified offline against a simulated adapter (KWP and UDS modules, both
+  record layouts) and rendered in a browser with stubbed results.
+  **Not yet tested on the car.**
+
+**Still to do, in the agreed order:** actuator tests, adaptation resets,
+telecoding read. Optional refinement: match the recognition answer against
+`DSD.IDENTIF` to name ambiguous modules exactly.
 
 **Not extracted:** the security-access key algorithm for `27 83`/`27 84` — it is
 code inside `AWRoot/dtrd/comm/Cal458.dll`, not data in the databases. Needed for
