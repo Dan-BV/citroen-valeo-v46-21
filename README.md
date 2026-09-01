@@ -54,6 +54,29 @@ longer have to be guessed. Every frame below is what the official tool sends.
 - `tools/diagbox/` — the extraction pipeline plus `decode.py`, which replays a
   recorded transcript through the map (this is how it was verified).
 
+## Car Scanner profile
+`out/custompids_v46_21_diagbox.csp` — 86 custom PIDs for Car Scanner, generated from
+the same extraction by `tools/diagbox/make_csp.py`. It holds **only what standard
+OBD-II does not already give on this ECU**: the ten parameters covered by supported
+mode-01 PIDs (RPM 010C, coolant 0105, IAT 010F, voltage 0142, speed 010D, both O2
+voltages 0114/0115, throttle 0111, timing 010E, MAP 010B) are deliberately left out.
+
+Notes:
+- Each entry carries the session opener in its "before command" field
+  (`ATCRA688;ATFCSH6A8;ATFCSD300000;ATFCSM1;81`) — without the `81` the ECU answers
+  nothing to a `21xx` read.
+- Requests use the bare `21Cx` form, whose answer is `61 Cx …`. Car Scanner strips
+  those two bytes, so payload byte 1 is `A` in the formulas.
+- Pages `$C3` and `$DB` are omitted: this ECU does not answer them. `$CF` (the dealer
+  service stamp) is omitted too — its date/mileage encoding is not established.
+- `RAPPORT_ENGAGE` and `TYPE_BOITE_VITESSES` share one byte through bit masks and are
+  omitted, since Car Scanner's support for mask expressions varies by version.
+- Every numeric formula was checked against `tools/diagbox/decode.py` on the recorded
+  drive: 51 of 51 comparable values match. The rest are enumerations, where the tile
+  shows the raw number and the legend sits in the long name.
+- Car Scanner sends one request per PID, unlike this app which reads a whole page and
+  splits it — so a dashboard packed with these will poll noticeably slower.
+
 ## Project layout & workflow
 This repo is the single project root (moved here 2026-08-28).
 - `index.html` — the app itself. **Edit it directly; `git push` deploys it** (GitHub Pages serves it).
