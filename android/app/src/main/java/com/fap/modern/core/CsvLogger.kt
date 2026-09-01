@@ -19,7 +19,7 @@ class CsvLogger(private val dir: File) {
     val isRunning: Boolean get() = writer != null
 
     @Synchronized
-    fun start(params: List<ParamDef>) {
+    fun start(params: List<Field>) {
         if (writer != null) return
         if (!dir.exists()) dir.mkdirs()
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())

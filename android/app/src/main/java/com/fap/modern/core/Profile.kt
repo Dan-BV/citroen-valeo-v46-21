@@ -30,6 +30,8 @@ data class Field(
     val states: Map<Int, String>? = null,
     /** Identification fields are packed decimal digits, shown as hex. */
     val isHex: Boolean = false,
+    /** The page this field is read from, e.g. "CB". */
+    val pageId: String = "",
 ) {
     val kind: ValueKind get() = if (states != null) ValueKind.ENUM else ValueKind.NUMERIC
 
@@ -83,7 +85,7 @@ data class Profile(
             val req = can.getString("req")
             val res = can.getString("res")
 
-            fun fields(arr: org.json.JSONArray): List<Field> =
+            fun fields(arr: org.json.JSONArray, pageId: String): List<Field> =
                 (0 until arr.length()).map { i ->
                     val f = arr.getJSONObject(i)
                     val states = f.optJSONObject("st")?.let { st ->
@@ -104,6 +106,7 @@ data class Profile(
                         bitMask = if (f.has("m")) f.getInt("m") else null,
                         states = states,
                         isHex = f.optBoolean("hex", false),
+                        pageId = pageId,
                     )
                 }
 
@@ -111,13 +114,14 @@ data class Profile(
                 val arr = o.optJSONArray(key) ?: return emptyList()
                 return (0 until arr.length()).map { i ->
                     val p = arr.getJSONObject(i)
+                    val id = p.optString("id", p.getString("req"))
                     Page(
-                        id = p.optString("id", p.getString("req")),
+                        id = id,
                         request = p.getString("req"),
                         marker = p.getString("mk"),
                         title = p.optString("title", ""),
                         slow = p.optBoolean("slow", slowDefault),
-                        fields = fields(p.getJSONArray("params")),
+                        fields = fields(p.getJSONArray("params"), id),
                         header = req,
                         receive = res,
                     )

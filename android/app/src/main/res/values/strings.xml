@@ -1,10 +1,10 @@
 <resources>
-    <string name="app_name">FAP Live</string>
-    <string name="connect">Connect</string>
-    <string name="disconnect">Disconnect</string>
-    <string name="status_disconnected">Disconnected</string>
-    <string name="status_connecting">Connecting…</string>
-    <string name="status_connected">Connected</string>
+    <string name="app_name">Citroën Valeo V46.21</string>
+    <string name="connect">Подключить</string>
+    <string name="disconnect">Отключить</string>
+    <string name="status_disconnected">Отключено</string>
+    <string name="status_connecting">Подключение…</string>
+    <string name="status_connected">Подключено</string>
     <string name="log_on">Logging: ON</string>
     <string name="log_off">Logging: OFF</string>
     <string name="no_data">--</string>

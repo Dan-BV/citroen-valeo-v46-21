@@ -6,8 +6,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.fap.modern.core.AppState
-import com.fap.modern.core.ParamDef
-import com.fap.modern.core.V4621Profile
+import com.fap.modern.core.Field
 import com.fap.modern.databinding.ActivityGraphBinding
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -15,7 +14,7 @@ import java.util.Locale
 class GraphActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityGraphBinding
-    private lateinit var def: ParamDef
+    private lateinit var field: Field
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,34 +23,33 @@ class GraphActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val key = intent.getStringExtra("key")
-        val found = key?.let { V4621Profile.byKey(it) }
+        val found = AppState.profile.fields.firstOrNull { it.key == key }
         if (found == null) { finish(); return }
-        def = found
+        field = found
 
-        binding.toolbar.title = def.label
-        binding.toolbar.subtitle = "${def.page}  ·  ${def.unit}"
+        binding.toolbar.title = field.label
+        binding.toolbar.subtitle = subtitle(null)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
-        if (def.desc.isNotBlank()) {
-            binding.desc.text = def.desc
-            binding.desc.visibility = android.view.View.VISIBLE
-        }
-
-        binding.chart.bind(def.unit, def.decimals, def.min, def.max)
-        binding.chart.setData(session().historySnapshot(def.key))
+        binding.chart.bind(field.unit, field.decimals, field.min, field.max)
+        binding.chart.setData(AppState.session.historySnapshot(field.key))
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                session().values.collect { values ->
-                    binding.chart.setData(session().historySnapshot(def.key))
-                    val s = values[def.key]
-                    binding.toolbar.subtitle = if (s != null && s.valid)
-                        "${def.page}  ·  " + String.format(Locale.US, "%.${def.decimals}f %s", s.value, def.unit)
-                    else "${def.page}  ·  ${def.unit}"
+                AppState.session.values.collect { values ->
+                    binding.chart.setData(AppState.session.historySnapshot(field.key))
+                    val s = values[field.key]
+                    binding.toolbar.subtitle =
+                        subtitle(if (s != null && s.valid) s.value else null)
                 }
             }
         }
     }
 
-    private fun session() = AppState.session
+    private fun subtitle(value: Double?): String {
+        val where = "\$${field.pageId}"
+        return if (value == null) "$where  ·  ${field.unit}"
+        else "$where  ·  " +
+            String.format(Locale.US, "%.${field.decimals}f %s", value, field.unit)
+    }
 }

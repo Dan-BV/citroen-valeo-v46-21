@@ -12,7 +12,19 @@ import java.util.UUID
 
 /** How the adapter is reached. */
 sealed interface TransportConfig {
+    /** Classic Bluetooth SPP (RFCOMM) - what most ELM327 adapters expose. */
     data class Bluetooth(val address: String, val name: String) : TransportConfig
+
+    /**
+     * BLE GATT clones. [context] must be the application context: the config
+     * outlives an activity.
+     */
+    data class Ble(
+        val address: String,
+        val name: String,
+        val context: android.content.Context,
+    ) : TransportConfig
+
     data class Wifi(val host: String, val port: Int) : TransportConfig
 }
 
