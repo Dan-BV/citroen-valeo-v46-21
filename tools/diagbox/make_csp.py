@@ -35,6 +35,86 @@ STANDARD = {
     'PRESSIONTUBULURE': '010B',
 }
 
+# Confirmed absent on this car: the byte reads FF ("no data") in every sample
+# of the recorded drive, so the electric vacuum pump is not fitted.
+NOT_FITTED = {'ETAT_COMMANDE_POMPE_VIDE_ELECTRIQUE'}
+
+# A working diagnostic set, chosen from the recorded drive rather than by
+# taste. Parameters left out fall into three groups: never answered ($C3, $DB),
+# always FF, or byte-identical to another one in every sample - this ECU sends
+# the same value for all four injection times, for both mixture corrections,
+# for optimal and maximum advance, for commanded and measured throttle angle,
+# and for air torque and driver-demand torque.
+CORE = [
+    # Mixture, oxygen sensors, canister
+    'TEMPS_INJECTION_CYLINDRE_01',
+    'ETAT_SONDE_A_OXYGENE_AMONT',
+    'ETAT_SONDE_A_OXYGENE_AVAL',
+    'RCOAMONT',
+    'RCOAVAL',
+    'FACTEUR_CORRECTION_RICHESSE_AMONT',
+    'CON_RICHESSE',
+    'CHARGE_ESTIMEE_CANISTER',
+    'CDERCOELECPURGE',
+    # Ignition and knock
+    'AVANCE_ALLUMAGE_OPTIMAL',
+    'AVANCE_ALLUMAGE_MINIMUM',
+    'RETRAIT_AVANCE_ALLUMAGE_CYLINDRE_01',
+    'BRUIT_CAPTEUR_CLIQUETIS',
+    # Intake and throttle
+    'DEBIT_AIR',
+    'DEBAIRCONS',
+    'CONSIGNE_PRESSION_ADMISSION',
+    'ANGLE_PAPILLON_CONSIGNE',
+    'TENSION_RECOPIE_POSITION_PAPILLON_01',
+    'TENSION_RECOPIE_POSITION_PAPILLON_02',
+    # Torque
+    'COUPLE_MOTEUR_EFFECTIF_AIR',
+    'COUPLE_RESISTANT_MOTEUR_ESTIME',
+    # Supplies and sensors
+    'TENSION_ALIMENTATION_CAPTEURS_01',
+    'TENSION_ALIMENTATION_CAPTEURS_03',
+    'PRESSION_HUILE_MOTEUR',
+    # Vehicle systems
+    'PRESSION_MASTERVAC',
+    'PRESSION_CIRCUIT_REFRIGERANT_a',
+    'REGMOTRALENTI',
+    'NIVEAU_CARBURANT_AFFICHE',
+]
+
+# Tile names for the core set. Auto-shortening is fine for 85 rarely-used
+# entries but these are the ones that end up on a dashboard.
+CORE_NAMES = {
+    'TEMPS_INJECTION_CYLINDRE_01': 'Впрыск',
+    'ETAT_SONDE_A_OXYGENE_AMONT': 'Лямбда до кат.',
+    'ETAT_SONDE_A_OXYGENE_AVAL': 'Лямбда после кат.',
+    'RCOAMONT': 'Подогрев л. до кат.',
+    'RCOAVAL': 'Подогрев л. после кат.',
+    'FACTEUR_CORRECTION_RICHESSE_AMONT': 'Коррекция смеси',
+    'CON_RICHESSE': 'Задание смеси',
+    'CHARGE_ESTIMEE_CANISTER': 'Засорение адсорбера',
+    'CDERCOELECPURGE': 'Клапан адсорбера',
+    'AVANCE_ALLUMAGE_OPTIMAL': 'УОЗ оптимальный',
+    'AVANCE_ALLUMAGE_MINIMUM': 'УОЗ минимальный',
+    'RETRAIT_AVANCE_ALLUMAGE_CYLINDRE_01': 'Отмена УОЗ цил.1',
+    'BRUIT_CAPTEUR_CLIQUETIS': 'Шум детонации',
+    'DEBIT_AIR': 'Расход воздуха',
+    'DEBAIRCONS': 'Расход возд. задание',
+    'CONSIGNE_PRESSION_ADMISSION': 'Задание P впуска',
+    'ANGLE_PAPILLON_CONSIGNE': 'Задание дросселя',
+    'TENSION_RECOPIE_POSITION_PAPILLON_01': 'U дросселя 1',
+    'TENSION_RECOPIE_POSITION_PAPILLON_02': 'U дросселя 2',
+    'COUPLE_MOTEUR_EFFECTIF_AIR': 'Момент по воздуху',
+    'COUPLE_RESISTANT_MOTEUR_ESTIME': 'Момент сопротивл.',
+    'TENSION_ALIMENTATION_CAPTEURS_01': 'Питание датчиков 1',
+    'TENSION_ALIMENTATION_CAPTEURS_03': 'Питание датчиков 3',
+    'PRESSION_HUILE_MOTEUR': 'Давление масла',
+    'PRESSION_MASTERVAC': 'Вакуум усилителя',
+    'PRESSION_CIRCUIT_REFRIGERANT_a': 'P кондиционера',
+    'REGMOTRALENTI': 'Задание Х.Х.',
+    'NIVEAU_CARBURANT_AFFICHE': 'Уровень топлива',
+}
+
 # The init the engine ECU needs before it answers any 21xx read.
 BEFORE = 'ATCRA688;ATFCSH6A8;ATFCSD300000;ATFCSM1;81'
 
@@ -149,6 +229,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--profile', required=True)
     ap.add_argument('--out', required=True)
+    ap.add_argument('--core', action='store_true',
+                    help='emit only the working diagnostic set')
     a = ap.parse_args()
 
     txt = open(a.profile, encoding='utf-8').read()
@@ -159,6 +241,10 @@ def main():
         if pg['id'] not in PAGES:
             continue
         for f in pg['params']:
+            if f['k'] in NOT_FITTED:
+                continue
+            if a.core and f['k'] not in CORE:
+                continue
             if f['k'] in STANDARD:
                 skipped_std.append(f['k'])
                 continue
@@ -188,7 +274,9 @@ def main():
                 'FHID': False, 'RBS': False, 'ORD': -1, 'TVV': None,
                 'FR': formula(f), 'UN': 0,
                 'BCM': BEFORE, 'ACM': '', 'ACT': False, 'TRNS': [],
-                'NM': name, 'SNM': short_name(f['l']), '_label': f['l'],
+                'NM': name,
+                'SNM': CORE_NAMES.get(f['k']) or short_name(f['l']),
+                '_label': f['l'],
                 'HDR': '6A8', 'RL': 0,
                 'MAX': float(hi), 'MIN': float(lo),
                 'Id': pid, 'VIS': True, 'SkipCycles': 0, 'ABRPRole': 0,
