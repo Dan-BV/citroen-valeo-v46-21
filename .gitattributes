@@ -1,0 +1,6 @@
+# The CI runner is Linux: the wrapper script must keep LF endings, and the
+# wrapper jar must never be touched by line-ending conversion.
+gradlew text eol=lf
+*.sh text eol=lf
+*.jar binary
+*.apk binary
