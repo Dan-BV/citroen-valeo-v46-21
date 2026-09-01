@@ -102,6 +102,25 @@ Notes:
 - Car Scanner sends one request per PID, unlike this app which reads a whole page and
   splits it — so a dashboard packed with these will poll noticeably slower.
 
+## Android app
+`android/` is a native client with the same feature set as the web page, and one
+thing the web page cannot have: **classic Bluetooth SPP**. Android Chrome's Web
+Bluetooth speaks BLE only, so the working RFCOMM adapter is unreachable from the
+browser on a phone. Both transports are supported here.
+
+There is no JDK or Android SDK on the development machine, so **CI is the compiler**:
+every push touching `android/` runs `.github/workflows/android.yml`, which builds a
+debug APK and attaches it to the run. Download it from the run's Artifacts section
+(`gh run download <id> -n apk`) and sideload it.
+
+It reads the very same generated profile as the web app — `make_profile.py` and
+`make_scan.py` write `android/app/src/main/assets/*.json` with `--json-out` — so the
+two clients cannot drift apart.
+
+Not carried over: K-line, the init-mode picker and the byte-shift nudge. This ECU is
+reached over CAN, neither adapter has a working K-line transceiver, and byte offsets
+now come from the databases instead of being tuned by hand.
+
 ## Project layout & workflow
 This repo is the single project root (moved here 2026-08-28).
 - `index.html` — the app itself. **Edit it directly; `git push` deploys it** (GitHub Pages serves it).
@@ -109,6 +128,7 @@ This repo is the single project root (moved here 2026-08-28).
   `calibrate.py` (align transcript+FAP CSV → verify/discover offsets), `gen_csp.py` / `gen_csp_obd.py`
   (emit Car Scanner `.csp`), and its own `README.md`. `data/` holds the reproducible captures.
 - `tools/diagbox/` — Diagbox database extraction (see above).
+- `android/` — the native Android client, built by GitHub Actions.
 - `out/` — calibration docs (`*.md`) and Car Scanner profiles (`*.csp`).
 - `tools/platform-tools/` — adb (git-ignored). Needed to pull a new drive's btsnoop via `adb bugreport`.
 

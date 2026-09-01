@@ -164,9 +164,14 @@ class ElmSession(
         send("ATFCSD300000", 800)
         send("ATFCSM1", 800)
         send("81", 2500)
-        val probe = profile.pages.firstOrNull() ?: return true
-        val reply = send(withCount(probe.request), 2500)
-        return !Frames.isError(reply) && Frames.clean(reply).contains(probe.marker)
+        // Consider the ECU reachable if any of the first few pages answers -
+        // a single page can be one this variant does not implement, and that
+        // is not a reason to call the whole connection dead.
+        for (page in profile.pages.take(3)) {
+            val reply = send(withCount(page.request), 2500)
+            if (!Frames.isError(reply) && Frames.clean(reply).contains(page.marker)) return true
+        }
+        return false
     }
 
     private fun applyHeader(header: String, receive: String) {

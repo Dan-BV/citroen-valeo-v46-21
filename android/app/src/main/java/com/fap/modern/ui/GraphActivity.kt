@@ -14,7 +14,7 @@ import java.util.Locale
 class GraphActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityGraphBinding
-    private lateinit var field: Field
+    private lateinit var param: Field
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,20 +25,20 @@ class GraphActivity : AppCompatActivity() {
         val key = intent.getStringExtra("key")
         val found = AppState.profile.fields.firstOrNull { it.key == key }
         if (found == null) { finish(); return }
-        field = found
+        param = found
 
-        binding.toolbar.title = field.label
+        binding.toolbar.title = param.label
         binding.toolbar.subtitle = subtitle(null)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
-        binding.chart.bind(field.unit, field.decimals, field.min, field.max)
-        binding.chart.setData(AppState.session.historySnapshot(field.key))
+        binding.chart.bind(param.unit, param.decimals, param.min, param.max)
+        binding.chart.setData(AppState.session.historySnapshot(param.key))
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 AppState.session.values.collect { values ->
-                    binding.chart.setData(AppState.session.historySnapshot(field.key))
-                    val s = values[field.key]
+                    binding.chart.setData(AppState.session.historySnapshot(param.key))
+                    val s = values[param.key]
                     binding.toolbar.subtitle =
                         subtitle(if (s != null && s.valid) s.value else null)
                 }
@@ -47,9 +47,9 @@ class GraphActivity : AppCompatActivity() {
     }
 
     private fun subtitle(value: Double?): String {
-        val where = "\$${field.pageId}"
-        return if (value == null) "$where  ·  ${field.unit}"
+        val where = "\$${param.pageId}"
+        return if (value == null) "$where  ·  ${param.unit}"
         else "$where  ·  " +
-            String.format(Locale.US, "%.${field.decimals}f %s", value, field.unit)
+            String.format(Locale.US, "%.${param.decimals}f %s", value, param.unit)
     }
 }
