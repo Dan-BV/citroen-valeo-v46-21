@@ -197,6 +197,9 @@ class ElmSession(
             noCount.add(page.request)
             if (tryPage(page)) continue
             noCount.remove(page.request)
+            // One more try: the first failure can be the tail of an earlier
+            // desync rather than a page this ECU lacks.
+            if (tryPage(page)) continue
             skip.add(page.request)
         }
         HashSet(skip)
@@ -221,7 +224,7 @@ class ElmSession(
                 // Slow pages hold still while driving; dead ones get an
                 // occasional retry in case the failure was transient.
                 if (page.slow && cycle % 10L != 1L) continue
-                if (skip.contains(page.request) && cycle % 100L != 0L) continue
+                if (skip.contains(page.request) && cycle % 20L != 0L) continue
 
                 val reply = io.withLock {
                     applyHeader(page.header, page.receive)
@@ -386,11 +389,31 @@ class ElmSession(
         }
     }
 
+    /**
+     * Anything still in the input belongs to an earlier exchange - a reply that
+     * arrived after its timeout, or trailing bytes after the prompt. Left in
+     * place it is read as the answer to the next command, and from then on
+     * every read returns the previous page's data: the marker no longer
+     * matches, so page after page looks dead.
+     */
+    private fun drain(inp: java.io.InputStream) {
+        val buf = ByteArray(256)
+        try {
+            while (true) {
+                val avail = inp.available()
+                if (avail <= 0) return
+                if (inp.read(buf, 0, min(avail, buf.size)) <= 0) return
+            }
+        } catch (_: Exception) {
+        }
+    }
+
     /** Sends one ELM command (adds CR) and reads until the '>' prompt or timeout. */
     private fun send(cmd: String, timeoutMs: Long): String {
         val t = transport ?: return ""
         val out = t.output()
         val inp = t.input()
+        drain(inp)
         out.write((cmd + "\r").toByteArray(Charsets.US_ASCII))
         out.flush()
         lastCmdMs = System.currentTimeMillis()

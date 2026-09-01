@@ -79,12 +79,17 @@ Start with `out/custompids_v46_21_test.csp` (3 PIDs, one per page) to prove the
 transport before importing a whole dashboard's worth.
 
 Notes:
-- Each entry opens the KWP session in its "before command" field
-  (`ATFCSH6A8;ATFCSD300000;ATFCSM1;81`) — without the `81` the ECU answers nothing to
-  a `21xx` read — and restores automatic flow control afterwards (`ATFCSM0`).
-- **No `ATCRA` here, deliberately.** A receive filter set to 688 stays set after the
-  request, so the next standard PID waits for a 7E8 reply that the filter drops. That
-  looks like the whole app hanging rather than one custom PID failing.
+- Each entry's "before command" field is just **`81`**, which opens the KWP session —
+  without it the ECU answers nothing to a `21xx` read.
+- **Nothing else is set, deliberately: adapter state is sticky.** `ATCRA688` kept
+  filtering out the 7E8 replies of every standard PID that followed. `ATFCSH6A8` plus
+  `ATFCSM1` are worse — they make the adapter answer a multi-frame reply from 7E8 with
+  a flow-control frame addressed to 6A8, so the ECU never receives it and every cycle
+  stalls on a timeout. A dashboard mixing custom and standard PIDs freezes outright.
+  Undoing it in the after-command was not enough. Automatic flow control derives the
+  frame from the current request header, which is what we want anyway.
+- `out/custompids_v46_21_test_fc.csp` is the same three PIDs *with* explicit flow
+  control, kept only to compare against on an adapter that needs it.
 - Car Scanner sends one request per PID, and each of these costs two bus transactions
   (`81` then the page read). A dashboard of 5-8 of them polls comfortably; thirty do
   not. If you want them faster, move `81` into the adapter's own init commands so it

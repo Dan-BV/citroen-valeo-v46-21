@@ -128,15 +128,26 @@ CORE_NAMES = {
     'NIVEAU_CARBURANT_AFFICHE': 'Уровень топлива',
 }
 
-# Run before each read. Two rules matter here:
-#   * no ATCRA. A receive filter set for 688 stays set, so Car Scanner's next
-#     standard PID waits for 7E8 and never sees it - which looks like the whole
-#     app hanging, not like one custom PID failing.
-#   * 81 opens the KWP session; without it the ECU answers nothing to 21xx.
-# Flow control has to be forced for the multi-frame page replies, so it is put
-# back to automatic afterwards for the same reason as the filter.
-BEFORE = 'ATFCSH6A8;ATFCSD300000;ATFCSM1;81'
-AFTER = 'ATFCSM0'
+# Run before each read. The rule is: leave no adapter state behind.
+#
+# `81` opens the KWP session and is unavoidable - the ECU answers nothing to a
+# 21xx read without it, and it is harmless to the standard PIDs.
+#
+# Everything else was harmful. `ATCRA688` kept filtering out the 7E8 replies of
+# every standard PID that followed. `ATFCSH6A8` + `ATFCSM1` are worse still:
+# they stay set, so the adapter answers a multi-frame reply from 7E8 with a
+# flow-control frame addressed to 6A8, the ECU never receives it, and every
+# cycle stalls on a timeout - a dashboard mixing custom and standard PIDs
+# simply freezes. Undoing it in the after-command was not enough.
+#
+# Without them the adapter uses automatic flow control, which derives the frame
+# from the current request header - 6A8 while our PID is polled, which is
+# exactly right. Should a particular adapter disagree, --fc emits the explicit
+# variant for comparison.
+BEFORE = '81'
+BEFORE_FC = 'ATFCSH6A8;ATFCSD300000;ATFCSM1;81'
+AFTER = ''
+AFTER_FC = 'ATFCSM0'
 
 # Abbreviations, longest first. They shorten rather than delete, so a
 # truncated name still says what it is.
@@ -253,11 +264,16 @@ def main():
                     help='emit only the working diagnostic set')
     ap.add_argument('--test', action='store_true',
                     help='emit three PIDs, one per page, to prove the setup')
+    ap.add_argument('--fc', action='store_true',
+                    help='force flow control explicitly instead of relying on '
+                         'the adapter (leaves sticky state; for comparison)')
     a = ap.parse_args()
 
     txt = open(a.profile, encoding='utf-8').read()
     prof = json.loads(txt.split('= ', 1)[1].strip().rstrip(';'))
 
+    before = BEFORE_FC if a.fc else BEFORE
+    after = AFTER_FC if a.fc else AFTER
     out, skipped_std, skipped_bits, pid = [], [], [], 2001
     for pg in prof['pages']:
         if pg['id'] not in PAGES:
@@ -297,7 +313,7 @@ def main():
                 'SIG': False, 'TP': 0, 'BIT': 0,
                 'FHID': False, 'RBS': False, 'ORD': -1, 'TVV': None,
                 'FR': formula(f), 'UN': 0,
-                'BCM': BEFORE, 'ACM': AFTER, 'ACT': False, 'TRNS': [],
+                'BCM': before, 'ACM': after, 'ACT': False, 'TRNS': [],
                 'NM': name,
                 'SNM': CORE_NAMES.get(f['k']) or short_name(f['l']),
                 '_label': f['l'],
