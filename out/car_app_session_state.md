@@ -277,6 +277,37 @@ reading sits a normal 12-15 mBar below it for a low-pressure day. The database
 formula (2 bytes, offset +500) is right, and the app's earlier hand-fitted
 1-byte `+756` was the wrong one.
 
+## SESSION 6 (2026-09-01) — native Android client
+
+Why native at all: **Android Chrome's Web Bluetooth is BLE-only**, so the web
+page can never reach the classic-SPP adapter that actually works on this car.
+That alone justifies the port; background logging and no HTTPS dependency come
+free.
+
+- The old `fap_modern` Kotlin skeleton moved into the repo as `android/`. It
+  already had an RFCOMM transport, coroutines and a chart view; what it lacked
+  was the data.
+- **No JDK and no Android SDK on this machine**, so CI is the compiler:
+  `.github/workflows/android.yml` builds a debug APK on every push touching
+  `android/` and attaches it to the run. Iteration is ~2.5 min, so write
+  carefully and batch changes.
+- Both clients now read the *same* generated profile:
+  `make_profile.py --json-out` and `make_scan.py --json-out` write into
+  `android/app/src/main/assets/`. Never hand-edit the parameter table.
+- Ported in full: 118 parameters grouped by read page, enum states as text,
+  identification, fault read/clear, the 41-address scan, the page diagnostic,
+  the fair-queue adapter lock, the connect-time page probe and the
+  expected-response-count suffix. BLE transport added alongside SPP; the
+  notify/write characteristics are discovered, not hardcoded.
+- **Fixed a real defect inherited from the old Kotlin parser:** it stripped
+  every non-hex character, which folds the frame indices (`0:`, `1:`) and the
+  length header of a multi-frame ISO-TP reply into the payload and corrupts
+  every field past the first frame. `Frames.clean` handles them properly, as
+  the web version already did.
+- Dropped: K-line, the init-mode picker, the byte-shift nudge. All obsolete.
+- **Compiles, but has never run on a phone or a car.** Everything below is
+  unverified on hardware: BLE in particular is written from the spec.
+
 **Still to do, in the agreed order:** actuator tests, adaptation resets,
 telecoding read. Optional refinement: match the recognition answer against
 `DSD.IDENTIF` to name ambiguous modules exactly.
