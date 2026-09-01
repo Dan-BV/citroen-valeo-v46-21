@@ -7,3 +7,10 @@ fap_src/
 tools/btsnoop/data/*.zip
 __pycache__/
 *.pyc
+
+# Android build outputs
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/.idea/

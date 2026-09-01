@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView style="@style/CfgLabel" android:text="Connection" />
+
+        <RadioGroup
+            android:id="@+id/transportGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton android:id="@+id/rbBluetooth" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Bluetooth" />
+            <RadioButton android:id="@+id/rbWifi" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:text="WiFi" />
+        </RadioGroup>
+
+        <TextView style="@style/CfgLabel" android:text="Bluetooth device (paired)" />
+        <Spinner
+            android:id="@+id/btSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView style="@style/CfgLabel" android:text="WiFi host" />
+        <EditText
+            android:id="@+id/wifiHost"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text"
+            android:hint="192.168.0.10" />
+
+        <TextView style="@style/CfgLabel" android:text="WiFi port" />
+        <EditText
+            android:id="@+id/wifiPort"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:hint="35000" />
+
+        <TextView style="@style/CfgLabel" android:text="KWP init mode" />
+        <Spinner
+            android:id="@+id/initSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView style="@style/CfgLabel" android:text="Frame byte shift (offset tuning)" />
+        <EditText
+            android:id="@+id/frameShift"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberSigned"
+            android:hint="0" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/on_surface_dim"
+            android:textSize="11sp"
+            android:text="Nudges every parameter's byte offset. Only needed if values look wrong against a live 21Cx dump." />
+    </LinearLayout>
+</ScrollView>
