@@ -75,10 +75,21 @@ The core set was chosen from the recorded drive, not by taste. Left out of it:
   for optimal and maximum advance, for commanded and measured throttle angle, and for
   air torque and driver-demand torque. Only one of each pair is kept.
 
+Start with `out/custompids_v46_21_test.csp` (3 PIDs, one per page) to prove the
+transport before importing a whole dashboard's worth.
+
 Notes:
-- Each entry carries the session opener in its "before command" field
-  (`ATCRA688;ATFCSH6A8;ATFCSD300000;ATFCSM1;81`) — without the `81` the ECU answers
-  nothing to a `21xx` read.
+- Each entry opens the KWP session in its "before command" field
+  (`ATFCSH6A8;ATFCSD300000;ATFCSM1;81`) — without the `81` the ECU answers nothing to
+  a `21xx` read — and restores automatic flow control afterwards (`ATFCSM0`).
+- **No `ATCRA` here, deliberately.** A receive filter set to 688 stays set after the
+  request, so the next standard PID waits for a 7E8 reply that the filter drops. That
+  looks like the whole app hanging rather than one custom PID failing.
+- Car Scanner sends one request per PID, and each of these costs two bus transactions
+  (`81` then the page read). A dashboard of 5-8 of them polls comfortably; thirty do
+  not. If you want them faster, move `81` into the adapter's own init commands so it
+  runs once per connection instead of once per PID — at the cost of values going blank
+  if the ECU's session ever times out.
 - Requests use the bare `21Cx` form, whose answer is `61 Cx …`. Car Scanner strips
   those two bytes, so payload byte 1 is `A` in the formulas.
 - Pages `$C3` and `$DB` are omitted: this ECU does not answer them. `$CF` (the dealer

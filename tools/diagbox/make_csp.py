@@ -87,6 +87,10 @@ CORE = [
     'NIVEAU_CARBURANT_AFFICHE',
 ]
 
+# Three cheap reads on three different pages: enough to tell whether the
+# transport works at all without loading a dashboard.
+TEST = ['CHARGE_ESTIMEE_CANISTER', 'DEBIT_AIR', 'PRESSION_MASTERVAC']
+
 # Tile names for the core set. Auto-shortening is fine for 85 rarely-used
 # entries but these are the ones that end up on a dashboard.
 CORE_NAMES = {
@@ -124,8 +128,15 @@ CORE_NAMES = {
     'NIVEAU_CARBURANT_AFFICHE': 'Уровень топлива',
 }
 
-# The init the engine ECU needs before it answers any 21xx read.
-BEFORE = 'ATCRA688;ATFCSH6A8;ATFCSD300000;ATFCSM1;81'
+# Run before each read. Two rules matter here:
+#   * no ATCRA. A receive filter set for 688 stays set, so Car Scanner's next
+#     standard PID waits for 7E8 and never sees it - which looks like the whole
+#     app hanging, not like one custom PID failing.
+#   * 81 opens the KWP session; without it the ECU answers nothing to 21xx.
+# Flow control has to be forced for the multi-frame page replies, so it is put
+# back to automatic afterwards for the same reason as the filter.
+BEFORE = 'ATFCSH6A8;ATFCSD300000;ATFCSM1;81'
+AFTER = 'ATFCSM0'
 
 # Abbreviations, longest first. They shorten rather than delete, so a
 # truncated name still says what it is.
@@ -240,6 +251,8 @@ def main():
     ap.add_argument('--out', required=True)
     ap.add_argument('--core', action='store_true',
                     help='emit only the working diagnostic set')
+    ap.add_argument('--test', action='store_true',
+                    help='emit three PIDs, one per page, to prove the setup')
     a = ap.parse_args()
 
     txt = open(a.profile, encoding='utf-8').read()
@@ -252,7 +265,9 @@ def main():
         for f in pg['params']:
             if f['k'] in NOT_FITTED:
                 continue
-            if a.core and f['k'] not in CORE:
+            if a.test and f['k'] not in TEST:
+                continue
+            if a.core and not a.test and f['k'] not in CORE:
                 continue
             if f['k'] in STANDARD:
                 skipped_std.append(f['k'])
@@ -282,7 +297,7 @@ def main():
                 'SIG': False, 'TP': 0, 'BIT': 0,
                 'FHID': False, 'RBS': False, 'ORD': -1, 'TVV': None,
                 'FR': formula(f), 'UN': 0,
-                'BCM': BEFORE, 'ACM': '', 'ACT': False, 'TRNS': [],
+                'BCM': BEFORE, 'ACM': AFTER, 'ACT': False, 'TRNS': [],
                 'NM': name,
                 'SNM': CORE_NAMES.get(f['k']) or short_name(f['l']),
                 '_label': f['l'],
