@@ -269,6 +269,14 @@ On a timing model built from the captured replies: 2192 ms -> 217 ms per cycle.
 Expect roughly 1480 -> 250-350 ms on the car; **to be confirmed on the next
 drive.**
 
+### Atmospheric pressure formula confirmed
+
+The `$CB` byte 56 reading of 857-860 mBar looked low until the owner confirmed
+the car lives at **1250 m**. Standard atmosphere there is ~872 mBar, so the
+reading sits a normal 12-15 mBar below it for a low-pressure day. The database
+formula (2 bytes, offset +500) is right, and the app's earlier hand-fitted
+1-byte `+756` was the wrong one.
+
 **Still to do, in the agreed order:** actuator tests, adaptation resets,
 telecoding read. Optional refinement: match the recognition answer against
 `DSD.IDENTIF` to name ambiguous modules exactly.

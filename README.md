@@ -60,9 +60,10 @@ standard OBD-II does not already give on this ECU** (the ten parameters covered 
 supported mode-01 PIDs — RPM 010C, coolant 0105, IAT 010F, voltage 0142, speed 010D,
 both O2 voltages 0114/0115, throttle 0111, timing 010E, MAP 010B — are left out):
 
-- **`out/custompids_v46_21_core.csp` — 28 PIDs, the one to import.** A working
+- **`out/custompids_v46_21_core.csp` — 32 PIDs, the one to import.** A working
   diagnostic set: mixture and oxygen sensors, canister, ignition and knock, air flow
-  and throttle tracks, torque, sensor supplies, oil pressure, brake-booster vacuum.
+  and throttle tracks, the inlet cam phaser, torque, sensor supplies, oil pressure,
+  brake-booster vacuum.
 - `out/custompids_v46_21_diagbox.csp` — all 85, for when something specific is needed.
 
 The core set was chosen from the recorded drive, not by taste. Left out of it:
