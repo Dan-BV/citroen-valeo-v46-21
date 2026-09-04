@@ -307,7 +307,10 @@ class MainActivity : AppCompatActivity() {
     private fun shareLog() {
         session.logger?.flush()
         val dir = getExternalFilesDir("logs") ?: filesDir
-        val files = (dir.listFiles().orEmpty() + File(dir, "reports").listFiles().orEmpty())
+        // listFiles() returns an Array, which has no orEmpty().
+        val logs = dir.listFiles()?.toList() ?: emptyList()
+        val reports = File(dir, "reports").listFiles()?.toList() ?: emptyList()
+        val files = (logs + reports)
             .filter { it.isFile && it.length() > 0 }
             .sortedByDescending { it.lastModified() }
         if (files.isEmpty()) {
