@@ -62,6 +62,7 @@ RU_SUBS = [
 
 # Fields the dictionary leaves untranslated or unlabelled altogether.
 RU_NAMES = {
+    'MP_AVANCE_ALLUMAGE_APPLIQUEE_A_CHAQUE_CYLINDRE': 'Применённый УОЗ, цил. 1',
     'MP_ETAT_CONTACTEUR_FREIN_PRINCIPAL': 'Состояние основного контактора тормоза',
     # $CF is the after-sales intervention stamp, $DB the raw adaptation block.
     'DONNES_ADAPT': 'Адаптивные данные',
@@ -74,6 +75,37 @@ RU_NAMES = {
     'INFTYP': 'Тип записи прослеживаемости',
     'DATEFAB': 'Аппаратный реферанс / дата изготовления',
 }
+
+
+# Fields the databases leave unnamed but the raw data identifies.
+#
+# $C1 byte 10 is labelled "ignition advance applied to EACH cylinder" and bytes
+# 11-13 are unnamed - yet in 3050 captured replies all four move as one group
+# and are always equal, which is what a four-element per-cylinder array looks
+# like when no cylinder is being corrected. Exposing 11-13 is what lets a
+# per-cylinder retard be confirmed rather than assumed: during a knock event
+# cylinder 1's applied advance should fall below the other three.
+#
+# Marked inferred, not from Diagbox. Same scaling as the advance fields.
+EXTRA = {
+    'C1': [
+        (10, 'Применённый УОЗ, цил. 2 (не подтверждено)'),
+        (11, 'Применённый УОЗ, цил. 3 (не подтверждено)'),
+        (12, 'Применённый УОЗ, цил. 4 (не подтверждено)'),
+    ],
+}
+
+
+def extra_fields(page_id):
+    out = []
+    for off, label in EXTRA.get(page_id, []):
+        out.append({
+            'k': 'AVANCE_APPLIQUEE_CYL_%d' % (off - 8),
+            'l': label, 'o': off, 'n': 1,
+            'z': 1.0, 'd': -100.0, 'u': '° коленвала',
+            'dec': 0, 'lo': -100.0, 'hi': 155.0,
+        })
+    return out
 
 
 def fix_ru(text):
@@ -201,6 +233,8 @@ def main():
                 continue          # engine speed and voltage repeat on every page
             seen.add(f['k'])
             params.append(f)
+        params.extend(extra_fields(pid))
+        params.sort(key=lambda f: f['o'])
         if params:
             pages.append({'id': pid, 'req': req_hex(u), 'mk': marker(u),
                           'title': title, 'params': params,

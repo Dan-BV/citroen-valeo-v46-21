@@ -339,6 +339,35 @@ and in the bare `21xx` form — and decodes whichever answer carries the marker,
 plus **share** actions for the report and the CSV. `Android/data` is unreachable
 with a file manager on API 30+, so both leave through a share sheet.
 
+### Per-cylinder knock retard: decode verified, attribution not
+
+Questioned whether a sustained 7 degrees on cylinder 1 was real. Three checks:
+
+- **Decode is right.** `GPC` names bytes 16-19 of `$C1` explicitly as
+  "cylinder N advance reduction", factor 1, offset -100, degrees crankshaft. In
+  3050 captured replies from a calm drive those four bytes sit at exactly 100,
+  i.e. zero retard. Four consecutive bytes landing on 100 is not a coincidence
+  of a wrong mapping.
+- **An earlier "check" of mine was invalid.** Testing that
+  `applied = optimal - retard` failed 72 times out of 94, but it fails just as
+  often when the retard is zero (2493 of 3050), because applied advance carries
+  every other intervention too - torque reduction, warm-up, shifts. It never
+  was a test of the retard mapping. Retracted.
+- **Attribution to a specific cylinder is still unproven.** Which byte belongs
+  to which cylinder comes from the database's naming and has not been checked
+  against the car.
+
+Found while doing this: `$C1` byte 10 is labelled "advance applied to **each**
+cylinder", and bytes 11-13, unnamed in the database, move as one group with it
+and are always equal in the capture. That is a four-element per-cylinder array
+of which only the first was being read. Bytes 11-13 are now in the profile,
+labelled "не подтверждено".
+
+That makes the attribution testable: during a knock event, cylinder 1's applied
+advance should sit below the other three. If all four stay equal while the
+retard channel reads 7, the mapping or the ECU's per-cylinder capability is
+wrong.
+
 **Still to do, in the agreed order:** actuator tests, adaptation resets,
 telecoding read. Optional refinement: match the recognition answer against
 `DSD.IDENTIF` to name ambiguous modules exactly.
