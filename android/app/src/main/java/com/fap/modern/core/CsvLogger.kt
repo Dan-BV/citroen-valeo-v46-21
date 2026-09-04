@@ -12,6 +12,8 @@ class CsvLogger(private val dir: File) {
 
     private var writer: BufferedWriter? = null
     private var keys: List<String> = emptyList()
+    private var file: File? = null
+    private var rows = 0
 
     var currentPath: String? = null
         private set
@@ -30,6 +32,8 @@ class CsvLogger(private val dir: File) {
         w.newLine()
         w.flush()
         writer = w
+        file = f
+        rows = 0
         currentPath = f.absolutePath
     }
 
@@ -46,6 +50,7 @@ class CsvLogger(private val dir: File) {
         }
         w.write(sb.toString())
         w.newLine()
+        rows++
     }
 
     /** Push buffered rows to disk so the file can be shared mid-session. */
@@ -58,5 +63,12 @@ class CsvLogger(private val dir: File) {
     fun stop() {
         try { writer?.flush(); writer?.close() } catch (_: Exception) {}
         writer = null
+        // A start with no rows leaves a header-only file; every connect
+        // and every LOG toggle would otherwise litter the folder.
+        if (rows == 0) {
+            try { file?.delete() } catch (_: Exception) {}
+            currentPath = null
+        }
+        file = null
     }
 }

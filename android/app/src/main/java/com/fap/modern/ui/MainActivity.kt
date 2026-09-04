@@ -31,6 +31,11 @@ import com.fap.modern.core.ScanResult
 import com.fap.modern.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+private const val NEWLINE = "\n"
 
 class MainActivity : AppCompatActivity() {
 
@@ -294,14 +299,37 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(send, f.name))
     }
 
+    /**
+     * Every connect and every LOG toggle starts a new file, and reports pile
+     * up beside them, so offer the lot newest-first rather than silently
+     * sending whichever happens to be open.
+     */
     private fun shareLog() {
         session.logger?.flush()
-        val path = session.logger?.currentPath
-        if (path == null) {
-            toast("Лог не пишется: включите LOG и подключитесь")
+        val dir = getExternalFilesDir("logs") ?: filesDir
+        val files = (dir.listFiles().orEmpty() + File(dir, "reports").listFiles().orEmpty())
+            .filter { it.isFile && it.length() > 0 }
+            .sortedByDescending { it.lastModified() }
+        if (files.isEmpty()) {
+            toast("Файлов пока нет: включите LOG и подключитесь")
             return
         }
-        shareFile(File(path), "text/csv")
+        val current = session.logger?.currentPath
+        val when_ = SimpleDateFormat("dd.MM HH:mm", Locale.US)
+        val labels = files.map { f ->
+            val kb = f.length() / 1024
+            val size = if (kb >= 1024) "%.1f МБ".format(kb / 1024.0) else "$kb КБ"
+            val mark = if (f.absolutePath == current) "  ← идёт запись" else ""
+            f.name + NEWLINE + when_.format(Date(f.lastModified())) + " · " + size + mark
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Что отправить")
+            .setItems(labels.toTypedArray()) { _, i ->
+                val f = files[i]
+                shareFile(f, if (f.name.endsWith(".csv")) "text/csv" else "text/plain")
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
     private fun buildReport() {
