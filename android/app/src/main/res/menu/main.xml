@@ -16,4 +16,13 @@
         android:id="@+id/action_scan"
         android:title="Сканировать блоки"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_report"
+        android:title="Отчёт для анализа"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_share_log"
+        android:title="Отправить лог"
+        app:showAsAction="never" />
 </menu>

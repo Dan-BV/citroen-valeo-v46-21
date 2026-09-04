@@ -48,6 +48,12 @@ class CsvLogger(private val dir: File) {
         w.newLine()
     }
 
+    /** Push buffered rows to disk so the file can be shared mid-session. */
+    @Synchronized
+    fun flush() {
+        try { writer?.flush() } catch (_: Exception) {}
+    }
+
     @Synchronized
     fun stop() {
         try { writer?.flush(); writer?.close() } catch (_: Exception) {}

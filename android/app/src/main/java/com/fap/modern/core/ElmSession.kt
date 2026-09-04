@@ -181,8 +181,18 @@ class ElmSession(
         curHeader = header
     }
 
-    private fun withCount(request: String) =
-        Frames.withResponseCount(request, !noCount.contains(request))
+    /**
+     * The expected-response-count suffix is NOT used.
+     *
+     * It looked like free speed - the adapter returns as soon as the reply is
+     * assembled instead of waiting out its timeout - but on this adapter it
+     * makes a multi-frame ISO-TP reply come back as its first frame only, six
+     * bytes, silently. Pages whose first field fits in those six bytes then
+     * look like they are working while every later field reads as missing.
+     * The page probe below is what makes the poll loop fast; this is not
+     * worth the corruption.
+     */
+    private fun withCount(request: String) = request
 
     /**
      * Ask every page once and remember the ones this ECU does not answer, so
@@ -205,13 +215,20 @@ class ElmSession(
         HashSet(skip)
     }
 
+    /**
+     * Validate against the field that ends last, not the first one. A reply cut
+     * short still carries the early fields, so checking the first field lets a
+     * truncated page pass as healthy - which is exactly how the whole of $C0,
+     * $C2, $CA and $CF went missing while looking connected.
+     */
     private fun tryPage(page: Page): Boolean {
         val reply = send(withCount(page.request), 1500)
         lastReply[page.request] = reply.trim()
         if (Frames.isError(reply)) return false
         val clean = Frames.clean(reply)
-        val first = page.fields.firstOrNull() ?: return clean.contains(page.marker)
-        return Frames.extract(clean, page.marker, first) != null
+        val last = page.fields.maxByOrNull { it.offset + it.length }
+            ?: return clean.contains(page.marker)
+        return Frames.extract(clean, page.marker, last) != null
     }
 
     private suspend fun pollLoop() {
@@ -378,6 +395,23 @@ class ElmSession(
         }
         return out
     }
+
+    /**
+     * Ask one page three ways and hand back what came out, so a report can
+     * be built without reaching into the session internals. The three differ
+     * in exactly what is in doubt: the expected-response-count suffix, the
+     * plain request, and the bare 21xx form without the 8001 tail.
+     */
+    suspend fun probeVariants(page: Page): List<Pair<String, String>> = io.withLock {
+        applyHeader(page.header, page.receive)
+        val bare = if (page.request.length > 4) page.request.substring(0, 4) else page.request
+        listOf(page.request + "1", page.request, bare).map { cmd ->
+            cmd to Frames.clean(send(cmd, 2500))
+        }
+    }
+
+    /** Pages the probe wrote off, and pages that need the suffix omitted. */
+    fun probeState(): Pair<Set<String>, Set<String>> = HashSet(skip) to HashSet(noCount)
 
     // --------------------------------------------------------- plumbing
 

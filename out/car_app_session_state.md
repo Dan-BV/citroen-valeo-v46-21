@@ -308,6 +308,37 @@ free.
 - **Compiles, but has never run on a phone or a car.** Everything below is
   unverified on hardware: BLE in particular is written from the spec.
 
+### The response-count suffix corrupts multi-frame replies — removed
+
+A 23-minute log from the Android app (`fap_log_20260904_090225.csv`, 2959 rows,
+median cycle 462 ms) filled only 42 of 118 parameters, and the pattern was
+exact: `$C0`, `$C2`, `$CA` and `$CF` stopped at **six bytes** while `$C1`,
+`$C4` and `$CB` came back whole — `$CB` all 59 bytes of it. Size was not the
+discriminator; **the first field's offset was.** Every truncated page had its
+first field inside the first six bytes.
+
+Cause: the expected-response-count suffix (`21C08001` + `1`) makes this adapter
+return the **first frame only** of a multi-frame ISO-TP reply, silently. It was
+added as a speed optimisation and never verified on the car.
+
+It survived because the connect-time probe validated only the *first* field of
+a page. For a page whose first field sits in the first frame, a truncated reply
+looked like success, so the suffix was kept for that page for the whole session
+— while every later field read as missing.
+
+Two fixes, both in the web app and the Android app:
+- the suffix is gone; the page probe alone carries the speed win;
+- the probe now validates the field that **ends last**, so a short reply can
+  never pass as healthy.
+
+Expect the cycle to lengthen (462 ms was the cost of reading half a page).
+
+Also added, because the evidence was hard to get out of the phone: a
+**diagnostic report** that asks every page three ways — with the suffix, plain,
+and in the bare `21xx` form — and decodes whichever answer carries the marker,
+plus **share** actions for the report and the CSV. `Android/data` is unreachable
+with a file manager on API 30+, so both leave through a share sheet.
+
 **Still to do, in the agreed order:** actuator tests, adaptation resets,
 telecoding read. Optional refinement: match the recognition answer against
 `DSD.IDENTIF` to name ambiguous modules exactly.

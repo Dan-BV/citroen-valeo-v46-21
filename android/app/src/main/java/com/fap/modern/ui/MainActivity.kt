@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -23,11 +24,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.fap.modern.R
 import com.fap.modern.core.AppState
 import com.fap.modern.core.ConnState
+import com.fap.modern.core.Diagnostics
 import com.fap.modern.core.Dtc
 import com.fap.modern.core.Page
 import com.fap.modern.core.ScanResult
 import com.fap.modern.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -62,6 +65,8 @@ class MainActivity : AppCompatActivity() {
                 R.id.action_dtc -> { readDtc(); true }
                 R.id.action_ident -> { readIdent(); true }
                 R.id.action_scan -> { scanModules(); true }
+                R.id.action_report -> { buildReport(); true }
+                R.id.action_share_log -> { shareLog(); true }
                 else -> false
             }
         }
@@ -271,6 +276,53 @@ class MainActivity : AppCompatActivity() {
             .setMessage(sb.toString())
             .setPositiveButton("Закрыть", null)
             .show()
+    }
+
+    // ------------------------------------------------- sharing evidence
+
+    /**
+     * Android/data is out of reach of a file manager on API 30+, so the log
+     * and the report leave through a share sheet instead of a path the user
+     * has to go hunting for.
+     */
+    private fun shareFile(f: File, mime: String) {
+        val uri = FileProvider.getUriForFile(this, packageName + ".files", f)
+        val send = Intent(Intent.ACTION_SEND)
+            .setType(mime)
+            .putExtra(Intent.EXTRA_STREAM, uri)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        startActivity(Intent.createChooser(send, f.name))
+    }
+
+    private fun shareLog() {
+        session.logger?.flush()
+        val path = session.logger?.currentPath
+        if (path == null) {
+            toast("Лог не пишется: включите LOG и подключитесь")
+            return
+        }
+        shareFile(File(path), "text/csv")
+    }
+
+    private fun buildReport() {
+        if (!requireConnected()) return
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Отчёт для анализа")
+            .setMessage("Опрашиваю каждую страницу тремя способами…")
+            .setCancelable(false)
+            .create()
+        dialog.show()
+        lifecycleScope.launch {
+            try {
+                val text = Diagnostics.build(session, profile)
+                val file = Diagnostics.write(this@MainActivity, text)
+                dialog.dismiss()
+                shareFile(file, "text/plain")
+            } catch (e: Exception) {
+                dialog.dismiss()
+                toast("Отчёт: " + e.message)
+            }
+        }
     }
 
     // -------------------------------------------------------------- misc

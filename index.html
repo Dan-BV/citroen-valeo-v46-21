@@ -602,7 +602,12 @@ class Session{
   // soon as that many have arrived - the single biggest win in poll rate.
   // Some clones mishandle it, so a page that fails with the suffix is retried
   // without it once, at connect.
-  pageCmd(pg){ return this.nodigit[pg] ? pg : pg+"1"; }
+  // The expected-response-count suffix is NOT used: on this adapter it makes a
+  // multi-frame reply come back as its first frame only, six bytes, silently.
+  // Pages whose first field fits in those six bytes then look healthy while
+  // every later field reads as missing. The page probe is what makes the loop
+  // fast; this is not worth the corruption.
+  pageCmd(pg){ return pg; }
   async setHeaderFor(p0){
     if(!p0 || !p0.hdr || p0.hdr===this.curHdr) return;
     await this.elm.cmd("ATSH"+p0.hdr,600);
@@ -627,12 +632,17 @@ class Session{
     });
   }
   async tryPage(pg,p0){
+    const ps=paramsForPage(pg);
+    const pLast=ps.reduce((a,b)=>(b.sbi+b.dl>a.sbi+a.dl?b:a), p0);
     const reply=await this.elm.cmd(this.pageCmd(pg),1500);
     this.lastCmd=Date.now();
     const cl=cleanHex(reply);
     this.raw[pg]={reply:(reply||"").trim(), clean:cl, t:Date.now(),
                   err:isError(reply)};
-    return !isError(reply) && extractRaw(cl,p0)!==null;
+    // Validate the field that ends last, not the first: a reply cut short still
+    // carries the early fields, so checking the first one lets a truncated page
+    // pass as healthy.
+    return !isError(reply) && extractRaw(cl,pLast)!==null;
   }
   async useEngineHeader(){
     await this.elm.cmd("ATSH"+V4621.can.req,600);

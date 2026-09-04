@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- CSV logs and diagnostic reports, so they can be shared out of the app:
+         Android/data is not reachable with a file manager on API 30+. -->
+    <external-files-path name="logs" path="logs/" />
+</paths>

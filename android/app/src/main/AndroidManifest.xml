@@ -35,5 +35,18 @@
             android:name=".ui.GraphActivity"
             android:exported="false"
             android:parentActivityName=".ui.MainActivity" />
+
+        <!-- Android/data is unreachable with a file manager on API 30+, so the
+             logs and reports leave the app through a share intent. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
 </manifest>
