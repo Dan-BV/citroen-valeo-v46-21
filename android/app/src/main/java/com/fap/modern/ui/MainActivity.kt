@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.widget.ArrayAdapter
@@ -56,13 +57,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        adapter = ParamAdapter(
-            ParamAdapter.rowsOf(profile.pages),
-            onParam = { f -> openGraph(f.key) },
-            onHeader = { p -> showPageDiag(p) },
-        )
         binding.list.layoutManager = LinearLayoutManager(this)
-        binding.list.adapter = adapter
+        rebuildList()
 
         binding.toolbar.inflateMenu(R.menu.main)
         binding.toolbar.setOnMenuItemClickListener { item ->
@@ -79,11 +75,13 @@ class MainActivity : AppCompatActivity() {
         binding.connectButton.setOnClickListener { onConnectClicked() }
         binding.logButton.setOnClickListener { onLogClicked() }
         binding.settingsButton.setOnClickListener { showSettings() }
+        binding.filterButton.setOnClickListener { showFilter() }
         updateLogButton()
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { session.values.collect { adapter.submit(it) } }
+                launch { session.state.collect { updateLogButton() } }
                 launch { session.statusText.collect { binding.statusText.text = it } }
                 launch { session.state.collect { updateConnectButton(it) } }
                 launch { session.deadPages.collect { adapter.submitDead(it) } }
@@ -283,6 +281,60 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // ------------------------------------------------------------ filter
+
+    /** Pages carrying only the fields the user kept. */
+    private fun rebuildList() {
+        val sel = AppState.selectedKeys
+        val pages = profile.pages.map { p ->
+            p.copy(fields = p.fields.filter { sel.contains(it.key) })
+        }
+        adapter = ParamAdapter(
+            ParamAdapter.rowsOf(pages),
+            onParam = { f -> openGraph(f.key) },
+            onHeader = { p -> showPageDiag(p) },
+        )
+        binding.list.adapter = adapter
+        adapter.submitDead(session.deadPages.value)
+        adapter.submit(session.values.value)
+    }
+
+    private fun applySelection(keys: Set<String>) {
+        AppState.selectedKeys = keys
+        rebuildList()
+        // The CSV header is fixed when the file opens, so a changed set of
+        // columns needs a new file rather than a ragged old one.
+        if (session.isConnected && AppState.loggingEnabled) {
+            session.stopLogging()
+            session.startLogging()
+        }
+        updateLogButton()
+        toast("Показывается " + keys.size + " из " + profile.fields.size)
+    }
+
+    /**
+     * Unticking a parameter is not cosmetic: a page with nothing selected is
+     * not requested at all, which is the only real lever on cycle time.
+     */
+    private fun showFilter() {
+        val fields = profile.fields
+        val chosen = AppState.selectedKeys.toMutableSet()
+        val labels = fields.map { "\$${it.pageId} · ${it.label}" }.toTypedArray()
+        val checked = BooleanArray(fields.size) { chosen.contains(fields[it].key) }
+        val allOn = checked.all { it }
+        AlertDialog.Builder(this)
+            .setTitle("Какие параметры опрашивать")
+            .setMultiChoiceItems(labels, checked) { _, i, on ->
+                if (on) chosen.add(fields[i].key) else chosen.remove(fields[i].key)
+            }
+            .setNeutralButton(if (allOn) "Снять все" else "Выбрать все") { _, _ ->
+                applySelection(if (allOn) emptySet() else fields.map { it.key }.toSet())
+            }
+            .setNegativeButton("Отмена", null)
+            .setPositiveButton("Применить") { _, _ -> applySelection(chosen) }
+            .show()
+    }
+
     // ------------------------------------------------- sharing evidence
 
     /**
@@ -290,24 +342,27 @@ class MainActivity : AppCompatActivity() {
      * and the report leave through a share sheet instead of a path the user
      * has to go hunting for.
      */
-    private fun shareFile(f: File, mime: String) {
-        val uri = FileProvider.getUriForFile(this, packageName + ".files", f)
-        val send = Intent(Intent.ACTION_SEND)
-            .setType(mime)
-            .putExtra(Intent.EXTRA_STREAM, uri)
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        startActivity(Intent.createChooser(send, f.name))
+    private fun shareFiles(files: List<File>) {
+        val uris = ArrayList<Uri>()
+        for (f in files) uris.add(FileProvider.getUriForFile(this, packageName + ".files", f))
+        val send = if (uris.size == 1) {
+            Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_STREAM, uris[0])
+        } else {
+            Intent(Intent.ACTION_SEND_MULTIPLE)
+                .putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+        }
+        send.type = "text/*"
+        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        startActivity(Intent.createChooser(send, "Отправить"))
     }
 
     /**
-     * Every connect and every LOG toggle starts a new file, and reports pile
-     * up beside them, so offer the lot newest-first rather than silently
-     * sending whichever happens to be open.
+     * Every connect and every LOG toggle starts a new file, and reports pile up
+     * beside them, so offer the lot newest-first and let several go at once.
      */
     private fun shareLog() {
         session.logger?.flush()
         val dir = getExternalFilesDir("logs") ?: filesDir
-        // listFiles() returns an Array, which has no orEmpty().
         val logs = dir.listFiles()?.toList() ?: emptyList()
         val reports = File(dir, "reports").listFiles()?.toList() ?: emptyList()
         val files = (logs + reports)
@@ -318,20 +373,22 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val current = session.logger?.currentPath
-        val when_ = SimpleDateFormat("dd.MM HH:mm", Locale.US)
+        val stamp = SimpleDateFormat("dd.MM HH:mm", Locale.US)
         val labels = files.map { f ->
             val kb = f.length() / 1024
-            val size = if (kb >= 1024) "%.1f МБ".format(kb / 1024.0) else "$kb КБ"
+            val size = if (kb >= 1024) "%.1f МБ".format(kb / 1024.0) else kb.toString() + " КБ"
             val mark = if (f.absolutePath == current) "  ← идёт запись" else ""
-            f.name + NEWLINE + when_.format(Date(f.lastModified())) + " · " + size + mark
-        }
+            stamp.format(Date(f.lastModified())) + " · " + size + mark + NEWLINE + f.name
+        }.toTypedArray()
+        val picked = BooleanArray(files.size)
         AlertDialog.Builder(this)
             .setTitle("Что отправить")
-            .setItems(labels.toTypedArray()) { _, i ->
-                val f = files[i]
-                shareFile(f, if (f.name.endsWith(".csv")) "text/csv" else "text/plain")
-            }
+            .setMultiChoiceItems(labels, picked) { _, i, on -> picked[i] = on }
             .setNegativeButton("Отмена", null)
+            .setPositiveButton("Отправить") { _, _ ->
+                val sel = files.filterIndexed { i, _ -> picked[i] }
+                if (sel.isEmpty()) toast("Ничего не выбрано") else shareFiles(sel)
+            }
             .show()
     }
 
@@ -348,7 +405,7 @@ class MainActivity : AppCompatActivity() {
                 val text = Diagnostics.build(session, profile)
                 val file = Diagnostics.write(this@MainActivity, text)
                 dialog.dismiss()
-                shareFile(file, "text/plain")
+                shareFiles(listOf(file))
             } catch (e: Exception) {
                 dialog.dismiss()
                 toast("Отчёт: " + e.message)
@@ -369,8 +426,17 @@ class MainActivity : AppCompatActivity() {
         if (newState && path != null) toast("Запись в\n$path")
     }
 
+    /**
+     * Armed and recording are different things: the switch is a preference that
+     * survives a disconnect, while a file is only open while connected. Showing
+     * one for the other is how a stopped log looks like a running one.
+     */
     private fun updateLogButton() {
-        binding.logButton.text = if (AppState.loggingEnabled) "LOG ●" else "LOG"
+        binding.logButton.text = when {
+            AppState.loggingEnabled && session.isLogging -> "LOG ●"
+            AppState.loggingEnabled -> "LOG ○"
+            else -> "LOG"
+        }
     }
 
     private fun openGraph(key: String) {

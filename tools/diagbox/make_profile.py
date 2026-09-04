@@ -17,20 +17,26 @@ import os
 LANG = ('ru_RU', 'en_GB')
 
 # Live measurement pages, in the order the app should show them.
+#
+# $C3 (learned values) and $DB (adaptation block) are deliberately absent: this
+# ECU answers neither, confirmed across three separate drives where all 13 $C3
+# fields and DONNES_ADAPT stayed empty while every other page filled. Diagbox
+# lists them for the platform, so a different software version may have them -
+# add the lines back to see.
 LIVE = [
     ('B0', 'RDBLID_LID_B0', 'Питание и иммобилайзер'),
     ('C0', 'RDBLID_LID_C0', 'Смесеобразование'),
     ('C1', 'RDBLID_LID_C1', 'Зажигание'),
     ('C2', 'RDBLID_LID_C2', 'Впуск'),
-    ('C3', 'RDBLID_LID_C3', 'Обучение и адаптивы'),
+
     ('C4', 'RDBLID_LID_C4', 'Момент двигателя'),
     ('CA', 'RDBLID_LID_CA', 'Движение'),
     ('CB', 'RDBLID_LID_CB', 'Окружение двигателя'),
     ('CF', 'RDBLID_LID_CF', 'Кадр $CF'),
-    ('DB', 'RDBLID_LID_DB', 'Адаптации $DB'),
+
 ]
 # Pages worth reading once in a while rather than every cycle.
-SLOW = {'B0', 'C3', 'CF', 'DB'}
+SLOW = {'B0', 'CF'}
 
 IDENT = [
     ('ZA', 'Идентификация $80'),

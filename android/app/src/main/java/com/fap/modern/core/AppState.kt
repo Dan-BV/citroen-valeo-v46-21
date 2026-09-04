@@ -32,6 +32,7 @@ object AppState {
         session.logger = CsvLogger(app.getExternalFilesDir("logs") ?: app.filesDir)
         session.loggingEnabled = loggingEnabled
         initialised = true
+        session.setSelection(selectedKeys)
     }
 
     /** The transport config for the current settings. */
@@ -40,6 +41,21 @@ object AppState {
         "ble" -> TransportConfig.Ble(btAddress, btName, appContext)
         else -> TransportConfig.Bluetooth(btAddress, btName)
     }
+
+    /**
+     * Which parameters to poll, show and log. Fewer selected means fewer pages
+     * asked for, which is the only real lever on cycle time. Defaults to all.
+     */
+    var selectedKeys: Set<String>
+        get() {
+            val raw = prefs.getString("selected", null)
+                ?: return profile.fields.map { it.key }.toSet()
+            return raw.split(",").filter { it.isNotEmpty() }.toSet()
+        }
+        set(v) {
+            prefs.edit().putString("selected", v.joinToString(",")).apply()
+            if (initialised) session.setSelection(v)
+        }
 
     // ---- persisted settings ----
 

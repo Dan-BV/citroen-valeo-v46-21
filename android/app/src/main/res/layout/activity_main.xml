@@ -33,6 +33,15 @@
             android:text="@string/status_disconnected" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/filterButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:minWidth="0dp"
+            android:text="ФИЛЬТР" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/logButton"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="wrap_content"

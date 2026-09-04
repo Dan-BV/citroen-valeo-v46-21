@@ -68,6 +68,14 @@ class ElmSession(
     @Volatile
     var loggingEnabled: Boolean = true
 
+    /**
+     * Which parameters the user wants. A page with nothing selected is not
+     * asked for at all - that, not any adapter trick, is what shortens the
+     * cycle. Starts as everything.
+     */
+    @Volatile
+    private var selected: Set<String> = profile.fields.map { it.key }.toSet()
+
     private val skip = HashSet<String>()
     private val noCount = HashSet<String>()
     private var curHeader: String? = null
@@ -80,9 +88,15 @@ class ElmSession(
     val isLogging: Boolean get() = logger?.isRunning == true
     val isBusy: Boolean get() = loopJob?.isActive == true
 
+    fun setSelection(keys: Set<String>) { selected = keys }
+
+    private fun isOn(f: Field) = selected.contains(f.key)
+
+    private fun anyOn(page: Page) = page.fields.any { isOn(it) }
+
     fun rawReply(page: String): String? = lastReply[page]
 
-    fun startLogging() { if (isConnected) logger?.start(profile.fields) }
+    fun startLogging() { if (isConnected) logger?.start(profile.fields.filter { isOn(it) }) }
     fun stopLogging() { logger?.stop() }
 
     fun connect(cfg: TransportConfig) {
@@ -144,7 +158,7 @@ class ElmSession(
             _deadPages.value = dead
             _statusText.value =
                 "Подключено" + if (dead.isEmpty()) "" else " · без ответа: ${dead.size}"
-            if (loggingEnabled) logger?.start(profile.fields)
+            if (loggingEnabled) logger?.start(profile.fields.filter { isOn(it) })
             pollLoop()
         } catch (e: Exception) {
             _statusText.value = "Ошибка: ${e.message}"
@@ -242,6 +256,7 @@ class ElmSession(
                 // occasional retry in case the failure was transient.
                 if (page.slow && cycle % 10L != 1L) continue
                 if (skip.contains(page.request) && cycle % 20L != 0L) continue
+                if (!anyOn(page)) continue
 
                 val reply = io.withLock {
                     applyHeader(page.header, page.receive)
@@ -253,6 +268,7 @@ class ElmSession(
                 skip.remove(page.request)
                 val clean = Frames.clean(reply)
                 for (f in page.fields) {
+                    if (!isOn(f)) continue
                     val raw = Frames.extract(clean, page.marker, f)
                     val sample = if (raw == null) Sample(0.0, 0, now, false)
                     else Sample(f.compute(raw), raw, now, true)

@@ -67,8 +67,10 @@ class CsvLogger(private val dir: File) {
         // and every LOG toggle would otherwise litter the folder.
         if (rows == 0) {
             try { file?.delete() } catch (_: Exception) {}
-            currentPath = null
         }
+        // Nothing is being written any more, so nothing should look
+        // current: the file list marks currentPath as "recording".
+        currentPath = null
         file = null
     }
 }
