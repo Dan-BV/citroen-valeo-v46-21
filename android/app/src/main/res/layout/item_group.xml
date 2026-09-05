@@ -6,7 +6,7 @@
     android:gravity="bottom"
     android:background="?attr/selectableItemBackground"
     android:paddingHorizontal="16dp"
-    android:paddingTop="20dp"
+    android:paddingTop="14dp"
     android:paddingBottom="4dp">
 
     <TextView

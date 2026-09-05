@@ -7,4 +7,37 @@
         <item name="android:textStyle">bold</item>
         <item name="android:textSize">13sp</item>
     </style>
+    <!-- MaterialButton ships with 6dp top and bottom insets and a 48dp minimum
+         height. Five of those plus the status text overflow a phone header and
+         stack it vertically, so the toolbar buttons strip all of that back. -->
+    <style name="Btn.Compact" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingRight">10dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="cornerRadius">6dp</item>
+    </style>
+
+    <style name="Btn.Compact.Filled" parent="Widget.Material3.Button">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingLeft">12dp</item>
+        <item name="android:paddingRight">12dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="cornerRadius">6dp</item>
+    </style>
+    <style name="ToolbarTitle" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textSize">16sp</item>
+    </style>
 </resources>
