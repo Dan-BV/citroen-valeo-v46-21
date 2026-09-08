@@ -19,11 +19,13 @@
 
         <TextView
             android:id="@+id/label"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/on_surface"
             android:textSize="15sp"
             android:textStyle="bold"
+            android:maxLines="3"
+            android:ellipsize="end"
             android:text="Parameter" />
 
         <TextView
@@ -36,6 +38,10 @@
             android:text="key • 21CB" />
     </LinearLayout>
 
+    <!-- A state name is a sentence, not a number. Left to wrap_content it
+         claims the whole row, the weighted column beside it is then measured
+         with nothing left, and the parameter name breaks one letter per line.
+         ParamAdapter caps this to a share of the screen for state rows. -->
     <TextView
         android:id="@+id/value"
         android:layout_width="wrap_content"
@@ -45,6 +51,8 @@
         android:textColor="@color/primary"
         android:textSize="20sp"
         android:textStyle="bold"
+        android:maxLines="3"
+        android:ellipsize="end"
         android:text="--" />
 
     <TextView

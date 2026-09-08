@@ -8,10 +8,12 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.RadioButton
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -24,6 +26,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fap.modern.R
 import com.fap.modern.core.AppState
+import com.fap.modern.core.BaseSet
 import com.fap.modern.core.ConnState
 import com.fap.modern.core.Diagnostics
 import com.fap.modern.core.Dtc
@@ -262,10 +265,13 @@ class MainActivity : AppCompatActivity() {
         val raw = session.rawReply(page.request)
         val need = page.fields.maxOfOrNull { it.offset + it.length } ?: 0
         val clean = raw?.let { com.fap.modern.core.Frames.clean(it) }
+        val period = session.periodOf(page)
         val sb = StringBuilder()
         sb.append("Запрос: ${page.request}\n")
         sb.append("Маркер ответа: ${page.marker}\n")
         sb.append("Нужно байт: $need\n")
+        sb.append("Опрос: " + (if (period <= 1) "каждый цикл" else "каждый $period-й цикл") + "\n")
+        session.lastPageMs(page.request)?.let { sb.append("Заняло: $it мс\n") }
         if (clean.isNullOrEmpty()) {
             sb.append("\nОтвет ещё не получен — подключитесь и дождитесь цикла опроса.")
         } else {
@@ -321,18 +327,48 @@ class MainActivity : AppCompatActivity() {
         val chosen = AppState.selectedKeys.toMutableSet()
         val labels = fields.map { "\$${it.pageId} · ${it.label}" }.toTypedArray()
         val checked = BooleanArray(fields.size) { chosen.contains(fields[it].key) }
-        val allOn = checked.all { it }
-        AlertDialog.Builder(this)
-            .setTitle("Какие параметры опрашивать")
+        val head = layoutInflater.inflate(R.layout.dialog_filter_head, null)
+        val count = head.findViewById<TextView>(R.id.filterCount)
+
+        // A page with nothing ticked is not requested at all, so what the set
+        // really costs is pages, not parameters.
+        fun pagesOf(keys: Set<String>, everyCycle: Boolean) = profile.pages.count { p ->
+            p.fields.any { keys.contains(it.key) } && (session.periodOf(p) == 1) == everyCycle
+        }
+        fun showCount() {
+            val rare = pagesOf(chosen, false)
+            count.text = "${chosen.size} из ${fields.size} · " +
+                "запросов в цикле: " +
+                "${pagesOf(chosen, true)}" + if (rare > 0) " (+$rare реже)" else ""
+        }
+        showCount()
+
+        val dialog = AlertDialog.Builder(this)
+            .setCustomTitle(head)
             .setMultiChoiceItems(labels, checked) { _, i, on ->
                 if (on) chosen.add(fields[i].key) else chosen.remove(fields[i].key)
-            }
-            .setNeutralButton(if (allOn) "Снять все" else "Выбрать все") { _, _ ->
-                applySelection(if (allOn) emptySet() else fields.map { it.key }.toSet())
+                showCount()
             }
             .setNegativeButton("Отмена", null)
             .setPositiveButton("Применить") { _, _ -> applySelection(chosen) }
-            .show()
+            .create()
+        dialog.show()
+
+        // The presets tick the boxes in place rather than applying and closing,
+        // so the base set can still be adjusted before it is applied.
+        fun preset(keys: Set<String>) {
+            chosen.clear()
+            chosen.addAll(keys)
+            for (i in fields.indices) {
+                val on = chosen.contains(fields[i].key)
+                checked[i] = on
+                dialog.listView.setItemChecked(i, on)
+            }
+            showCount()
+        }
+        head.findViewById<View>(R.id.filterBase).setOnClickListener { preset(BaseSet.keysIn(profile)) }
+        head.findViewById<View>(R.id.filterAll).setOnClickListener { preset(fields.map { it.key }.toSet()) }
+        head.findViewById<View>(R.id.filterNone).setOnClickListener { preset(emptySet()) }
     }
 
     // ------------------------------------------------- sharing evidence

@@ -63,6 +63,13 @@ class ElmSession(
     /** Last raw reply per page, for the on-screen page diagnostic. */
     private val lastReply = ConcurrentHashMap<String, String>()
 
+    /**
+     * Wall time of the last read of each page. A cycle is the sum of these and
+     * nothing else, so this is where to look before trimming anything: a page
+     * costs one adapter turnaround, the parameters inside it cost nothing.
+     */
+    private val lastMs = ConcurrentHashMap<String, Long>()
+
     var logger: CsvLogger? = null
 
     @Volatile
@@ -96,6 +103,16 @@ class ElmSession(
 
     fun rawReply(page: String): String? = lastReply[page]
 
+    fun lastPageMs(page: String): Long? = lastMs[page]
+
+    /**
+     * Cycles between reads of a page. The profile marks the two static pages
+     * `slow`; [BaseSet.PERIODS] slows down the ones that are worth logging but
+     * not worth a request every pass.
+     */
+    fun periodOf(page: Page): Int =
+        if (page.slow) SLOW_PERIOD else (BaseSet.PERIODS[page.id] ?: 1)
+
     fun startLogging() { if (isConnected) logger?.start(profile.fields.filter { isOn(it) }) }
     fun stopLogging() { logger?.stop() }
 
@@ -103,6 +120,7 @@ class ElmSession(
         if (isBusy) return
         history.clear()
         lastReply.clear()
+        lastMs.clear()
         skip.clear()
         noCount.clear()
         curHeader = null
@@ -172,6 +190,14 @@ class ElmSession(
     private fun initEcu(): Boolean {
         send("ATZ", 2500); send("ATD", 800); send("ATE0", 800)
         send("ATL0", 800); send("ATH0", 800); send("ATS0", 800); send("ATAL", 800)
+        // After a reply is assembled the adapter still sits waiting in case a
+        // second module answers, and that wait - not the CAN traffic - is most
+        // of a page's cost. Nothing else can answer here: ATCRA688 filters to
+        // this ECU. AT2 lets the adapter shorten the wait to what the ECU
+        // actually takes, ATST caps what it may wait when it guesses wrong.
+        // If a page starts reading NO DATA, raise POLL_ST before blaming it.
+        send("ATAT2", 800)
+        send("ATST$POLL_ST", 800)
         send("ATSP6", 800)
         applyHeader(profile.canRequest, profile.canResponse)
         send("ATFCSH" + profile.canRequest, 800)
@@ -252,17 +278,21 @@ class ElmSession(
             val started = System.currentTimeMillis()
             for (page in profile.pages) {
                 if (loopJob?.isActive != true) break
-                // Slow pages hold still while driving; dead ones get an
-                // occasional retry in case the failure was transient.
-                if (page.slow && cycle % 10L != 1L) continue
+                // A page that holds still is read now and then rather than
+                // every pass; dead ones get an occasional retry in case the
+                // failure was transient.
+                val period = periodOf(page)
+                if (period > 1 && cycle % period != 1L) continue
                 if (skip.contains(page.request) && cycle % 20L != 0L) continue
                 if (!anyOn(page)) continue
 
+                val sent = System.currentTimeMillis()
                 val reply = io.withLock {
                     applyHeader(page.header, page.receive)
                     send(withCount(page.request), 1200)
                 }
                 val now = System.currentTimeMillis()
+                lastMs[page.request] = now - sent
                 lastReply[page.request] = reply.trim()
                 if (Frames.isError(reply)) continue
                 skip.remove(page.request)
@@ -388,7 +418,9 @@ class ElmSession(
                     }
                 }
             } finally {
-                send("ATSTFF", 600)
+                // ATSTFF would leave the adapter willing to wait 1020 ms on
+                // every poll for the rest of the session.
+                send("ATST$POLL_ST", 600)
                 curHeader = null
                 applyHeader(profile.canRequest, profile.canResponse)
                 send("ATFCSH" + profile.canRequest, 400)
@@ -484,6 +516,18 @@ class ElmSession(
             }
         }
         return sb.toString()
+    }
+
+    private companion object {
+        /**
+         * Adapter reply timeout, in ELM units of 4 ms: 0x19 = 100 ms. The
+         * default is 0x32 (200 ms) and the ceiling 0xFF (1020 ms); with
+         * adaptive timing on this is the cap, not the usual wait.
+         */
+        const val POLL_ST = "19"
+
+        /** Cycles between reads of a page the profile marks static. */
+        const val SLOW_PERIOD = 10
     }
 
     private fun closeTransport() {

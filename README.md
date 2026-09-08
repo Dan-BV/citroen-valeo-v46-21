@@ -122,6 +122,27 @@ It reads the very same generated profile as the web app — `make_profile.py` an
 `make_scan.py` write `android/app/src/main/assets/*.json` with `--json-out` — so the
 two clients cannot drift apart.
 
+`ФИЛЬТР` picks what is polled, shown and logged. What a cycle costs is
+**requests, not parameters**: the loop pays one adapter turnaround per page and
+nothing for the parameters inside it, so the presets are built page-first and a
+page worth logging but not worth logging often gets a period instead of being
+dropped. **БАЗОВЫЙ** - what a fresh install starts on - is 40 parameters:
+`$C0` mixture, `$C1` ignition, `$C2` intake and `$CA` driving every cycle, `$C4`
+torque every second cycle, `$CB` environment every tenth, and `$B0`
+(immobilizer) and `$CF` (the ZAPV service record) never, both being static. It
+keeps every request/actual pair and every per-cylinder signal, and drops the
+duplicate channels, the unconfirmed per-cylinder advance, oil pressure (a
+threshold switch, which the oil light already reports) and knock-sensor noise
+(the four knock retards on `$C1` report its outcome at full rate). The list and
+the periods are in `core/BaseSet.kt`; **ВСЕ** still gives all 107.
+
+Cycle time is otherwise the adapter's, not the car's: after a reply is assembled
+the ELM sits waiting in case a second module answers, which nothing can here
+(`ATCRA688` filters to this ECU). `ATAT2` plus `ATST19` (100 ms cap, against a
+200 ms default) cut that wait; a page's own cost is on its heading dialog next
+to the raw reply. If a page starts answering NO DATA, raise `POLL_ST` in
+`ElmSession.kt` before suspecting the ECU.
+
 Not carried over: K-line, the init-mode picker and the byte-shift nudge. This ECU is
 reached over CAN, neither adapter has a working K-line transceiver, and byte offsets
 now come from the databases instead of being tuned by hand.

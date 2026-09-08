@@ -92,14 +92,24 @@ class ParamAdapter(
         if (f.kind == ValueKind.ENUM) {
             h.chevron.visibility = View.GONE
             h.boolDot.visibility = View.GONE
+            // Nothing to put in the unit column for a state, and 34dp of it
+            // is 34dp the name does not get.
+            h.unit.visibility = View.GONE
             h.unit.text = ""
+            // Without the cap a long state - "ЭБУ синхронизирован, простая
+            // блокировка" on the very first rows - takes the whole width, the
+            // weighted name column is measured with nothing left and the name
+            // wraps one letter per line into a row several screens tall.
+            h.value.maxWidth = (ctx.resources.displayMetrics.widthPixels * ENUM_WIDTH).toInt()
             h.value.text = if (s == null || !s.valid) "--" else f.stateText(s.raw)
             h.value.textSize = 14f
             h.value.setTextColor(ContextCompat.getColor(ctx, R.color.on_surface))
         } else {
             h.chevron.visibility = View.VISIBLE
             h.boolDot.visibility = View.GONE
+            h.unit.visibility = View.VISIBLE
             h.unit.text = f.unit
+            h.value.maxWidth = Int.MAX_VALUE
             h.value.textSize = 22f
             h.value.text = if (s == null || !s.valid) "--"
             else String.format(Locale.US, "%.${f.decimals}f", s.value)
@@ -124,6 +134,9 @@ class ParamAdapter(
     companion object {
         private const val TYPE_HEADER = 0
         private const val TYPE_PARAM = 1
+
+        /** Share of the screen a state value may take, leaving the rest to the name. */
+        private const val ENUM_WIDTH = 0.45f
         private val PAYLOAD = Any()
 
         /** Flattens the profile into headings followed by their parameters. */

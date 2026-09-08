@@ -44,12 +44,15 @@ object AppState {
 
     /**
      * Which parameters to poll, show and log. Fewer selected means fewer pages
-     * asked for, which is the only real lever on cycle time. Defaults to all.
+     * asked for, which is the only real lever on cycle time. A fresh install
+     * starts on [BaseSet] rather than on all 107: three of the eight pages hold
+     * nothing that moves while driving, and paying for them every cycle buys a
+     * slower log of the same car. FILTER still offers the whole list.
      */
     var selectedKeys: Set<String>
         get() {
             val raw = prefs.getString("selected", null)
-                ?: return profile.fields.map { it.key }.toSet()
+                ?: return BaseSet.keysIn(profile)
             return raw.split(",").filter { it.isNotEmpty() }.toSet()
         }
         set(v) {

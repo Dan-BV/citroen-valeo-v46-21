@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A dialog has three buttons and the filter needs four choices, so the
+     presets live in the title instead: they tick the boxes in place and the
+     selection is still applied - or dropped - with the buttons below. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp"
+    android:paddingTop="18dp"
+    android:paddingBottom="6dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/on_surface"
+        android:textSize="18sp"
+        android:text="Какие параметры опрашивать" />
+
+    <TextView
+        android:id="@+id/filterCount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/on_surface_dim"
+        android:textSize="12sp"
+        android:text="" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/filterBase"
+            style="@style/Btn.Compact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="БАЗОВЫЙ" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/filterAll"
+            style="@style/Btn.Compact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="ВСЕ" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/filterNone"
+            style="@style/Btn.Compact"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="НИЧЕГО" />
+    </LinearLayout>
+</LinearLayout>
