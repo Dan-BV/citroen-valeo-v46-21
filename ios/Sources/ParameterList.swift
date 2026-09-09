@@ -58,7 +58,7 @@ struct ParameterList: View {
             .buttonStyle(.plain)
         } else if field.kind == .numeric {
             NavigationLink {
-                GraphScreen(session: session, field: field)
+                GraphScreen(session: session, field: Readout(field))
             } label: {
                 valueRow(field)
             }
@@ -116,13 +116,6 @@ struct ParameterList: View {
     }
 
     private func shown(_ field: Profile.Field) -> String {
-        guard let sample = session.values[field.key], sample.valid else { return "—" }
-        switch field.kind {
-        case .enumerated:
-            return field.stateText(sample.raw)
-        case .numeric:
-            let text = String(format: "%.\(field.decimals)f", sample.value)
-            return field.unit.isEmpty ? text : text + " " + field.unit
-        }
+        Readout(field).text(session.values[field.key])
     }
 }

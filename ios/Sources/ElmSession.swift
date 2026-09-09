@@ -19,6 +19,18 @@ final class ElmSession: ObservableObject {
         case failed
     }
 
+    /// Where the readings come from. Kept apart rather than mixed, because
+    /// the two use different CAN headers and switching costs two adapter
+    /// turnarounds - as much as a small page.
+    enum Mode: Equatable {
+        /// The proprietary V46.21 pages: everything the ECU knows, but a page
+        /// answers with 40-70 bytes and BLE needs a notification per 20.
+        case proprietary
+        /// Standard mode-01 PIDs, up to six per request. Far fewer bytes, so
+        /// this is the fast one - at the price of only the standard readings.
+        case obd
+    }
+
     // MARK: - what the screen watches
 
     @Published private(set) var state: State = .disconnected
@@ -30,7 +42,14 @@ final class ElmSession: ObservableObject {
     // MARK: -
 
     private let profile: Profile
+    private let obd: ObdSet?
     private let makeTransport: (TransportConfig) -> any ElmTransport
+
+    private(set) var mode: Mode = .proprietary
+
+    /// Whether the ECU honours several PIDs in one request. Assumed until an
+    /// answer cannot be walked, then dropped for the rest of the session.
+    private(set) var multiPid = true
 
     /// One adapter, several callers: the poll loop and any on-demand read.
     private let io = AsyncLock()
@@ -99,10 +118,17 @@ final class ElmSession: ObservableObject {
     var isBusy: Bool { loop != nil }
 
     init(profile: Profile,
+         obd: ObdSet? = nil,
          makeTransport: @escaping (TransportConfig) -> any ElmTransport) {
         self.profile = profile
+        self.obd = obd
         self.makeTransport = makeTransport
         self.selected = Self.defaultSelection(profile)
+        if let obd {
+            // The standard set starts fully on: it is cheap, and trimming it
+            // is what the selection screen is for.
+            self.selected.formUnion(obd.params.map(\.key))
+        }
     }
 
     // MARK: - selection
@@ -118,13 +144,15 @@ final class ElmSession: ObservableObject {
         selected = on ? selected.union(keys) : selected.subtracting(keys)
     }
 
-    func toggle(_ field: Profile.Field) {
-        if selected.contains(field.key) {
-            selected.remove(field.key)
+    func toggle(_ key: String) {
+        if selected.contains(key) {
+            selected.remove(key)
         } else {
-            selected.insert(field.key)
+            selected.insert(key)
         }
     }
+
+    func toggle(_ field: Profile.Field) { toggle(field.key) }
 
     private func isOn(_ field: Profile.Field) -> Bool { selected.contains(field.key) }
 
@@ -145,8 +173,10 @@ final class ElmSession: ObservableObject {
 
     // MARK: - session
 
-    func connect(_ config: TransportConfig) {
+    func connect(_ config: TransportConfig, mode: Mode = .proprietary) {
         guard !isBusy else { return }
+        self.mode = mode
+        multiPid = true
         history = [:]
         lastReply = [:]
         lastMs = [:]
@@ -175,23 +205,10 @@ final class ElmSession: ObservableObject {
         do {
             try await adapter.open()
             status = "Адаптер открыт, инициализация ЭБУ…"
-
-            let alive = try await io.locked { await self.initEcu(adapter) }
-            guard alive else {
-                status = "ЭБУ не отвечает (адаптер / зажигание)"
-                state = .failed
-                adapter.close()
-                loop = nil
-                return
+            switch mode {
+            case .proprietary: try await runProprietary(adapter)
+            case .obd: try await runObd(adapter)
             }
-
-            state = .connected
-            status = "Проверка доступных страниц…"
-            let dead = try await io.locked { await self.probePages(adapter) }
-            deadPages = dead
-            status = "Подключено" + (dead.isEmpty ? "" : " · без ответа: \(dead.count)")
-
-            await pollLoop(adapter)
         } catch {
             if !Task.isCancelled {
                 status = "Ошибка: \(error.localizedDescription)"
@@ -200,6 +217,23 @@ final class ElmSession: ObservableObject {
         }
         adapter.close()
         loop = nil
+    }
+
+    private func runProprietary(_ adapter: Adapter) async throws {
+        let alive = try await io.locked { await self.initEcu(adapter) }
+        guard alive else {
+            status = "ЭБУ не отвечает (адаптер / зажигание)"
+            state = .failed
+            return
+        }
+
+        state = .connected
+        status = "Проверка доступных страниц…"
+        let dead = try await io.locked { await self.probePages(adapter) }
+        deadPages = dead
+        status = "Подключено" + (dead.isEmpty ? "" : " · без ответа: \(dead.count)")
+
+        await pollLoop(adapter)
     }
 
     private func initEcu(_ adapter: Adapter) async -> Bool {
@@ -323,6 +357,94 @@ final class ElmSession: ObservableObject {
     private func keepAliveIfIdle(_ adapter: Adapter) async {
         guard await adapter.idleFor() > 2.5 else { return }
         _ = try? await io.locked { await adapter.send("3E", 0.8) }
+    }
+
+    // MARK: - the standard OBD-II set
+
+    private func runObd(_ adapter: Adapter) async throws {
+        guard let obd else {
+            status = "Стандартный набор недоступен: нет obd2.json"
+            state = .failed
+            return
+        }
+        let alive = try await io.locked { await self.initObd(adapter, obd) }
+        guard alive else {
+            status = "ЭБУ не отвечает на стандартный OBD (зажигание?)"
+            state = .failed
+            return
+        }
+        state = .connected
+        status = "Подключено · стандартный OBD"
+        await pollObd(adapter, obd)
+    }
+
+    /// Same adapter setup as the proprietary session, but addressed to the
+    /// engine ECU's standard identifiers instead of the PSA ones, and the
+    /// header is set once here rather than per page.
+    private func initObd(_ adapter: Adapter, _ obd: ObdSet) async -> Bool {
+        await adapter.send("ATZ", 2.5)
+        for command in ["ATD", "ATE0", "ATL0", "ATH0", "ATS0", "ATAL"] {
+            await adapter.send(command, 0.8)
+        }
+        await adapter.send("ATAT2", 0.8)
+        await adapter.send("ATST" + Self.pollST, 0.8)
+        await adapter.send("ATSP6", 0.8)
+        await adapter.applyHeader(obd.header.req, receive: obd.header.res)
+        await adapter.send("ATFCSH" + obd.header.req, 0.8)
+        await adapter.send("ATFCSD300000", 0.8)
+        await adapter.send("ATFCSM1", 0.8)
+        // `0100` answers with the supported-PID bitmask; all that matters here
+        // is that mode 01 is answered at all. No `81` - that is KWP, and the
+        // standard set does not need a session opened.
+        let reply = await adapter.send("0100", 2.5)
+        return !Frames.isError(reply) && Frames.clean(reply).hasPrefix("4100")
+    }
+
+    private func pollObd(_ adapter: Adapter, _ obd: ObdSet) async {
+        var live: [String: Sample] = [:]
+        while !Task.isCancelled {
+            let started = Date()
+            let wanted = obd.params.filter { selected.contains($0.key) }
+
+            for group in ObdReply.group(wanted, perRequest: multiPid ? 6 : 1) {
+                if Task.isCancelled { break }
+                let request = ObdReply.request(for: group)
+                let sent = Date()
+                let reply: String
+                do {
+                    reply = try await io.locked { await adapter.send(request, 1.2) }
+                } catch {
+                    break
+                }
+                let now = Date()
+                lastMs[request] = Int(now.timeIntervalSince(sent) * 1000)
+                lastReply[request] = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+                if Frames.isError(reply) { continue }
+
+                guard let raws = ObdReply.walk(Frames.clean(reply), expecting: group) else {
+                    // Either the ECU ignored the extra PIDs, or one answered
+                    // with a different length than the table expects - and then
+                    // every value after it would be read from the wrong place.
+                    if group.count > 1 {
+                        multiPid = false
+                        status = "ЭБУ не принял мульти-PID, читаю по одному"
+                    }
+                    continue
+                }
+                for param in group {
+                    guard let raw = raws[param.code] else { continue }
+                    let sample = Sample(value: param.value(raw), raw: raw,
+                                        at: now, valid: true)
+                    live[param.key] = sample
+                    append(Point(at: now, value: sample.value), to: param.key)
+                }
+            }
+
+            values = live
+            let elapsed = Int(Date().timeIntervalSince(started) * 1000)
+            let per = multiPid ? "по 6" : "по одному"
+            status = "Стандартный OBD · цикл \(elapsed) мс · \(per)"
+        }
     }
 
     // MARK: - on demand

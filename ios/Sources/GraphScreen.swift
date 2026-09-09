@@ -12,7 +12,7 @@ import SwiftUI
 /// makes the view pick the new points up.
 struct GraphScreen: View {
     @ObservedObject var session: ElmSession
-    let field: Profile.Field
+    let field: Readout
 
     enum Window: String, CaseIterable, Identifiable {
         case minute = "1 мин"
@@ -135,7 +135,7 @@ struct GraphScreen: View {
 
     private func current(_ sample: Sample?) -> String {
         guard let sample, sample.valid else { return "—" }
-        if field.kind == .enumerated { return field.stateText(sample.raw) }
+        if !field.isNumeric { return field.state(sample.raw) ?? "—" }
         let text = number(sample.value)
         return field.unit.isEmpty ? text : text + " " + field.unit
     }

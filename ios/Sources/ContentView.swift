@@ -28,11 +28,17 @@ struct SessionScreen: View {
     @StateObject private var session: ElmSession
     @State private var adapter: TransportConfig?
     @State private var settings = false
+    @State private var mode: ElmSession.Mode = .obd
+
+    /// Missing only if the build is broken, so the app carries on without the
+    /// standard set rather than refusing to start.
+    private let obd = try? ObdSet.bundled()
 
     init(profile: Profile) {
         self.profile = profile
         _session = StateObject(wrappedValue: ElmSession(
             profile: profile,
+            obd: try? ObdSet.bundled(),
             makeTransport: { BleTransport(config: $0) }
         ))
         _adapter = State(initialValue: AdapterStore.load())
@@ -40,7 +46,7 @@ struct SessionScreen: View {
 
     var body: some View {
         NavigationStack {
-            ParameterList(session: session, profile: profile)
+            list
                 .navigationTitle("Valeo V46.21")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -54,11 +60,31 @@ struct SessionScreen: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         connectButton
                     }
+                    ToolbarItem(placement: .principal) {
+                        Picker("Набор", selection: $mode) {
+                            Text("OBD").tag(ElmSession.Mode.obd)
+                            Text("V46.21").tag(ElmSession.Mode.proprietary)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 160)
+                        .disabled(session.isBusy || obd == nil)
+                    }
                 }
                 .safeAreaInset(edge: .bottom) { statusBar }
         }
         .sheet(isPresented: $settings) {
             AdapterSheet(session: session, profile: profile, adapter: $adapter)
+        }
+    }
+
+    /// Which set is on screen follows the session while it runs, and the
+    /// picker while it does not - so what is shown is always what is read.
+    @ViewBuilder
+    private var list: some View {
+        if let obd, (session.isBusy ? session.mode : mode) == .obd {
+            ObdList(session: session, obd: obd)
+        } else {
+            ParameterList(session: session, profile: profile)
         }
     }
 
@@ -69,7 +95,7 @@ struct SessionScreen: View {
         } else {
             Button("Пуск") {
                 if let adapter {
-                    session.connect(adapter)
+                    session.connect(adapter, mode: mode)
                 } else {
                     settings = true
                 }

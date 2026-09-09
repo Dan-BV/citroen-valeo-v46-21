@@ -32,6 +32,11 @@ targets:
       - path: ../android/app/src/main/assets/v46_21_profile.json
         type: file
         buildPhase: resources
+      # The standard OBD-II table, the same file tools/obd2/make_obd2.py
+      # splices into index.html.
+      - path: ../data/obd2/obd2.json
+        type: file
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.fap.modern
@@ -72,10 +77,14 @@ targets:
       - path: Sources/ElmSession.swift
       - path: Sources/AsyncLock.swift
       - path: Sources/Sample.swift
+      - path: Sources/ObdSet.swift
       - path: ../data/parity/golden.json
         type: file
         buildPhase: resources
       - path: ../android/app/src/main/assets/v46_21_profile.json
+        type: file
+        buildPhase: resources
+      - path: ../data/obd2/obd2.json
         type: file
         buildPhase: resources
     settings:
