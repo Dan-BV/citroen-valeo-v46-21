@@ -48,9 +48,18 @@ jobs:
         working-directory: ios
         run: |
           set -o pipefail
+          # The udid, not the name: the runners carry several iOS runtimes at
+          # once, so "iPhone 17" resolves to three destinations and xcodebuild
+          # bails out with code 70 before compiling anything.
           sim="$(python3 ../tools/ios/pick_simulator.py)"
-          echo "simulator: $sim"
-          xcodebuild test             -project Valeo.xcodeproj             -scheme Valeo             -destination "platform=iOS Simulator,name=$sim"             -derivedDataPath build-test             CODE_SIGNING_ALLOWED=NO             | tee test.log
+          echo "simulator udid: $sim"
+          xcodebuild test \
+            -project Valeo.xcodeproj \
+            -scheme Valeo \
+            -destination "platform=iOS Simulator,id=$sim" \
+            -derivedDataPath build-test \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee test.log
           grep 'parity:' test.log | tail -1
 
       - name: Build (unsigned)
