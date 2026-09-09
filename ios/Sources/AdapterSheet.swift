@@ -19,6 +19,21 @@ struct AdapterSheet: View {
                 if !probe.lines.isEmpty || probe.failure != nil || probe.running {
                     handshakeSection
                 }
+                Section {
+                    NavigationLink {
+                        LogList(session: session)
+                    } label: {
+                        HStack {
+                            Text("Логи поездок")
+                            Spacer()
+                            if session.logURL != nil {
+                                Label("запись", systemImage: "record.circle")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                    }
+                }
                 profileSection
             }
             .navigationTitle("Адаптер")

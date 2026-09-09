@@ -78,6 +78,7 @@ targets:
       - path: Sources/AsyncLock.swift
       - path: Sources/Sample.swift
       - path: Sources/ObdSet.swift
+      - path: Sources/CsvLogger.swift
       - path: ../data/parity/golden.json
         type: file
         buildPhase: resources

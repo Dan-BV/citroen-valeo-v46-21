@@ -112,10 +112,20 @@ struct SessionScreen: View {
                 .font(.caption)
                 .lineLimit(1)
             Spacer()
+            if session.logURL != nil {
+                Image(systemName: "record.circle")
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+                Text("\(session.loggedRows)")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
             // What the cycle is actually paying for: the pages still in it.
-            Text("\(session.polledPages.count) стр.")
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
+            if session.mode == .proprietary {
+                Text("\(session.polledPages.count) стр.")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.horizontal)
         .padding(.vertical, 8)

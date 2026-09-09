@@ -47,6 +47,18 @@ final class ElmSession: ObservableObject {
 
     private(set) var mode: Mode = .proprietary
 
+    private let logger = CsvLogger()
+
+    /// Whether a connect starts a recording. On by default: a drive that was
+    /// not logged cannot be analysed afterwards, and the file is deleted again
+    /// if no row was written.
+    @Published var logToFile = true
+
+    /// Rows written so far, for the recording indicator.
+    @Published private(set) var loggedRows = 0
+
+    var logURL: URL? { logger.url }
+
     /// Whether the ECU honours several PIDs in one request. Assumed until an
     /// answer cannot be walked, then dropped for the rest of the session.
     private(set) var multiPid = true
@@ -215,6 +227,7 @@ final class ElmSession: ObservableObject {
                 state = .failed
             }
         }
+        stopLogging()
         adapter.close()
         loop = nil
     }
@@ -228,6 +241,9 @@ final class ElmSession: ObservableObject {
         }
 
         state = .connected
+        startLogging(keys: profile.pages.flatMap { page in
+            page.params.map(\.key).filter(selected.contains)
+        })
         status = "Проверка доступных страниц…"
         let dead = try await io.locked { await self.probePages(adapter) }
         deadPages = dead
@@ -348,6 +364,7 @@ final class ElmSession: ObservableObject {
             }
 
             values = live
+            record(live)
             let elapsed = Int(Date().timeIntervalSince(started) * 1000)
             status = "Подключено · цикл \(elapsed) мс"
             await keepAliveIfIdle(adapter)
@@ -357,6 +374,33 @@ final class ElmSession: ObservableObject {
     private func keepAliveIfIdle(_ adapter: Adapter) async {
         guard await adapter.idleFor() > 2.5 else { return }
         _ = try? await io.locked { await adapter.send("3E", 0.8) }
+    }
+
+    // MARK: - recording
+
+    private func startLogging(keys: [String]) {
+        guard logToFile, !keys.isEmpty else { return }
+        do {
+            try logger.start(keys: keys)
+            loggedRows = 0
+        } catch {
+            status = "Запись не открылась: \(error.localizedDescription)"
+        }
+    }
+
+    private func record(_ values: [String: Sample]) {
+        guard logger.isRunning else { return }
+        logger.log(Date(), values)
+        loggedRows = logger.rows
+    }
+
+    private func stopLogging() {
+        logger.stop()
+    }
+
+    /// Push what is buffered, so a file can be shared without stopping.
+    func flushLog() {
+        logger.flush()
     }
 
     // MARK: - the standard OBD-II set
@@ -374,6 +418,7 @@ final class ElmSession: ObservableObject {
             return
         }
         state = .connected
+        startLogging(keys: obd.params.map(\.key).filter(selected.contains))
         status = "Подключено · стандартный OBD"
         await pollObd(adapter, obd)
     }
@@ -441,6 +486,7 @@ final class ElmSession: ObservableObject {
             }
 
             values = live
+            record(live)
             let elapsed = Int(Date().timeIntervalSince(started) * 1000)
             let per = multiPid ? "по 6" : "по одному"
             status = "Стандартный OBD · цикл \(elapsed) мс · \(per)"
