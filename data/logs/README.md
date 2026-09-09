@@ -6,7 +6,8 @@ time. A cell is empty when that parameter had no valid reading in the cycle; a
 parameter on a slowed-down page (see `BaseSet.PERIODS`) repeats its last value until
 the page is asked for again, so consecutive equal values are expected, not a fault.
 
-These are the inputs. Anything derived from them lives in [`out/drives/`](../../out/drives/).
+These are the inputs. Anything derived from them lives in [`out/drives/`](../../out/drives/),
+and the standing conclusions in [`out/driving_cheatsheet.md`](../../out/driving_cheatsheet.md).
 
 ## Sessions
 
