@@ -1,0 +1,45 @@
+name: Parity
+
+# The generated data is the thing three versions share, so the generators are
+# the thing that must not drift. This is the cheap half of the guard: it checks
+# that what is committed is still exactly what the generators produce from the
+# official databases. The other half - that each decoder reads that data the
+# same way - is the parity test inside the iOS and Android workflows.
+on:
+  push:
+    paths:
+      - 'data/**'
+      - 'tools/**'
+      - 'index.html'
+      - 'android/app/src/main/assets/**'
+      - '.github/workflows/parity.yml'
+  workflow_dispatch:
+
+jobs:
+  generated-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Fails on its own if the generated profile no longer agrees with the raw
+      # Diagbox database, listing every field that differs; anything accepted
+      # deliberately is in tools/parity/deviations.json.
+      - name: Rebuild the parity fixture
+        run: python tools/parity/make_golden.py --every 25
+
+      - name: The committed fixture must be what the generator produces
+        run: |
+          git diff --stat -- data/parity/golden.json
+          git diff --quiet -- data/parity/golden.json || {
+            echo "data/parity/golden.json is stale - regenerate and commit it"
+            exit 1
+          }
+
+      # index.html carries the standard OBD-II table as JavaScript, spliced in
+      # from the same JSON the iOS app bundles.
+      - name: The OBD-II table in index.html must match the JSON
+        run: python tools/obd2/make_obd2.py --check

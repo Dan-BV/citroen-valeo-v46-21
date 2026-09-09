@@ -6,6 +6,7 @@ on:
   push:
     paths:
       - 'android/**'
+      - 'data/parity/**'
       - '.github/workflows/android.yml'
   workflow_dispatch:
 
@@ -30,6 +31,15 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
+
+      # Before the APK on purpose: the parity fixture is the only thing that
+      # holds this decoder and the iOS one to the same byte maps, so a
+      # divergence must not reach a phone.
+      - name: Parity test against the recorded frames
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon test
 
       - name: Build debug APK
         working-directory: android

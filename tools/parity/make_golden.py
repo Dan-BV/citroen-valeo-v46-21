@@ -19,7 +19,6 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -193,9 +192,11 @@ def main():
               % (len(mismatches), len(seen)))
         return 1
 
+    # No timestamp on purpose: the CI gate regenerates this file and requires
+    # it to be identical to what is committed, and git already records when it
+    # changed.
     golden = {
         'source': os.path.relpath(a.transcript, ROOT).replace('\\', '/'),
-        'generated': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         'every': a.every,
         'profile_sha256': hashlib.sha256(raw_profile).hexdigest(),
         'deviations': json.load(open(a.deviations, encoding='utf-8'))['kind'],

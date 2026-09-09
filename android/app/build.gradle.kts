@@ -35,6 +35,11 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = false
+        }
+    }
 }
 
 dependencies {
@@ -46,4 +51,9 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.9.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    testImplementation("junit:junit:4.13.2")
+    // The parity test runs on the JVM, where org.json is only a stub inside
+    // android.jar, so a real implementation has to be on the test classpath.
+    testImplementation("org.json:json:20240303")
 }
