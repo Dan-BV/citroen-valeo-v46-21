@@ -50,8 +50,8 @@ final class ElmSession: ObservableObject {
 
     /// Which parameters the user wants. A page with nothing selected is not
     /// asked for at all - that, not any adapter trick, is what shortens the
-    /// cycle. Starts as everything, like the Kotlin session.
-    private var selected: Set<String>
+    /// cycle. Published, because the switches on screen read it back.
+    @Published private(set) var selected: Set<String>
 
     private var skip: Set<String> = []
     private var cycle: Int64 = 0
@@ -69,6 +69,32 @@ final class ElmSession: ObservableObject {
     /// $CB engine environment every third.
     private static let periods: [String: Int] = ["C4": 2, "CB": 3]
 
+    /// Pages nothing is selected from by default, so they are never asked for.
+    /// $B0 is the immobilizer and $CF the ZAPV service record; both hold still
+    /// while driving. This is where cycle time actually goes: a page costs one
+    /// adapter turnaround and the parameters inside it cost nothing, so the
+    /// Android base set buys its speed by leaving these two out entirely
+    /// rather than by dropping parameters.
+    static let staticPages: Set<String> = ["B0", "CF"]
+
+    /// What is selected when nothing has been chosen yet: everything except
+    /// the two static pages.
+    static func defaultSelection(_ profile: Profile) -> Set<String> {
+        Set(profile.pages
+            .filter { !staticPages.contains($0.id ?? "") }
+            .flatMap { $0.params.map(\.key) })
+    }
+
+    /// Every key the profile knows, for a screen that wants to offer them all.
+    static func allKeys(_ profile: Profile) -> Set<String> {
+        Set(profile.pages.flatMap { $0.params.map(\.key) })
+    }
+
+    /// Pages the cycle currently asks for, in profile order, with how often.
+    var polledPages: [(page: Profile.Page, period: Int)] {
+        profile.pages.filter(anyOn).map { ($0, periodOf($0)) }
+    }
+
     var isConnected: Bool { state == .connected }
     var isBusy: Bool { loop != nil }
 
@@ -76,12 +102,29 @@ final class ElmSession: ObservableObject {
          makeTransport: @escaping (TransportConfig) -> any ElmTransport) {
         self.profile = profile
         self.makeTransport = makeTransport
-        self.selected = Set(profile.pages.flatMap { $0.params.map(\.key) })
+        self.selected = Self.defaultSelection(profile)
     }
 
     // MARK: - selection
 
     func setSelection(_ keys: Set<String>) { selected = keys }
+
+    func isSelected(_ key: String) -> Bool { selected.contains(key) }
+
+    /// Turning a whole page off is what makes the cycle shorter; turning a
+    /// single parameter off only tidies the screen.
+    func setPage(_ page: Profile.Page, on: Bool) {
+        let keys = Set(page.params.map(\.key))
+        selected = on ? selected.union(keys) : selected.subtracting(keys)
+    }
+
+    func toggle(_ field: Profile.Field) {
+        if selected.contains(field.key) {
+            selected.remove(field.key)
+        } else {
+            selected.insert(field.key)
+        }
+    }
 
     private func isOn(_ field: Profile.Field) -> Bool { selected.contains(field.key) }
 
