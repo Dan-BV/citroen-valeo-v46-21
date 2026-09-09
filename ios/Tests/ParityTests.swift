@@ -156,6 +156,34 @@ final class ParityTests: XCTestCase {
         XCTAssertNil(Frames.extract(clean, marker: "61CF", offset: 2, length: 2))
     }
 
+    /// The recording cannot cover this: the byte those two bit fields live in
+    /// reads 0x08 in all 3052 recorded CA frames, so both a right and a wrong
+    /// extraction order come out the same. TYPE_BOITE_VITESSES has mask 3 and
+    /// shift 6, so masking before shifting makes it identically zero on any
+    /// byte - which is what this checks, with the top bits actually set.
+    func testBitFieldsShiftBeforeMasking() throws {
+        let profile = try Profile.bundled(in: bundle)
+        let page = try XCTUnwrap(profile.pages.first { $0.id == "CA" })
+        let gearbox = try XCTUnwrap(page.params.first { $0.key == "TYPE_BOITE_VITESSES" })
+        let gear = try XCTUnwrap(page.params.first { $0.key == "RAPPORT_ENGAGE" })
+        XCTAssertEqual(gearbox.mask, 3)
+        XCTAssertEqual(gearbox.shift, 6)
+
+        // A frame whose byte at the pair's offset is 0xC8: top bits 11, low
+        // bits 001000.
+        var bytes = [UInt8](repeating: 0, count: gearbox.offset + 1)
+        bytes[0] = 0x61
+        bytes[1] = 0xFF
+        bytes[gearbox.offset] = 0xC8
+        let frame = bytes.map { String(format: "%02X", $0) }.joined()
+
+        let (rawGearbox, _) = try XCTUnwrap(gearbox.read(frame, marker: page.marker))
+        XCTAssertEqual(rawGearbox, 3, "0xC8 >> 6 & 3 = 3; masking first would give 0")
+
+        let (rawGear, _) = try XCTUnwrap(gear.read(frame, marker: page.marker))
+        XCTAssertEqual(rawGear, 8, "mask 63, shift 0: 0xC8 & 63 = 8")
+    }
+
     func testErrorRepliesAreRecognised() {
         XCTAssertTrue(Frames.isError("NO DATA"))
         XCTAssertTrue(Frames.isError("?"))

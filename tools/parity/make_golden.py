@@ -105,7 +105,10 @@ def profile_decode(param, marker, hexstr):
         return None, None
     raw = int(hexstr[start:end], 16)
     if param.get('m') is not None:
-        raw = (raw & param['m']) >> (param.get('sh') or 0)
+        # Shift first, then mask - `m` masks the shifted value. The database
+        # side carries the unshifted bit pattern instead (0b11000000), so the
+        # two agree only in this order.
+        raw = (raw >> (param.get('sh') or 0)) & param['m']
     if param.get('hex'):
         return raw, hexstr[start:end].upper()
     if param.get('st'):

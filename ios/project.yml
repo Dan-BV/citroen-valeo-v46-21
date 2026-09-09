@@ -69,6 +69,9 @@ targets:
       - path: Sources/Reading.swift
       - path: Sources/ElmTransport.swift
       - path: Sources/AdapterStore.swift
+      - path: Sources/ElmSession.swift
+      - path: Sources/AsyncLock.swift
+      - path: Sources/Sample.swift
       - path: ../data/parity/golden.json
         type: file
         buildPhase: resources

@@ -25,7 +25,11 @@ extension Profile.Field {
               var raw = Int(digits, radix: 16) else { return nil }
 
         if let mask {
-            raw = (raw & mask) >> (shift ?? 0)
+            // Shift first, then mask, exactly like Field.compute in the Kotlin
+            // app: the generator emits `m` as the mask of the already-shifted
+            // value, so masking first would make a field like
+            // TYPE_BOITE_VITESSES (m=3, sh=6) identically zero.
+            raw = (raw >> (shift ?? 0)) & mask
         }
         if hex == true {
             return (raw, .hex(digits.uppercased()))
