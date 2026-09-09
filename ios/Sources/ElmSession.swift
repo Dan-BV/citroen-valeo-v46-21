@@ -101,13 +101,9 @@ final class ElmSession: ObservableObject {
     /// this is the cap, not the usual wait.
     private static let pollST = "19"
 
-    /// Cycles between reads of a page the profile marks static.
-    private static let slowPeriod = 10
-
-    /// Pages worth logging but not worth a request every pass. Mirrors
-    /// BaseSet.PERIODS in the Android app - $C4 torque every second cycle,
-    /// $CB engine environment every third.
-    private static let periods: [String: Int] = ["C4": 2, "CB": 3]
+    /// How often each page is read and what each one costs, remembered between
+    /// sessions so the effect of a change can be shown before setting off.
+    let plan = PagePlan()
 
     /// Pages nothing is selected from by default, so they are never asked for.
     /// $B0 is the immobilizer and $CF the ZAPV service record; both hold still
@@ -179,11 +175,26 @@ final class ElmSession: ObservableObject {
 
     private func anyOn(_ page: Profile.Page) -> Bool { page.params.contains(where: isOn) }
 
-    /// Cycles between reads of a page. The profile marks the two static pages
-    /// `slow`.
+    /// Cycles between reads of a page: the reader's choice if there is one,
+    /// otherwise the default the Android app arrived at.
     func periodOf(_ page: Profile.Page) -> Int {
-        if page.slow == true { return Self.slowPeriod }
-        return Self.periods[page.id ?? ""] ?? 1
+        plan.period(of: page)
+    }
+
+    func setPeriod(_ period: Int, for page: Profile.Page) {
+        plan.setPeriod(period, for: page)
+        objectWillChange.send()
+    }
+
+    /// What a cycle will take at the current selection and periods, from the
+    /// round trips this adapter actually showed. `nil` until something has been
+    /// measured.
+    var predictedCycleMs: Int? {
+        plan.predictedCycleMs(profile.pages.filter(anyOn))
+    }
+
+    var cycleBreakdown: [(page: Profile.Page, share: Int)] {
+        plan.breakdown(profile.pages.filter(anyOn))
     }
 
     func rawReply(_ request: String) -> String? { lastReply[request] }
@@ -351,10 +362,12 @@ final class ElmSession: ObservableObject {
                     break
                 }
                 let now = Date()
-                lastMs[page.request] = Int(now.timeIntervalSince(sent) * 1000)
+                let took = Int(now.timeIntervalSince(sent) * 1000)
+                lastMs[page.request] = took
                 lastReply[page.request] = reply.trimmingCharacters(in: .whitespacesAndNewlines)
                 if Frames.isError(reply) { continue }
                 skip.remove(page.request)
+                plan.record(took, for: page)
 
                 let clean = Frames.clean(reply)
                 for field in page.params where isOn(field) {

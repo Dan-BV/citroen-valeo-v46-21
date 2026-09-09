@@ -108,7 +108,7 @@ struct SessionScreen: View {
             Circle()
                 .fill(colour)
                 .frame(width: 8, height: 8)
-            Text(session.status)
+            Text(statusText)
                 .font(.caption)
                 .lineLimit(1)
             Spacer()
@@ -130,6 +130,17 @@ struct SessionScreen: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(.bar)
+    }
+
+    /// Idle, the bar carries what a cycle *will* cost at the current selection,
+    /// from the round trips this adapter showed before - so the effect of a
+    /// change is visible without starting the car.
+    private var statusText: String {
+        if !session.isBusy, session.mode == .proprietary,
+           let predicted = session.predictedCycleMs {
+            return "\(session.status) · оценка цикла ~\(predicted) мс"
+        }
+        return session.status
     }
 
     private var colour: Color {

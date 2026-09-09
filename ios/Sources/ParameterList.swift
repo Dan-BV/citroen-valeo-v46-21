@@ -79,10 +79,10 @@ struct ParameterList: View {
     }
 
     private func header(_ page: Profile.Page) -> some View {
-        HStack {
+        HStack(spacing: 8) {
             Text(page.title.isEmpty ? (page.id ?? page.request) : page.title)
             Spacer()
-            if let ms = session.lastPageMs(page.request) {
+            if let ms = session.lastPageMs(page.request) ?? session.plan.cost(of: page) {
                 Text("\(ms) мс")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
@@ -93,13 +93,46 @@ struct ParameterList: View {
                     .foregroundStyle(.orange)
             }
             if editing {
+                periodMenu(page)
                 Toggle("", isOn: Binding(
                     get: { page.params.contains { session.isSelected($0.key) } },
                     set: { session.setPage(page, on: $0) }
                 ))
                 .labelsHidden()
+            } else if session.periodOf(page) > 1 {
+                // A page read every N cycles is showing values up to N cycles
+                // old, which is worth saying out loud.
+                Text("1/\(session.periodOf(page))")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
             }
         }
+    }
+
+    /// How often this page is asked for. Dividing a heavy page's rate is the
+    /// other lever besides dropping it: its cost enters the cycle divided by
+    /// this number.
+    private func periodMenu(_ page: Profile.Page) -> some View {
+        Menu {
+            ForEach(PagePlan.choices, id: \.self) { choice in
+                Button {
+                    session.setPeriod(choice, for: page)
+                } label: {
+                    if choice == session.periodOf(page) {
+                        Label(label(choice), systemImage: "checkmark")
+                    } else {
+                        Text(label(choice))
+                    }
+                }
+            }
+        } label: {
+            Text(label(session.periodOf(page)))
+                .font(.caption2.monospacedDigit())
+        }
+    }
+
+    private func label(_ period: Int) -> String {
+        period == 1 ? "каждый" : "1/\(period)"
     }
 
     // MARK: -

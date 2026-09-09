@@ -81,6 +81,7 @@ targets:
       - path: Sources/CsvLogger.swift
       - path: Sources/CsvFile.swift
       - path: Sources/TechLog.swift
+      - path: Sources/PagePlan.swift
       - path: ../data/parity/golden.json
         type: file
         buildPhase: resources
