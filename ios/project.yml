@@ -1,0 +1,58 @@
+# XcodeGen manifest. The .xcodeproj is NOT checked in: this project is edited on
+# a Windows machine with no Xcode, so the project file is generated on the CI
+# runner instead of being hand-maintained.
+name: Valeo
+
+options:
+  bundleIdPrefix: com.fap
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "17.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGNING_ALLOWED: NO
+    TARGETED_DEVICE_FAMILY: "1,2"
+
+targets:
+  Valeo:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Resources
+      # The generated profile is shared byte-for-byte with the Android app and
+      # index.html: tools/diagbox/make_profile.py emits one JSON body for all
+      # three. Referenced in place rather than copied, so it cannot drift.
+      - path: ../android/app/src/main/assets/v46_21_profile.json
+        type: file
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fap.modern
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Valeo V46.21
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # BLE is the only transport an iPhone can use for an ELM327 clone:
+        # classic SPP needs MFi hardware.
+        NSBluetoothAlwaysUsageDescription: >-
+          Нужен для связи с адаптером ELM327, подключённым к машине.
+        # Drive logs land in Documents and are picked up from the Files app.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
