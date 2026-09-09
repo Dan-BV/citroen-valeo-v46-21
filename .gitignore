@@ -23,3 +23,5 @@ ios/Info.plist
 Payload/
 *.ipa
 source.json
+ios/build-test/
+ios/test.log

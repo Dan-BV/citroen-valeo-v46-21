@@ -35,6 +35,24 @@ build linked from `support.apple.com/en-us/106372` is iTunes 12.10.11 from 2020,
 driver Windows 11 silently rejects - the service installs, `usbaapl64.sys` does not, and the
 iPhone stays visible only as a camera with no trust prompt.
 
+## Parity between the versions
+The same byte maps exist three times - in `index.html`, in the Android app and in the iOS
+app - so `data/parity/golden.json` holds real frames recorded off the car together with the
+values they must decode to. The expected values come from the **raw** Diagbox database, not
+from the generated profile, so the fixture checks `tools/diagbox/make_profile.py` as well: a
+wrong offset or factor fails a build instead of showing up as a wrong number in a moving
+car.
+
+```
+python tools/parity/make_golden.py --every 25
+```
+
+613 frames over the five pages the recording covers (C0 C1 C2 CA CB), 89 fields each. The
+iOS test target replays them on every push; the generator itself refuses to write a fixture
+when the profile and the database disagree, unless the difference is listed in
+`tools/parity/deviations.json` - which currently holds exactly one entry, three CA fields
+the database prints as hex bytes and the generator emits as plain numbers.
+
 ## Protocols (CFG)
 - **CAN PSA** (default) — 118 ECU parameters across 10 read pages, taken straight from the
   official Diagbox databases (byte offsets, scaling, units and text states are the ECU's own

@@ -1,0 +1,34 @@
+{
+  "_comment": [
+    "Known, deliberate differences between the raw Diagbox database and the",
+    "generated profile. Everything listed here is accepted by",
+    "tools/parity/make_golden.py and recorded in the fixture, so a deviation is",
+    "visible and greppable instead of silently tolerated. Anything NOT listed",
+    "here fails the generator.",
+    "",
+    "Adding an entry is a decision about what the apps display; removing one",
+    "means make_profile.py was changed to match the database, which requires",
+    "regenerating the profile and re-releasing all three versions."
+  ],
+  "kind": [
+    {
+      "page": "CA",
+      "keys": [
+        "ETAT_RVV",
+        "ETAT_LVV",
+        "ETAT_CONTACTEUR_FREIN_PRINCIPAL"
+      ],
+      "db": "hex",
+      "profile": "num",
+      "why": [
+        "In the database these three are data_type BINARY with neither a factor",
+        "nor a state list, which is how Diagbox marks a raw byte it prints as",
+        "hex - they look like bit fields (0x14, 0x08). make_profile.py only",
+        "flags identification fields as hex, so these decode as plain numbers",
+        "in all three versions instead. The value is identical either way,",
+        "only the formatting differs; changing it would alter what index.html",
+        "and the Android app already show."
+      ]
+    }
+  ]
+}

@@ -56,3 +56,34 @@ targets:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+
+  # Not hosted by the app on purpose: the core files are compiled straight into
+  # the test bundle, so `xcodebuild test` needs no app install and no signing.
+  ValeoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+      - path: Sources/Frames.swift
+      - path: Sources/Profile.swift
+      - path: Sources/Reading.swift
+      - path: ../data/parity/golden.json
+        type: file
+        buildPhase: resources
+      - path: ../android/app/src/main/assets/v46_21_profile.json
+        type: file
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fap.modern.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Valeo:
+    build:
+      targets:
+        Valeo: all
+        ValeoTests: [test]
+    test:
+      targets:
+        - ValeoTests

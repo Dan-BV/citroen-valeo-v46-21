@@ -92,10 +92,16 @@ struct Profile: Decodable {
         }
     }
 
-    static func bundled() throws -> Profile {
-        guard let url = Bundle.main.url(forResource: "v46_21_profile", withExtension: "json") else {
+    static func decode(_ data: Data) throws -> Profile {
+        try JSONDecoder().decode(Profile.self, from: data)
+    }
+
+    /// Loads the copy bundled with the app. `bundle` is a parameter so the
+    /// parity test can load its own copy without needing a host application.
+    static func bundled(in bundle: Bundle = .main) throws -> Profile {
+        guard let url = bundle.url(forResource: "v46_21_profile", withExtension: "json") else {
             throw LoadError.notBundled
         }
-        return try JSONDecoder().decode(Profile.self, from: try Data(contentsOf: url))
+        return try decode(try Data(contentsOf: url))
     }
 }

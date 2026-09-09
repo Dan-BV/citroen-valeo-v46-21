@@ -11,6 +11,8 @@ on:
     paths:
       - 'ios/**'
       - 'tools/ios/**'
+      - 'tools/parity/**'
+      - 'data/parity/**'
       - 'android/app/src/main/assets/v46_21_profile.json'
       - '.github/workflows/ios.yml'
   workflow_dispatch:
@@ -39,6 +41,17 @@ jobs:
       - name: Generate the Xcode project
         working-directory: ios
         run: xcodegen generate
+
+      # Runs before the build on purpose: a byte map that no longer agrees with
+      # the raw Diagbox database must not reach a phone.
+      - name: Parity test against the recorded frames
+        working-directory: ios
+        run: |
+          set -o pipefail
+          sim="$(python3 ../tools/ios/pick_simulator.py)"
+          echo "simulator: $sim"
+          xcodebuild test             -project Valeo.xcodeproj             -scheme Valeo             -destination "platform=iOS Simulator,name=$sim"             -derivedDataPath build-test             CODE_SIGNING_ALLOWED=NO             | tee test.log
+          grep 'parity:' test.log | tail -1
 
       - name: Build (unsigned)
         working-directory: ios
