@@ -38,6 +38,15 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = false
+            // The parity test prints how many readings it compared; without
+            // this Gradle swallows it, and a guard nobody can read is half a
+            // guard.
+            all {
+                it.testLogging {
+                    events("passed", "failed")
+                    showStandardStreams = true
+                }
+            }
         }
     }
 }
