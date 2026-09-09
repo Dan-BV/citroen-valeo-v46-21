@@ -11,6 +11,7 @@ final class ScriptedTransport: ElmTransport {
     private(set) var sent: [String] = []
     private let lock = NSLock()
     private var pending = ""
+    private var link = LinkStats()
 
     var opened = false
     var closed = false
@@ -27,6 +28,8 @@ final class ScriptedTransport: ElmTransport {
         lock.lock()
         sent.append(command)
         pending = (script[command] ?? "OK") + "\r>"
+        link = LinkStats(notifications: 1, bytes: pending.utf8.count,
+                         largest: pending.utf8.count)
         lock.unlock()
     }
 
@@ -40,6 +43,13 @@ final class ScriptedTransport: ElmTransport {
     func drain() {
         lock.lock(); defer { lock.unlock() }
         pending = ""
+        link = LinkStats()
+    }
+
+    /// One notification per reply, which is what a scripted adapter is.
+    var stats: LinkStats {
+        lock.lock(); defer { lock.unlock() }
+        return link
     }
 
     func close() {

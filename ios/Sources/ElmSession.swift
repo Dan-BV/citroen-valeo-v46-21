@@ -48,6 +48,15 @@ final class ElmSession: ObservableObject {
     private(set) var mode: Mode = .proprietary
 
     private let logger = CsvLogger()
+    private let tech = TechLog()
+
+    /// Whether every exchange is measured into a second file. On for now: the
+    /// open questions about where the cycle time goes are all answered by that
+    /// file and by nothing else.
+    @Published var techToFile = true
+
+    var techURL: URL? { tech.url }
+    @Published private(set) var techRows = 0
 
     /// Whether a connect starts a recording. On by default: a drive that was
     /// not logged cannot be analysed afterwards, and the file is deleted again
@@ -217,6 +226,7 @@ final class ElmSession: ObservableObject {
         do {
             try await adapter.open()
             status = "Адаптер открыт, инициализация ЭБУ…"
+            if techToFile { try? tech.start() }
             switch mode {
             case .proprietary: try await runProprietary(adapter)
             case .obd: try await runObd(adapter)
@@ -253,9 +263,9 @@ final class ElmSession: ObservableObject {
     }
 
     private func initEcu(_ adapter: Adapter) async -> Bool {
-        await adapter.send("ATZ", 2.5)
+        await at(adapter, "ATZ", 2.5)
         for command in ["ATD", "ATE0", "ATL0", "ATH0", "ATS0", "ATAL"] {
-            await adapter.send(command, 0.8)
+            await at(adapter, command, 0.8)
         }
         // After a reply is assembled the adapter still sits waiting in case a
         // second module answers, and that wait - not the CAN traffic - is most
@@ -263,20 +273,20 @@ final class ElmSession: ObservableObject {
         // this ECU. AT2 lets the adapter shorten the wait to what the ECU
         // actually takes, ATST caps what it may wait when it guesses wrong.
         // If a page starts reading NO DATA, raise pollST before blaming it.
-        await adapter.send("ATAT2", 0.8)
-        await adapter.send("ATST" + Self.pollST, 0.8)
-        await adapter.send("ATSP6", 0.8)
+        await at(adapter, "ATAT2", 0.8)
+        await at(adapter, "ATST" + Self.pollST, 0.8)
+        await at(adapter, "ATSP6", 0.8)
         await adapter.applyHeader(profile.can.req, receive: profile.can.res)
-        await adapter.send("ATFCSH" + profile.can.req, 0.8)
-        await adapter.send("ATFCSD300000", 0.8)
-        await adapter.send("ATFCSM1", 0.8)
-        await adapter.send("81", 2.5)
+        await at(adapter, "ATFCSH" + profile.can.req, 0.8)
+        await at(adapter, "ATFCSD300000", 0.8)
+        await at(adapter, "ATFCSM1", 0.8)
+        await at(adapter, "81", 2.5)
 
         // Consider the ECU reachable if any of the first few pages answers - a
         // single page can be one this variant does not implement, and that is
         // not a reason to call the whole connection dead.
         for page in profile.pages.prefix(3) {
-            let reply = await adapter.send(page.request, 2.5)
+            let reply = await at(adapter, page.request, 2.5)
             if !Frames.isError(reply), Frames.clean(reply).contains(page.marker) {
                 return true
             }
@@ -304,7 +314,7 @@ final class ElmSession: ObservableObject {
     /// lets a truncated page pass as healthy - which is exactly how the whole
     /// of $C0, $C2, $CA and $CF went missing while looking connected.
     private func tryPage(_ page: Profile.Page, _ adapter: Adapter) async -> Bool {
-        let reply = await adapter.send(page.request, 1.5)
+        let reply = await at(adapter, page.request, 1.5)
         lastReply[page.request] = reply.trimmingCharacters(in: .whitespacesAndNewlines)
         if Frames.isError(reply) { return false }
         let clean = Frames.clean(reply)
@@ -335,7 +345,7 @@ final class ElmSession: ObservableObject {
                 do {
                     reply = try await io.locked {
                         await adapter.applyHeader(self.profile.can.req, receive: self.profile.can.res)
-                        return await adapter.send(page.request, 1.2)
+                        return await at(adapter, page.request, 1.2)
                     }
                 } catch {
                     break
@@ -373,10 +383,36 @@ final class ElmSession: ObservableObject {
 
     private func keepAliveIfIdle(_ adapter: Adapter) async {
         guard await adapter.idleFor() > 2.5 else { return }
-        _ = try? await io.locked { await adapter.send("3E", 0.8) }
+        _ = try? await io.locked { await at(adapter, "3E", 0.8) }
     }
 
     // MARK: - recording
+
+    /// Send one command and note what it cost.
+    ///
+    /// Everything the session asks for goes through here, so the technical log
+    /// covers short AT commands as well as page reads - the short ones are what
+    /// gives the fixed cost per exchange, and the difference is what gives the
+    /// cost per byte. The two `ATSH`/`ATCRA` writes inside `Adapter.applyHeader`
+    /// are the exception; they are the same shape as the other AT commands, so
+    /// their cost reads off those.
+    @discardableResult
+    private func at(_ adapter: Adapter, _ command: String,
+                    _ timeout: TimeInterval, note: String = "") async -> String {
+        let reply = await adapter.send(command, timeout)
+        guard tech.isRunning else { return reply }
+        tech.log(TechLog.Exchange(
+            at: Date(),
+            mode: mode == .obd ? "obd" : "v4621",
+            command: command,
+            replyChars: reply.count,
+            stats: await adapter.lastStats,
+            ms: await adapter.lastMs,
+            ok: !reply.isEmpty && !Frames.isError(reply),
+            note: note))
+        return reply
+    }
+
 
     private func startLogging(keys: [String]) {
         guard logToFile, !keys.isEmpty else { return }
@@ -389,6 +425,7 @@ final class ElmSession: ObservableObject {
     }
 
     private func record(_ values: [String: Sample]) {
+        techRows = tech.rows
         guard logger.isRunning else { return }
         logger.log(Date(), values)
         loggedRows = logger.rows
@@ -396,11 +433,13 @@ final class ElmSession: ObservableObject {
 
     private func stopLogging() {
         logger.stop()
+        tech.stop()
     }
 
     /// Push what is buffered, so a file can be shared without stopping.
     func flushLog() {
         logger.flush()
+        tech.flush()
     }
 
     // MARK: - the standard OBD-II set
@@ -427,21 +466,21 @@ final class ElmSession: ObservableObject {
     /// engine ECU's standard identifiers instead of the PSA ones, and the
     /// header is set once here rather than per page.
     private func initObd(_ adapter: Adapter, _ obd: ObdSet) async -> Bool {
-        await adapter.send("ATZ", 2.5)
+        await at(adapter, "ATZ", 2.5)
         for command in ["ATD", "ATE0", "ATL0", "ATH0", "ATS0", "ATAL"] {
-            await adapter.send(command, 0.8)
+            await at(adapter, command, 0.8)
         }
-        await adapter.send("ATAT2", 0.8)
-        await adapter.send("ATST" + Self.pollST, 0.8)
-        await adapter.send("ATSP6", 0.8)
+        await at(adapter, "ATAT2", 0.8)
+        await at(adapter, "ATST" + Self.pollST, 0.8)
+        await at(adapter, "ATSP6", 0.8)
         await adapter.applyHeader(obd.header.req, receive: obd.header.res)
-        await adapter.send("ATFCSH" + obd.header.req, 0.8)
-        await adapter.send("ATFCSD300000", 0.8)
-        await adapter.send("ATFCSM1", 0.8)
+        await at(adapter, "ATFCSH" + obd.header.req, 0.8)
+        await at(adapter, "ATFCSD300000", 0.8)
+        await at(adapter, "ATFCSM1", 0.8)
         // `0100` answers with the supported-PID bitmask; all that matters here
         // is that mode 01 is answered at all. No `81` - that is KWP, and the
         // standard set does not need a session opened.
-        let reply = await adapter.send("0100", 2.5)
+        let reply = await at(adapter, "0100", 2.5)
         return !Frames.isError(reply) && Frames.clean(reply).hasPrefix("4100")
     }
 
@@ -457,7 +496,7 @@ final class ElmSession: ObservableObject {
                 let sent = Date()
                 let reply: String
                 do {
-                    reply = try await io.locked { await adapter.send(request, 1.2) }
+                    reply = try await io.locked { await at(adapter, request, 1.2) }
                 } catch {
                     break
                 }
@@ -473,6 +512,10 @@ final class ElmSession: ObservableObject {
                     if group.count > 1 {
                         multiPid = false
                         status = "ЭБУ не принял мульти-PID, читаю по одному"
+                        tech.log(TechLog.Exchange(
+                            at: now, mode: "obd", command: request,
+                            replyChars: reply.count, stats: LinkStats(), ms: 0,
+                            ok: false, note: "multipid-refused"))
                     }
                     continue
                 }
@@ -500,7 +543,7 @@ final class ElmSession: ObservableObject {
         guard let adapter else { throw TransportError.notOpen }
         return try await io.locked {
             await adapter.applyHeader(self.profile.can.req, receive: self.profile.can.res)
-            let reply = await adapter.send("17FF00", 3.0)
+            let reply = await at(adapter, "17FF00", 3.0)
             return try Self.parseDtc(reply, dictionary: self.profile.dtc)
         }
     }
@@ -533,7 +576,7 @@ final class ElmSession: ObservableObject {
         guard let adapter else { throw TransportError.notOpen }
         try await io.locked {
             await adapter.applyHeader(self.profile.can.req, receive: self.profile.can.res)
-            let clean = Frames.clean(await adapter.send("14FF00", 3.0))
+            let clean = Frames.clean(await at(adapter, "14FF00", 3.0))
             guard clean.hasPrefix("54") else {
                 throw SessionError.notCleared(clean.isEmpty ? "нет ответа" : String(clean.prefix(24)))
             }
@@ -546,7 +589,7 @@ final class ElmSession: ObservableObject {
             await adapter.applyHeader(self.profile.can.req, receive: self.profile.can.res)
             var out: [IdentBlock] = []
             for block in self.profile.ident {
-                let reply = await adapter.send(block.request, 2.5)
+                let reply = await at(adapter, block.request, 2.5)
                 if Frames.isError(reply) { continue }
                 let clean = Frames.clean(reply)
                 guard clean.contains(block.marker) else { continue }
@@ -610,6 +653,10 @@ actor Adapter {
     private var header: String?
     private var lastCommand = Date.distantPast
 
+    /// What the last exchange cost, for the technical log.
+    private(set) var lastStats = LinkStats()
+    private(set) var lastMs = 0
+
     init(transport: any ElmTransport) {
         self.transport = transport
     }
@@ -650,6 +697,10 @@ actor Adapter {
             return ""
         }
         lastCommand = Date()
-        return await transport.read(until: ">", timeout: timeout)
+        let started = Date()
+        let reply = await transport.read(until: ">", timeout: timeout)
+        lastMs = Int(Date().timeIntervalSince(started) * 1000)
+        lastStats = transport.stats
+        return reply
     }
 }

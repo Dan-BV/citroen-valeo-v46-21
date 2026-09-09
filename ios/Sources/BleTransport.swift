@@ -104,6 +104,8 @@ final class BleTransport: NSObject, ElmTransport {
         buffer.clear()
     }
 
+    var stats: LinkStats { buffer.stats }
+
     func close() {
         mutate { $0.closing = true }
         if let central, let peripheral {

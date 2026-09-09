@@ -19,6 +19,21 @@ enum TransportConfig: Equatable, Codable {
     }
 }
 
+/// What the link cost for one reply.
+///
+/// BLE hands data over in notification-sized pieces, and counting them is the
+/// only way to tell two very different bottlenecks apart: a ceiling on the
+/// notification size (many pieces, all the same small size, one per connection
+/// event) versus a slow serial link inside the adapter (few pieces, arriving
+/// slowly). The measurement matters because the answers differ - a different
+/// adapter fixes one and not the other.
+struct LinkStats: Equatable {
+    var notifications = 0
+    var bytes = 0
+    /// The largest piece seen, i.e. the MTU the adapter actually uses.
+    var largest = 0
+}
+
 /// A raw byte pipe to an ELM327 adapter. Command framing lives in ElmSession.
 protocol ElmTransport: AnyObject {
     func open() async throws
@@ -30,8 +45,12 @@ protocol ElmTransport: AnyObject {
     func read(until terminator: Character, timeout: TimeInterval) async -> String
 
     /// Throw away whatever is still buffered, so a reply cannot be mistaken for
-    /// the answer to the next command.
+    /// the answer to the next command. Also resets `stats`, which therefore
+    /// always describes the reply to the command just sent.
     func drain()
+
+    /// What the link cost for the reply since the last drain.
+    var stats: LinkStats { get }
 
     func close()
 }
@@ -106,6 +125,13 @@ enum Chunker {
 final class ByteBuffer {
     private let lock = NSLock()
     private var text = ""
+    private var link = LinkStats()
+
+    /// What arrived since the last `clear()`.
+    var stats: LinkStats {
+        lock.lock(); defer { lock.unlock() }
+        return link
+    }
 
     var isEmpty: Bool {
         lock.lock(); defer { lock.unlock() }
@@ -119,6 +145,9 @@ final class ByteBuffer {
             ?? String(decoding: data, as: UTF8.self)
         lock.lock(); defer { lock.unlock() }
         text += ascii
+        link.notifications += 1
+        link.bytes += data.count
+        link.largest = max(link.largest, data.count)
     }
 
     /// Everything before the first `terminator`, which is consumed but not
@@ -141,5 +170,6 @@ final class ByteBuffer {
     func clear() {
         lock.lock(); defer { lock.unlock() }
         text = ""
+        link = LinkStats()
     }
 }

@@ -79,6 +79,8 @@ targets:
       - path: Sources/Sample.swift
       - path: Sources/ObdSet.swift
       - path: Sources/CsvLogger.swift
+      - path: Sources/CsvFile.swift
+      - path: Sources/TechLog.swift
       - path: ../data/parity/golden.json
         type: file
         buildPhase: resources
