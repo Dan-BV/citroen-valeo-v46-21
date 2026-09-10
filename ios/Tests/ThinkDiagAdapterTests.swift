@@ -68,6 +68,59 @@ final class ThinkDiagAdapterTests: XCTestCase {
         }
     }
 
+    /// The drive of 2026-09-10 stopped at `21/11` - one of three opening
+    /// queries whose two-byte status nobody reads. Stopping there was the worse
+    /// of the two guesses: carrying on either reaches the licence or fails
+    /// there, and both outcomes say more than never having tried.
+    func testSilenceOnAStatusQueryDoesNotStopTheOpening() async throws {
+        let fake = FakeThinkDiag()
+        fake.answers.removeValue(forKey: "11")
+        let adapter = ThinkDiagAdapter(transport: fake, script: script)
+
+        try await adapter.open()
+
+        let report = await adapter.openingReport
+        let joined = report.joined(separator: " | ")
+        XCTAssertTrue(report.contains { $0.contains("запрос 11") && $0.contains("нет ответа") },
+                      joined)
+        XCTAssertTrue(report.contains { $0.contains("нет ответа и на повтор") }, joined)
+        XCTAssertTrue(report.contains { $0.contains("лицензия") },
+                      "it has to have got past the silence: \(joined)")
+        XCTAssertTrue(report.last?.contains("diagmini") == true, joined)
+    }
+
+    /// Silence on an identity query is a different matter: without it there is
+    /// no telling this adapter from any other device that answers `55aa`, and
+    /// the licence is not something to send into an unknown box.
+    func testSilenceOnAnIdentityQueryDoesStopTheOpening() async {
+        let fake = FakeThinkDiag()
+        fake.answers.removeValue(forKey: "03")
+        let adapter = ThinkDiagAdapter(transport: fake, script: script)
+        do {
+            try await adapter.open()
+            XCTFail("an unidentified adapter must not be sent the licence")
+        } catch {
+            XCTAssertEqual(error as? ThinkDiagError,
+                           .stopped(step: "идентификация", number: 1, of: 8))
+        }
+    }
+
+    /// The report has to say whether anything arrived at all. "No answer"
+    /// covers two diagnoses with nothing in common - the adapter said nothing,
+    /// or it answered and the frame was rejected - and the drive of 2026-09-10
+    /// could not tell them apart.
+    func testASilentStepReportsWhatTheLinkDelivered() async {
+        let fake = FakeThinkDiag()
+        fake.answers.removeValue(forKey: "1802aabb")
+        let adapter = ThinkDiagAdapter(transport: fake, script: script)
+        try? await adapter.open()
+
+        let last = await adapter.openingReport.last ?? ""
+        XCTAssertTrue(last.contains("нет ответа и на повтор"), last)
+        XCTAssertTrue(last.contains("0 увед."), last)
+        XCTAssertTrue(last.contains("0 Б"), last)
+    }
+
     /// An unexpected-but-present answer is a gap in what we know, not a fault.
     func testAnUnexpectedAnswerIsNotedAndTheOpeningCarriesOn() async throws {
         let fake = FakeThinkDiag()

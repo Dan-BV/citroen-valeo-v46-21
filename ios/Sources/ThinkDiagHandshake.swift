@@ -53,11 +53,28 @@ struct ThinkDiagStep: Equatable {
     /// worth recording. A mismatch is logged, never fatal - see `judge`.
     var expecting: Data?
 
-    init(label: String, cmd: UInt8, payload: Data, expecting: Data? = nil) {
+    /// Whether silence here ends the opening.
+    ///
+    /// Three of the six opening queries answer with a two-byte status we never
+    /// read - `21/2a`, `25/05`, `21/11`. Whether the adapter needs them asked
+    /// at all is not something the capture can say: the official app asked
+    /// them, so we ask them. But stopping on one is the worse guess of the
+    /// two, because carrying on either reaches the licence or fails there -
+    /// and both outcomes say more than never having tried.
+    ///
+    /// The identity queries stay required: without them there is no way to
+    /// tell this adapter from some other device that answers `55aa`, and the
+    /// licence is not something to send into an unknown box. Everything from
+    /// the script is required too.
+    var required: Bool
+
+    init(label: String, cmd: UInt8, payload: Data,
+         expecting: Data? = nil, required: Bool = true) {
         self.label = label
         self.cmd = cmd
         self.payload = payload
         self.expecting = expecting
+        self.required = required
     }
 
     func frame(seq: UInt8) -> ThinkDiagFrame {
@@ -119,11 +136,11 @@ enum ThinkDiagHandshake {
         ThinkDiagStep(label: "идентификация (повтор)", cmd: 0x21, payload: Data([0x03])),
         ThinkDiagStep(label: "версии", cmd: 0x21, payload: Data([0x05])),
         ThinkDiagStep(label: "запрос 2a", cmd: 0x21, payload: Data([0x2a]),
-                      expecting: Data([0x2a, 0x00])),
+                      expecting: Data([0x2a, 0x00]), required: false),
         ThinkDiagStep(label: "запрос 25/05", cmd: 0x25, payload: Data([0x05]),
-                      expecting: Data([0x05, 0x00])),
+                      expecting: Data([0x05, 0x00]), required: false),
         ThinkDiagStep(label: "запрос 11", cmd: 0x21, payload: Data([0x11]),
-                      expecting: Data([0x11, 0x00])),
+                      expecting: Data([0x11, 0x00]), required: false),
     ]
 
     /// Where in `opening` each identity reply lands, so a caller does not have

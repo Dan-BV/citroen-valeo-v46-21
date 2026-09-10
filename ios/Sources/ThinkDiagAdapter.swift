@@ -30,6 +30,11 @@ actor ThinkDiagAdapter: Adapter {
     /// before the adapter has even read it all.
     static let handshakeTimeout: TimeInterval = 5
 
+    /// For the three opening queries whose answer nobody reads. Every capture
+    /// has them answering in milliseconds, and silence on one no longer ends
+    /// the opening, so waiting long for them only delays the connect.
+    static let statusTimeout: TimeInterval = 1.5
+
     /// What an ELM327 prints when the ECU says nothing, and what the session's
     /// `Frames.isError` already knows how to read. The equivalent here is a
     /// bare `01ff…` status reply.
@@ -119,13 +124,18 @@ actor ThinkDiagAdapter: Adapter {
         let plan = try ThinkDiagHandshake.plan(with: script)
         openingReport = []
         for (index, step) in plan.enumerated() {
-            let request = step.frame(seq: sequence.next())
-            let reply = await exchange(request, timeout: Self.handshakeTimeout)
-            let result = ThinkDiagHandshake.judge(step, request: request, reply: reply)
+            var result = await attempt(step)
+            // One retry, and only after silence. It is what tells a dead step
+            // apart from a flaky one, and on the drive of 2026-09-10 the
+            // report could say neither.
+            if result.isFailure {
+                openingReport.append("\(index + 1). \(step.label): нет ответа — \(evidence())")
+                result = await attempt(step)
+            }
 
             switch result {
             case let .answered(payload):
-                openingReport.append("\(index + 1). \(step.label): \(payload.count) Б")
+                openingReport.append("\(index + 1). \(step.label): \(payload.count) Б, \(lastMs) мс")
             case let .unexpected(payload):
                 // Not a failure. The expectations come from three sessions
                 // with one adapter, so an answer we did not predict is far
@@ -133,9 +143,14 @@ actor ThinkDiagAdapter: Adapter {
                 openingReport.append("\(index + 1). \(step.label): неожиданный ответ "
                                      + payload.hexString)
             case .silent:
-                openingReport.append("\(index + 1). \(step.label): нет ответа")
-                throw ThinkDiagError.stopped(step: step.label,
-                                             number: index + 1, of: plan.count)
+                openingReport.append("\(index + 1). \(step.label): нет ответа и на повтор — "
+                                     + evidence())
+                guard !step.required else {
+                    throw ThinkDiagError.stopped(step: step.label,
+                                                 number: index + 1, of: plan.count)
+                }
+                // Not required: carry on and find out what the licence does.
+                continue
             }
 
             if index == ThinkDiagHandshake.identityStep, let payload = result.payload {
@@ -154,6 +169,37 @@ actor ThinkDiagAdapter: Adapter {
         // what they proved is worth keeping: the adapter is the right one and
         // this link does carry `55aa`. Only then say what is missing.
         guard script != nil else { throw ThinkDiagError.noScript }
+    }
+
+    private func attempt(_ step: ThinkDiagStep) async -> ThinkDiagStepResult {
+        // A status query answered in milliseconds in every capture, and now
+        // that silence on one is survivable there is no sense waiting five
+        // seconds for it twice. The licence steps keep the long timeout: a
+        // 1629-byte write is 650 ms of inter-chunk pauses before the adapter
+        // has even finished reading it.
+        let timeout = step.required ? Self.handshakeTimeout : Self.statusTimeout
+        let request = step.frame(seq: sequence.next())
+        let reply = await exchange(request, timeout: timeout)
+        return ThinkDiagHandshake.judge(step, request: request, reply: reply)
+    }
+
+    /// What the link actually delivered for the exchange just finished.
+    ///
+    /// This exists because of the drive of 2026-09-10, where the opening
+    /// stopped at `21/11` and the report said only "нет ответа" - which covers
+    /// two diagnoses that have nothing in common. Nothing arriving means the
+    /// adapter did not answer. Bytes arriving and being discarded means it did
+    /// answer and we rejected the frame, which would be our bug and not its
+    /// behaviour. One line separates them.
+    private func evidence() -> String {
+        var parts = ["\(lastMs) мс",
+                     "\(lastStats.notifications) увед.",
+                     "\(lastStats.bytes) Б"]
+        if lastStats.largest > 0 { parts.append("макс \(lastStats.largest) Б") }
+        if reader.discarded > 0 { parts.append("отброшено \(reader.discarded) Б") }
+        if reader.pending > 0 { parts.append("недособрано \(reader.pending) Б") }
+        if let linkFailure { parts.append("связь: \(linkFailure.localizedDescription)") }
+        return parts.joined(separator: ", ")
     }
 
     /// The AT vocabulary, which is all ELM327 configuration - echo, headers,
