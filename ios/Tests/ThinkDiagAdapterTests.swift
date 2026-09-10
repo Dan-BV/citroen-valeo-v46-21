@@ -117,9 +117,9 @@ final class ThinkDiagAdapterTests: XCTestCase {
 
     /// Accumulating an answer across notifications is the thing the ELM path
     /// never had to do, so it is worth proving through the actor and not only
-    /// in the reader. Page C0 is 91 bytes framed - just inside this link's 93 -
-    /// so the pieces are cut at twenty to force the case that 672 of the
-    /// captured frames are in anyway.
+    /// in the reader. Page C0 is 93 bytes framed, which is exactly this link's
+    /// notification size, so the pieces are cut at twenty to force the case
+    /// that 672 of the captured frames are in anyway.
     func testAnAnswerWiderThanOneNotificationIsAssembled() async throws {
         let fake = FakeThinkDiag()
         fake.chunk = 20                  // harsher than the real link
@@ -249,8 +249,8 @@ final class ThinkDiagAdapterTests: XCTestCase {
 
         _ = await adapter.send("21C08001", 2.5)
         let stats = await adapter.lastStats
-        XCTAssertEqual(stats.bytes, 91, "the framed reply")
-        XCTAssertEqual(stats.notifications, 5, "91 bytes in twenty-byte pieces")
+        XCTAssertEqual(stats.bytes, 93, "the framed reply")
+        XCTAssertEqual(stats.notifications, 5, "93 bytes in twenty-byte pieces")
         XCTAssertEqual(stats.largest, 20)
     }
 
