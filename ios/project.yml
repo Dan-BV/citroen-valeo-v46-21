@@ -74,7 +74,7 @@ targets:
       - path: Sources/Frames.swift
       - path: Sources/Profile.swift
       - path: Sources/Reading.swift
-      - path: Sources/ElmTransport.swift
+      - path: Sources/LinkTransport.swift
       - path: Sources/AdapterStore.swift
       - path: Sources/ElmSession.swift
       - path: Sources/AsyncLock.swift

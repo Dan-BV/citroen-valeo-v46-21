@@ -65,7 +65,7 @@ final class ElmProbe: ObservableObject {
         return .other(first.reply)
     }
 
-    private var transport: (any ElmTransport)?
+    private var transport: (any LinkTransport)?
 
     func run(_ config: TransportConfig) async {
         guard !running else { return }
@@ -102,10 +102,10 @@ final class ElmProbe: ObservableObject {
     }
 
     private func send(_ command: String, timeout: TimeInterval,
-                      over transport: any ElmTransport) async throws -> String {
+                      over transport: any LinkTransport) async throws -> String {
         transport.drain()
         try await transport.write(command + "\r")
-        let raw = await transport.read(until: ">", timeout: timeout)
+        let raw = await transport.readText(until: ">", timeout: timeout)
         return raw
             .split(whereSeparator: { $0 == "\r" || $0 == "\n" })
             .map { $0.trimmingCharacters(in: .whitespaces) }

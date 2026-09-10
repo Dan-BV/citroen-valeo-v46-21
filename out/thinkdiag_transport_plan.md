@@ -93,13 +93,25 @@ answer. The licence blobs themselves — 2469 of those 2564 bytes — do replay.
 Every step carries a label for one reason: so the app can name the step the
 adapter stopped answering at. That is the whole instrument W6 needs.
 
-**W5b — bytes through the transport.** Not done, and the plan was wrong to say
-there is no transport work. `ByteBuffer` accumulates a `String`, and
-`ElmTransport.read(until:timeout:)` returns one, so the ELM path is text all
-the way down — a `55aa` payload put through it is mangled the moment a byte
-goes above 0x7f. `ByteBuffer` has to hold bytes and convert on the way out.
-Contained, and the existing tests still apply, but it is its own change and it
-touches the working ELM path.
+**W5b — bytes through the transport. Done.** The plan was wrong to say there
+is no transport work: `ByteBuffer` accumulated a `String` and converted on the
+way in, so every byte above 0x7f became U+FFFD and could never be recovered.
+Fine while every adapter on this link answered in ELM327 ASCII, fatal for
+binary `55aa`.
+
+It now holds bytes and makes text on the way out. `ElmTransport` is
+`LinkTransport` (`ios/Sources/LinkTransport.swift`) — the link is the same for
+both adapters, only the meaning of the bytes differs — `read(until:timeout:)`
+is `readText(until:timeout:)`, and `readBytes(timeout:)` is the binary read:
+greedy and unframed, because a frame's extent is `ThinkDiagFrameReader`'s
+business and nothing else's.
+
+A side effect worth naming: the old conversion was chunk-dependent, so one
+UTF-8 sequence split across a notification boundary became two replacement
+characters instead of one. The ELM path never noticed because `Frames.clean`
+strips everything that is not a hex digit — but it means the buffer was
+lossy in a way that depended on BLE timing, which is not a property anything
+should have.
 
 **W6 — addressing.** Requests ride `27/01` as
 `64 00 01 ff | len(2) | 61 01 | n | link(2) | reqlen | request`, with link

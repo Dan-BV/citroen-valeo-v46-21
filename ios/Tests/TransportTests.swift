@@ -60,6 +60,77 @@ final class TransportTests: XCTestCase {
         XCTAssertNil(buffer.take(upTo: ">"))
     }
 
+    // MARK: - the same buffer, as bytes
+
+    // The buffer used to hold a String and convert on the way in, which was
+    // fine while every adapter on this link answered in ELM327 ASCII. A
+    // ThinkDiag answers binary `55aa` frames, and under the old buffer every
+    // byte above 0x7f arrived as U+FFFD and could never be recovered.
+
+    /// The bug, stated as a test: a byte that is not ASCII has to survive.
+    func testBytesAboveAsciiSurviveTheBuffer() {
+        let buffer = ByteBuffer()
+        let binary = Data([0x55, 0xaa, 0xf8, 0xf0, 0x00, 0x80, 0xff, 0x7f, 0x00])
+        buffer.append(binary)
+        XCTAssertEqual(buffer.takeBytes(), binary)
+        XCTAssertTrue(buffer.isEmpty)
+    }
+
+    /// End to end for the ThinkDiag path: a real frame, cut into pieces the
+    /// size this adapter's notifications carry, has to come back out byte for
+    /// byte and then parse.
+    func testAFrameSurvivesTheBufferInNotificationSizedPieces() {
+        let frame = ThinkDiagFrame(tag: .fromAdapter, seq: 0x12, cmd: 0x67,
+                                   payload: Data((0..<200).map { UInt8($0 % 251) }))
+        let buffer = ByteBuffer()
+        for piece in Chunker.chunks(frame.encoded, size: 93) {
+            buffer.append(piece)
+        }
+        let recovered = buffer.takeBytes()
+        XCTAssertEqual(recovered, frame.encoded)
+
+        let reader = ThinkDiagFrameReader()
+        reader.append(recovered)
+        XCTAssertEqual(reader.next(), frame, "and it still parses on the other side")
+    }
+
+    func testTakingBytesFromAnEmptyBufferGivesNothing() {
+        XCTAssertEqual(ByteBuffer().takeBytes(), Data())
+    }
+
+    /// One buffer, two ways of reading it. A binary read must pick up exactly
+    /// what the text read left behind, or a session that switches between them
+    /// loses whatever fell in the gap.
+    func testTheTextAndByteReadsShareOneBuffer() {
+        let buffer = ByteBuffer()
+        buffer.append(Data("OK\r>".utf8) + Data([0x55, 0xaa, 0x80]))
+        XCTAssertEqual(buffer.take(upTo: ">"), "OK\r")
+        XCTAssertEqual(buffer.takeBytes(), Data([0x55, 0xaa, 0x80]))
+    }
+
+    /// Converting on the way out means the prompt is still found when a
+    /// non-ASCII byte came before it - under the old buffer that byte had
+    /// already become a multi-byte replacement character.
+    func testThePromptIsStillFoundAfterALineNoiseByte() {
+        let buffer = ByteBuffer()
+        buffer.append(Data([0xff]) + Data("41 00 BE\r>".utf8))
+        let reply = buffer.take(upTo: ">")
+        XCTAssertNotNil(reply)
+        XCTAssertTrue(reply?.hasSuffix("41 00 BE\r") == true, "got \(reply ?? "nil")")
+        XCTAssertTrue(buffer.isEmpty)
+    }
+
+    /// The cost measurement must not change: it counts what the link
+    /// delivered, which was never about what the bytes meant.
+    func testStatsCountBinaryNotificationsTheSameWay() {
+        let buffer = ByteBuffer()
+        buffer.append(Data(repeating: 0x80, count: 93))
+        buffer.append(Data(repeating: 0x81, count: 20))
+        XCTAssertEqual(buffer.stats, LinkStats(notifications: 2, bytes: 113, largest: 93))
+        buffer.clear()
+        XCTAssertEqual(buffer.stats, LinkStats())
+    }
+
     // MARK: - waiting for data without a busy-wait
 
     // A read waits to be woken by the notification that carries the data. The

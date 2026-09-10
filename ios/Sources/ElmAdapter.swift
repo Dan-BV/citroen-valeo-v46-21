@@ -6,7 +6,7 @@ import Foundation
 /// An actor is right here - each method is a single exchange and does not need
 /// to stay indivisible across several of them; that is what `AsyncLock` is for.
 actor ElmAdapter: Adapter {
-    private let transport: any ElmTransport
+    private let transport: any LinkTransport
     private var header: String?
     private var lastCommand = Date.distantPast
 
@@ -26,7 +26,7 @@ actor ElmAdapter: Adapter {
     /// minutes, while the screen still read "Подключено · 0 мс".
     private(set) var linkFailure: TransportError?
 
-    init(transport: any ElmTransport) {
+    init(transport: any LinkTransport) {
         self.transport = transport
     }
 
@@ -72,7 +72,7 @@ actor ElmAdapter: Adapter {
         }
         lastCommand = Date()
         let started = Date()
-        let reply = await transport.read(until: ">", timeout: timeout)
+        let reply = await transport.readText(until: ">", timeout: timeout)
         lastMs = Int(Date().timeIntervalSince(started) * 1000)
         lastStats = transport.stats
         return reply

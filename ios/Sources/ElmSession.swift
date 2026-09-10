@@ -37,7 +37,7 @@ final class ElmSession: ObservableObject {
     // MARK: -
 
     private let profile: Profile
-    private let makeTransport: (TransportConfig) -> any ElmTransport
+    private let makeTransport: (TransportConfig) -> any LinkTransport
 
     private let logger = CsvLogger()
     private let tech = TechLog()
@@ -140,7 +140,7 @@ final class ElmSession: ObservableObject {
     var isBusy: Bool { loop != nil }
 
     init(profile: Profile,
-         makeTransport: @escaping (TransportConfig) -> any ElmTransport) {
+         makeTransport: @escaping (TransportConfig) -> any LinkTransport) {
         self.profile = profile
         self.makeTransport = makeTransport
         self.selected = Self.defaultSelection(profile)    }

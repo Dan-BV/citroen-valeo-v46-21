@@ -170,7 +170,7 @@ final class ThinkDiagFrameReader {
     }
 
     /// Throw away the buffer, so a late reply cannot be read as the answer to
-    /// the next request. The counterpart of `ElmTransport.drain()`.
+    /// the next request. The counterpart of `LinkTransport.drain()`.
     func reset() {
         buffer.removeAll(keepingCapacity: true)
         discarded = 0

@@ -34,15 +34,30 @@ struct LinkStats: Equatable {
     var largest = 0
 }
 
-/// A raw byte pipe to an ELM327 adapter. Command framing lives in ElmSession.
-protocol ElmTransport: AnyObject {
+/// A raw byte pipe to an adapter. What the bytes mean is the adapter's
+/// business: an ELM327 clone answers ASCII ending in a `>` prompt, a ThinkDiag
+/// answers binary `55aa` frames, and both arrive over the same BLE link.
+///
+/// Named for the link rather than for ELM327, which is what it was called
+/// while there was only one kind of adapter to reach.
+protocol LinkTransport: AnyObject {
     func open() async throws
     func write(_ data: Data) async throws
 
     /// Everything received before `terminator`, which is consumed and left out
     /// - or whatever had arrived when `timeout` ran out. An ELM327 ends every
     /// reply with the `>` prompt, which is what makes a read finish early.
-    func read(until terminator: Character, timeout: TimeInterval) async -> String
+    func readText(until terminator: Character, timeout: TimeInterval) async -> String
+
+    /// Whatever has arrived, as bytes, waiting up to `timeout` for the first
+    /// of it. Empty means nothing came.
+    ///
+    /// Unlike `readText` there is no terminator to stop on: a `55aa` frame
+    /// carries its own length and the piece that knows where one ends is
+    /// `ThinkDiagFrameReader`. So this returns as soon as there is anything to
+    /// return, and the caller reads again until it has a whole frame or runs
+    /// out of time.
+    func readBytes(timeout: TimeInterval) async -> Data
 
     /// Throw away whatever is still buffered, so a reply cannot be mistaken for
     /// the answer to the next command. Also resets `stats`, which therefore
@@ -55,7 +70,7 @@ protocol ElmTransport: AnyObject {
     func close()
 }
 
-extension ElmTransport {
+extension LinkTransport {
     func write(_ text: String) async throws {
         try await write(Data(text.utf8))
     }
@@ -122,9 +137,17 @@ enum Chunker {
 /// so a reply is accumulated here until the ELM327 prompt shows up. This is the
 /// counterpart of the queue behind `InputStream` in the Kotlin transport, and
 /// it is a separate type so it can be tested without any hardware.
+///
+/// It holds **bytes**, and text is made on the way out. It used to hold a
+/// `String` and convert on the way in, which was fine while everything on this
+/// link was ELM327 ASCII and destroys data now that it is not: a ThinkDiag
+/// speaks binary `55aa` frames, and every byte above 0x7f went in as U+FFFD
+/// and could never come back out. Even the lossy path was chunk-dependent -
+/// one UTF-8 sequence split across a notification boundary became two
+/// replacement characters instead of one.
 final class ByteBuffer: @unchecked Sendable {
     private let lock = NSLock()
-    private var text = ""
+    private var bytes: [UInt8] = []
     private var link = LinkStats()
 
     /// A reader parked in `waitForData`, and a wakeup that arrived while none
@@ -135,7 +158,7 @@ final class ByteBuffer: @unchecked Sendable {
     /// the drive lasts, and a continuous busy-wait is what iOS terminates an
     /// app for. So the data itself ends the wait.
     ///
-    /// This has to be the same lock that guards `text`: appending and waking
+    /// This has to be the same lock that guards `bytes`: appending and waking
     /// are one step, or a reader can park just after the data it wanted arrived
     /// and then sit there until its timeout. And it has to survive being woken
     /// twice or never, because CoreBluetooth does both - hence a guarded slot
@@ -152,17 +175,13 @@ final class ByteBuffer: @unchecked Sendable {
 
     var isEmpty: Bool {
         lock.lock(); defer { lock.unlock() }
-        return text.isEmpty
+        return bytes.isEmpty
     }
 
     func append(_ data: Data) {
-        // ELM327 talks ASCII; anything else is line noise, and dropping it is
-        // better than letting it derail the hex parsing downstream.
-        let ascii = String(data: data, encoding: .ascii)
-            ?? String(decoding: data, as: UTF8.self)
         var wake: CheckedContinuation<Void, Never>?
         lock.lock()
-        text += ascii
+        bytes.append(contentsOf: data)
         link.notifications += 1
         link.bytes += data.count
         link.largest = max(link.largest, data.count)
@@ -239,26 +258,52 @@ final class ByteBuffer: @unchecked Sendable {
         parked?.resume()
     }
 
-    /// Everything before the first `terminator`, which is consumed but not
-    /// returned; `nil` while it has not arrived yet.
+    /// Everything before the first `terminator`, as text; the terminator is
+    /// consumed but not returned. `nil` while it has not arrived yet.
     func take(upTo terminator: Character) -> String? {
+        // The ELM327 prompt is the only terminator there is, and it is ASCII.
+        // A non-ASCII one has no single byte to look for, so it can never
+        // match - the read above then falls through to its timeout, which is
+        // the honest outcome for a terminator this buffer cannot see.
+        guard let mark = terminator.asciiValue else { return nil }
         lock.lock(); defer { lock.unlock() }
-        guard let at = text.firstIndex(of: terminator) else { return nil }
-        let reply = String(text[..<at])
-        text = String(text[text.index(after: at)...])
+        guard let at = bytes.firstIndex(of: mark) else { return nil }
+        let reply = ByteBuffer.text(bytes[..<at])
+        bytes.removeFirst(at + 1)
         return reply
     }
 
     func takeAll() -> String {
         lock.lock(); defer { lock.unlock() }
-        let all = text
-        text = ""
+        let all = ByteBuffer.text(bytes[...])
+        bytes.removeAll(keepingCapacity: true)
+        return all
+    }
+
+    /// Everything buffered, as bytes, for a protocol that is not text.
+    ///
+    /// Deliberately greedy and deliberately not framed: a `55aa` frame can be
+    /// seventeen notifications long and two frames can share one, so the piece
+    /// that knows where a frame ends is `ThinkDiagFrameReader`, not this. This
+    /// hands over whatever has arrived and lets that accumulate it.
+    func takeBytes() -> Data {
+        lock.lock(); defer { lock.unlock() }
+        let all = Data(bytes)
+        bytes.removeAll(keepingCapacity: true)
         return all
     }
 
     func clear() {
         lock.lock(); defer { lock.unlock() }
-        text = ""
+        bytes.removeAll(keepingCapacity: true)
         link = LinkStats()
+    }
+
+    /// ELM327 talks ASCII; anything else is line noise, and letting it through
+    /// as replacement characters is better than refusing the whole reply -
+    /// `Frames.clean` strips everything that is not a hex digit anyway.
+    private static func text<C: Collection>(_ bytes: C) -> String where C.Element == UInt8 {
+        let data = Data(bytes)
+        return String(data: data, encoding: .ascii) ?? String(decoding: data, as: UTF8.self)
     }
 }

@@ -13,7 +13,7 @@ import Foundation
 /// a continuation in every delegate callback. CoreBluetooth can deliver the
 /// same callback twice, or none at all, and a continuation resumed twice is a
 /// crash; at ELM327 speeds a 20 ms poll costs nothing.
-final class BleTransport: NSObject, ElmTransport {
+final class BleTransport: NSObject, LinkTransport {
 
     private let wanted: UUID
     private let name: String
@@ -50,7 +50,7 @@ final class BleTransport: NSObject, ElmTransport {
         super.init()
     }
 
-    // MARK: - ElmTransport
+    // MARK: - LinkTransport
 
     func open() async throws {
         buffer.clear()
@@ -96,7 +96,7 @@ final class BleTransport: NSObject, ElmTransport {
         }
     }
 
-    func read(until terminator: Character, timeout: TimeInterval) async -> String {
+    func readText(until terminator: Character, timeout: TimeInterval) async -> String {
         let deadline = Date().addingTimeInterval(timeout)
         while true {
             if let reply = buffer.take(upTo: terminator) { return reply }
@@ -109,6 +109,19 @@ final class BleTransport: NSObject, ElmTransport {
             await buffer.waitForData(upTo: left)
         }
         return buffer.takeAll()
+    }
+
+    func readBytes(timeout: TimeInterval) async -> Data {
+        let deadline = Date().addingTimeInterval(timeout)
+        while true {
+            let arrived = buffer.takeBytes()
+            if !arrived.isEmpty { return arrived }
+            let left = deadline.timeIntervalSinceNow
+            if left <= 0 { return Data() }
+            // Same wait as above, for the same reason: a drive's worth of
+            // polling in the background is what iOS terminates an app for.
+            await buffer.waitForData(upTo: left)
+        }
     }
 
     func drain() {

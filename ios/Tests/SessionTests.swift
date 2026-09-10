@@ -3,7 +3,7 @@ import XCTest
 /// A transport that answers from a script instead of from an adapter, so the
 /// session can be driven end to end - init, page probe, poll loop, fault codes
 /// - without a car.
-final class ScriptedTransport: ElmTransport {
+final class ScriptedTransport: LinkTransport {
     /// Command without the carriage return, to the reply the adapter would
     /// give. Anything not listed answers `OK`, like an ELM327 does for AT
     /// commands it accepts.
@@ -33,11 +33,20 @@ final class ScriptedTransport: ElmTransport {
         lock.unlock()
     }
 
-    func read(until terminator: Character, timeout: TimeInterval) async -> String {
+    func readText(until terminator: Character, timeout: TimeInterval) async -> String {
         lock.lock(); defer { lock.unlock() }
         let reply = pending
         pending = ""
         return reply
+    }
+
+    /// This script is ELM327 text, so the byte read hands the same reply over
+    /// unconverted. Nothing here uses it; it exists because the protocol has it.
+    func readBytes(timeout: TimeInterval) async -> Data {
+        lock.lock(); defer { lock.unlock() }
+        let reply = pending
+        pending = ""
+        return Data(reply.utf8)
     }
 
     func drain() {
