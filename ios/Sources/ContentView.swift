@@ -177,7 +177,7 @@ struct SessionScreen: View {
                 .fill(colour)
                 .frame(width: 8, height: 8)
             Text(statusText)
-                .font(.subheadline)
+                .font(.footnote)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 12)
@@ -192,10 +192,10 @@ struct SessionScreen: View {
     private var cycleTime: some View {
         if session.isConnected, let ms = session.lastCycleMs {
             Text("\(ms.formatted()) мс")
-                .font(.title3.weight(.semibold).monospacedDigit())
+                .font(.body.weight(.semibold).monospacedDigit())
         } else if !session.isBusy, let ms = session.predictedCycleMs {
             Text("~\(ms.formatted()) мс")
-                .font(.title3.monospacedDigit())
+                .font(.body.monospacedDigit())
                 .foregroundStyle(.secondary)
         }
     }
@@ -222,11 +222,11 @@ struct SessionScreen: View {
         return VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text("\(pages.count) стр. в круге")
-                    .font(.subheadline.monospacedDigit())
+                    .font(.footnote.monospacedDigit())
                 Spacer()
                 if let ms = session.predictedCycleMs {
                     Text("~\(ms.formatted()) мс")
-                        .font(.title3.monospacedDigit())
+                        .font(.body.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
             }
