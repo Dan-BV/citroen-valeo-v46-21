@@ -1,108 +1,99 @@
-# ThinkDiag as a second adapter protocol — plan
+# ThinkDiag as a second adapter type — implementation plan
 
-**Scope: the iOS app only.** The web and Android versions are out of scope as of
-2026-09-10. **Priority: the engine data stream.** No work on the BSI or any
-other module until the engine stream is optimised.
+**Scope: the iOS app only.** Web and Android are out. **Poll optimisation is
+deferred** — the page-period work in `out/engine_stream_pages.md` waits until
+this is done.
 
-## Why bother — the hypothesis this has to earn
+The investigation is finished; what follows is the build. Findings behind every
+decision here: `out/thinkdiag_protocol.md`, baseline in
+`out/drives/2026-09-10_ios_baseline.md`.
 
-The engine stream on iOS is notification-bound, not ECU-bound. A proprietary
-`21xx8001` page answers with 40-70 bytes and the BLE link hands them over about
-20 at a time, one notification per connection event; measured elsewhere in the
-same session, a page that answers costs 78 ms and one that does not costs a full
-169 ms timeout, out of a 2353 ms cycle.
+## What is already settled
 
-ThinkDiag is worth building **only if its LE link moves that number** — a larger
-MTU, or fewer round-trips per page. That is measurable with instruments the app
-already has: `LinkStats` counts notifications, bytes and the largest piece;
-`TechLog` records it per exchange; `tools/tech` analyses the log. So the honest
-order is measure first, build second.
+- **The licence replays.** Two sessions minutes apart sent byte-identical
+  payloads, and the adapter's one varying reply is never referenced again. No
+  cloud round trip.
+- **The link is a plain transparent UART.** Service
+  `49535343-FE7D-4AE5-8FA9-9FAFD205E455`, notify
+  `49535343-1E4D-4BD9-BA61-23C647249616`, write
+  `49535343-8841-43F4-A8D4-ECBE34729BB3` (`49535343` is ASCII `ISSC`). Our
+  `BleTransport` discovers a notify/write pair generically and already brings
+  this link up — measured on the car, where every ELM command then timed out.
+  **There is no transport work to do.**
+- **It is worth 2.15x.** MTU 247 against the ELM clone's 136, and it delivers a
+  whole frame in one notification where the clone always uses twenty-byte
+  pieces. Against the measured cost model, a seven-page cycle goes from 883 ms
+  to about 412.
 
-## What the 2026-09-10 capture settled
+## How the adapter is identified
 
-Evidence and detail in `out/thinkdiag_protocol.md`.
+There is one adapter and no second one to choose between, so no picker and no
+stored selection: choosing the ThinkDiag *type* is the whole choice.
 
-- **The licence payload is static and replayable.** Two sessions minutes apart
-  sent byte-identical blobs; the adapter's one varying reply is never referenced
-  again. No Launch cloud round-trip.
-- **The adapter is dual-mode.** It advertises LE as `9TFD20257708` (442
-  advertising reports in the snoop, "BR/EDR not supported" bit clear) and the
-  phone bonds it as `[ DUAL ]`. The Android app happened to choose classic SPP;
-  the iPhone reaches it over LE. An earlier note in this plan claimed iOS could
-  not reach it at all — that was a conclusion drawn from one app's choice, and
-  it was wrong.
-- **Addressing is a handle, not a CAN id.** `27/01` carries
-  `64 00 01 ff | len(2) | 61 01 | n | link(2) | reqlen | request`, where `link`
-  is resolved inside the adapter's own vehicle software: `2905` engine, `2a25`
-  BSI. No CAN identifier appears in the stream in any encoding.
+Identify it by its **advertised name, `9TFD20257708`** — its case serial, which
+is stable. Not by the CoreBluetooth identifier: that is per-app, not a MAC, and
+it can change when the app is reinstalled, which happens on every SideStore
+resign. Cache the identifier once found to make reconnection quick, but never
+depend on it.
 
-## What is still unknown
+## The work
 
-1. ~~The GATT layout.~~ **Done** — ISSC transparent UART, one notify and one
-   write characteristic, listed in `out/thinkdiag_protocol.md`. S2 and S3 are
-   both answered: the app already lists the adapter and brings the link up, and
-   every ELM command times out on it. Transport fine, protocol wrong.
-2. **Whether `55aa` over GATT is framed the same** as over RFCOMM, and at what
-   MTU — which is the whole point of the exercise.
-3. **Whether the link handle is stable.** `2905` and `2a25` recur within the
-   13:02 session, but the two short CITROEN sessions used a different descriptor
-   form, so cross-session stability is not yet shown.
-4. **Whether a link has to be opened** before `27/01` will accept a handle, or
-   whether the handle alone is enough after the licence frames.
+**W1 — the seam.** `actor Adapter` (`ios/Sources/ElmSession.swift:706`) already
+exposes everything `ElmSession` uses: `send(command:timeout:)`, `lastStats`,
+`lastMs`. Turn it into a protocol; today's body becomes `ElmAdapter`. Nothing
+in the session changes.
 
-## Steps
+**W2 — the adapter type in settings.** `TransportConfig` gains a case beside
+`.ble(id:name:)`. `AdapterStore` persists it as `Codable` already, so the
+migration matters: a previously stored `.ble` value must still decode.
+A segmented control in `AdapterSheet` — ELM327 / ThinkDiag — and picking
+ThinkDiag hides the scan list, because there is nothing to pick.
 
-**S1 — measure the baseline, without ThinkDiag. DONE** →
-`out/drives/2026-09-10_ios_baseline.md`. 1338 healthy page reads: median 118 ms
-and 6 notifications per page, and `largest` pinned at **20 bytes** in every
-single one. The stream is notification-bound, as hypothesised, and iOS will not
-let an app ask for a bigger MTU — so on this adapter the ceiling has no software
-fix. A page costs what its length costs: 183 bytes → 10 notifications → 146 ms.
+**W3 — connect by name.** A scan that matches the advertised name and connects
+to the first hit, instead of connecting to a chosen identifier.
 
-The same logs caught a defect that outranks the ThinkDiag work: when the screen
-goes off the ECU drops the diagnostic session, every page then answers
-`NO DATA`, and the app never re-opens it because `81` runs only on connect.
-Fixes listed in the baseline document.
+**W4 — the framing.** Build and parse
+`55aa | tag(2) | len(2) | seq(1) | cmd(1) | payload | cksum(1)`; `f0f8` out,
+`f8f0` back, a reply echoes the request's `seq` with `cmd | 0x40`. Replies
+arrive whole in one notification on this link, but accumulate against `len`
+rather than assuming it.
 
-**S2 — enumerate the GATT** (`tools/ble/enumerate.py 9TFD`). Services,
-characteristics, properties, MTU.
+**W5 — the handshake.** `21/03` and `21/05` for identity, then the licence
+frames replayed byte for byte. Writes go out in twenty-byte chunks, which the
+existing `Chunker` already does.
 
-**S3 — probe with what already exists.** `AdapterScanner` scans with
-`withServices: nil` and `BleTransport` calls `discoverServices(nil)` and picks a
-notify/write pair generically, so the app should already list the adapter and
-may already bring up a byte pipe. Find out, and log which characteristics it
-chose and the negotiated MTU. No new transport code until this says one is
-needed.
+**W6 — addressing.** Requests ride `27/01` as
+`64 00 01 ff | len(2) | 61 01 | n | link(2) | reqlen | request`, with link
+`2905` for the engine. **The first experiment of the build**: whether that
+handle works on its own after the licence frames, or whether a setup exchange
+has to be replayed to create it. No CAN identifier ever crosses the wire, so
+there is nothing else to try if it does not.
 
-**S4 — speak the protocol.** `55aa` framing, the licence replay, then
-`21CB8001` on handle `2905`. One page answering correctly is the milestone.
+**W7 — translation.** `ThinkDiagAdapter` interprets the finite ELM vocabulary
+the session actually sends — `ATZ ATD ATE0 ATL0 ATH0 ATS0 ATAL ATAT2 ATST19
+ATSP6 ATSH ATCRA ATFCSH ATFCSD ATFCSM` as configuration or no-ops, and `81`,
+`3E`, `17FF00`, `2180`, `21FE`, `21xx8001` as requests onto `27/01`.
 
-**S5 — compare against S1** and keep it only if it wins.
+**W8 — the measurement stays honest.** Report `LinkStats` — notifications,
+bytes, largest — exactly as `BleTransport` does, so `TechLog` and `tools/tech`
+keep working. That is how the 2.15x gets proved rather than assumed.
 
-**Expected gain, now measured rather than hoped for: 2.15x** — a seven-page
-cycle from 883 ms to about 412 ms, because ThinkDiag delivers a whole page in
-one notification where the ELM clone always uses twenty-byte pieces. Details in
-`out/thinkdiag_protocol.md` and the baseline. That is the number S3 and S4 have
-to be worth: the whole `55aa` protocol, the licence replay and the link handles,
-against roughly halving the cycle.
+## Milestone and proof
 
-The cheaper lever sits next to it and needs no hardware. Of the 412 ms that
-would remain, 343 is fixed per-exchange cost with no bytes in it. **Fewer
-exchanges** — fewer pages, or pages asked for less often — pays without any of
-the above, and should be tried first.
+One `21CB8001` answering the right bytes over the ThinkDiag link. Then a full
+cycle measured against the 721 ms model and the 755 ms observed, with the same
+pages and periods, so the comparison means something.
+
+## Kill condition
+
+W6 needing a setup sequence we cannot reproduce without Launch's vehicle
+software. Then stop: the capture keeps its documentary value, and the
+poll-period work is the fallback for the same order of gain.
 
 ## Deliberately out of scope
 
-- The web and Android versions.
-- The BSI and every other module. The BSI DID sweep from this capture is
-  documented in `out/thinkdiag_protocol.md` and stays parked until the engine
-  stream is optimised.
-- New iOS transport plumbing before S3 proves it is needed.
-
-## Kill conditions
-
-- S1 shows the engine stream is not notification-bound — then ThinkDiag cannot
-  help, whatever else is true.
-- S2 or S3 shows no usable GATT pipe.
-- S4 needs setup we cannot reproduce without Launch's vehicle software. In that
-  case stop and keep the capture for its reference value.
+- The web and Android clients.
+- The BSI and every other module. The DID sweep is documented in
+  `out/thinkdiag_protocol.md` and waits.
+- Poll optimisation — deferred by decision, not forgotten:
+  `out/engine_stream_pages.md`.
