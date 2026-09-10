@@ -35,6 +35,11 @@ final class TechLog {
         let ms: Int
         let ok: Bool
         let note: String
+        /// The cleaned reply, truncated. Without it a refused answer cannot be
+        /// explained: the first drive showed the ECU answering a six-PID
+        /// request in one exchange while the parser rejected it, and the length
+        /// alone did not say why.
+        let reply: String
     }
 
     private let file: CsvFile
@@ -52,7 +57,10 @@ final class TechLog {
     }
 
     static let header = "time_ms,iso,mode,command,reply_chars,notifications," +
-        "link_bytes,largest,ms,ok,note"
+        "link_bytes,largest,ms,ok,note,reply"
+
+    /// Enough to see the shape of an answer without bloating the file.
+    static let replyCap = 64
 
     func start() throws {
         guard !isRunning else { return }
@@ -72,6 +80,7 @@ final class TechLog {
             "\(exchange.ms)",
             exchange.ok ? "1" : "0",
             exchange.note,
+            String(exchange.reply.prefix(Self.replyCap)),
         ].joined(separator: ","))
     }
 

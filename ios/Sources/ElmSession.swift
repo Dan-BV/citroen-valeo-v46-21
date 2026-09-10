@@ -39,6 +39,12 @@ final class ElmSession: ObservableObject {
     /// Requests of pages the ECU did not answer when probed.
     @Published private(set) var deadPages: Set<String> = []
 
+    /// Codes of standard PIDs this ECU does not publish. Measured on the car:
+    /// seven of the twenty-one answer nothing, and each of those costs a full
+    /// adapter timeout - 169 ms against 78 for one that answers, which was
+    /// 1183 ms of a 2353 ms cycle spent waiting for nothing.
+    @Published private(set) var deadPids: Set<String> = []
+
     // MARK: -
 
     private let profile: Profile
@@ -422,7 +428,8 @@ final class ElmSession: ObservableObject {
             stats: await adapter.lastStats,
             ms: await adapter.lastMs,
             ok: !reply.isEmpty && !Frames.isError(reply),
-            note: note))
+            note: note,
+            reply: Frames.clean(reply)))
         return reply
     }
 
@@ -471,7 +478,10 @@ final class ElmSession: ObservableObject {
         }
         state = .connected
         startLogging(keys: obd.params.map(\.key).filter(selected.contains))
+        status = "Проверка PID…"
+        deadPids = try await io.locked { await self.probePids(adapter, obd) }
         status = "Подключено · стандартный OBD"
+            + (deadPids.isEmpty ? "" : " · без ответа: \(deadPids.count)")
         await pollObd(adapter, obd)
     }
 
@@ -497,11 +507,33 @@ final class ElmSession: ObservableObject {
         return !Frames.isError(reply) && Frames.clean(reply).hasPrefix("4100")
     }
 
+    /// Ask each wanted PID once and remember the ones the ECU does not
+    /// publish, the same way pages are probed. Without this the cycle pays an
+    /// adapter timeout per unsupported PID, every pass, for nothing.
+    private func probePids(_ adapter: Adapter, _ obd: ObdSet) async -> Set<String> {
+        var dead: Set<String> = []
+        for param in obd.params where selected.contains(param.key) {
+            if Task.isCancelled { break }
+            let reply = await at(adapter, param.pid, 1.5, note: "probe")
+            if Frames.isError(reply)
+                || ObdReply.walk(Frames.clean(reply), expecting: [param]) == nil {
+                dead.insert(param.code)
+            }
+        }
+        return dead
+    }
+
     private func pollObd(_ adapter: Adapter, _ obd: ObdSet) async {
         var live: [String: Sample] = [:]
         while !Task.isCancelled {
+            cycle += 1
             let started = Date()
-            let wanted = obd.params.filter { selected.contains($0.key) }
+            // A written-off PID is retried now and then in case the silence
+            // was transient, like a dead page.
+            let retry = cycle % 20 == 0
+            let wanted = obd.params.filter {
+                selected.contains($0.key) && (retry || !deadPids.contains($0.code))
+            }
 
             for group in ObdReply.group(wanted, perRequest: multiPid ? 6 : 1) {
                 if Task.isCancelled { break }
@@ -528,12 +560,14 @@ final class ElmSession: ObservableObject {
                         tech.log(TechLog.Exchange(
                             at: now, mode: "obd", command: request,
                             replyChars: reply.count, stats: LinkStats(), ms: 0,
-                            ok: false, note: "multipid-refused"))
+                            ok: false, note: "multipid-refused",
+                            reply: Frames.clean(reply)))
                     }
                     continue
                 }
                 for param in group {
                     guard let raw = raws[param.code] else { continue }
+                    deadPids.remove(param.code)
                     let sample = Sample(value: param.value(raw), raw: raw,
                                         at: now, valid: true)
                     live[param.key] = sample

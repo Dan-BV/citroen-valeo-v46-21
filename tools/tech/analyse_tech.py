@@ -76,6 +76,8 @@ def main():
                         'ms': int(row['ms']),
                         'ok': row['ok'] == '1',
                         'note': row['note'],
+                        # Added after the first drive; older files lack it.
+                        'reply': row.get('reply', ''),
                     })
                 except (KeyError, ValueError):
                     continue
@@ -96,6 +98,24 @@ def main():
         'refused by the ECU - %d marked rows, so the standard set falls back to '
         'one PID per request' % len(refused) if refused else
         'accepted (no refusal rows)'))
+
+    if refused:
+        print('  the answers that were refused, so the shape can be read off:')
+        for r in refused[:4]:
+            print('    %-16s %s' % (r['command'], r['reply'] or '(not recorded)'))
+
+    # --- dead requests, which cost a full timeout each --------------------
+    dead = [r for r in rows if not r['ok'] and r['ms'] > 0]
+    if dead:
+        by_command = collections.Counter(r['command'] for r in dead)
+        wasted = statistics.median(r['ms'] for r in dead)
+        print()
+        print('UNANSWERED: %d exchanges, median %d ms each - a full adapter timeout'
+              % (len(dead), wasted))
+        print('  %d distinct requests: %s'
+              % (len(by_command), ' '.join(sorted(by_command))))
+        print('  -> %d ms per cycle spent waiting for nothing'
+              % (len(by_command) * wasted))
 
     # --- the link itself -------------------------------------------------
     sizes = collections.Counter(r['largest'] for r in good if r['largest'])

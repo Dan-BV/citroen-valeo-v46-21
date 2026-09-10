@@ -84,10 +84,15 @@ final class BleTransport: NSObject, ElmTransport {
             characteristic.properties.contains(.writeWithoutResponse) ? .withoutResponse : .withResponse
         let limit = min(Chunker.bleChunk, peripheral.maximumWriteValueLength(for: type))
 
-        for chunk in Chunker.chunks(data, size: max(limit, 1)) {
+        let chunks = Chunker.chunks(data, size: max(limit, 1))
+        for (index, chunk) in chunks.enumerated() {
             peripheral.writeValue(chunk, for: characteristic, type: type)
-            // The clones drop data if chunks arrive back to back.
-            try? await Task.sleep(nanoseconds: 8_000_000)
+            // The clones drop data if chunks arrive back to back - but only
+            // between chunks. Pausing after the last one delayed every single
+            // exchange by 8 ms for nothing, and a command is one chunk.
+            if index < chunks.count - 1 {
+                try? await Task.sleep(nanoseconds: 8_000_000)
+            }
         }
     }
 
@@ -95,7 +100,10 @@ final class BleTransport: NSObject, ElmTransport {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if let reply = buffer.take(upTo: terminator) { return reply }
-            try? await Task.sleep(nanoseconds: 5_000_000)
+            // 2 ms rather than 5: with a measured 48 ms per exchange even the
+            // polling granularity is worth something, and this costs nothing
+            // but wakeups.
+            try? await Task.sleep(nanoseconds: 2_000_000)
         }
         return buffer.takeAll()
     }

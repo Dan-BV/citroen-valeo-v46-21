@@ -100,6 +100,58 @@ final class ObdTests: XCTestCase {
         XCTAssertNil(ObdReply.walk("", expecting: group))
     }
 
+    /// What the car actually does. Measured on 2026-09-10: a six-PID request
+    /// was answered in one exchange of 97 ms, and refused, because the ECU
+    /// returns each PID as its own message rather than one message carrying
+    /// six. Reading them singly instead cost 468 ms.
+    func testPidsAnsweredAsSeparateConcatenatedMessages() throws {
+        let obd = try loadSet()
+        let group = ["RPM", "Coolant", "Speed"].compactMap { obd.byKey[$0] }
+
+        // 410C0A1F | 41055A | 410D32
+        let raws = try XCTUnwrap(ObdReply.walk("410C0A1F41055A410D32", expecting: group))
+        XCTAssertEqual(raws["0C"], 0x0A1F)
+        XCTAssertEqual(raws["05"], 0x5A)
+        XCTAssertEqual(raws["0D"], 0x32)
+    }
+
+    func testTheOrderOfConcatenatedMessagesDoesNotMatter() throws {
+        let obd = try loadSet()
+        let group = ["Speed", "RPM"].compactMap { obd.byKey[$0] }
+        let raws = try XCTUnwrap(ObdReply.walk("410D3241 0C0A1F".replacingOccurrences(of: " ", with: ""),
+                                               expecting: group))
+        XCTAssertEqual(raws["0D"], 0x32)
+        XCTAssertEqual(raws["0C"], 0x0A1F)
+    }
+
+    func testAConcatenatedAnswerMissingOnePidIsRefused() throws {
+        let obd = try loadSet()
+        let group = ["RPM", "Coolant", "Speed"].compactMap { obd.byKey[$0] }
+        XCTAssertNil(ObdReply.walk("410C0A1F41055A", expecting: group))
+    }
+
+    /// PID 14 answers with two bytes - the sensor voltage and a fuel trim -
+    /// and only the voltage is wanted. Reading one byte but stepping over one
+    /// is what left both lambdas empty in the whole first drive log.
+    func testAPidLongerThanTheValueReadFromItIsStillStepped() throws {
+        let obd = try loadSet()
+        let lambda = try XCTUnwrap(obd.byKey["O2S1"])
+        XCTAssertEqual(lambda.length, 1, "only byte A is wanted")
+        XCTAssertEqual(lambda.wireLength, 2, "but the PID answers with two")
+
+        // Alone: the trailing trim byte must not be mistaken for junk.
+        let single = try XCTUnwrap(ObdReply.walk("41140A20", expecting: [lambda]))
+        XCTAssertEqual(single["14"], 0x0A)
+        XCTAssertEqual(lambda.value(0x0A), 0.05, accuracy: 1e-9)
+
+        // And in company: the PID after it must still land in the right place.
+        let speed = try XCTUnwrap(obd.byKey["Speed"])
+        let pair = try XCTUnwrap(ObdReply.walk("41140A2041 0D32".replacingOccurrences(of: " ", with: ""),
+                                               expecting: [lambda, speed]))
+        XCTAssertEqual(pair["14"], 0x0A)
+        XCTAssertEqual(pair["0D"], 0x32, "not the trim byte")
+    }
+
     func testASinglePidAnswerWalksToo() throws {
         let obd = try loadSet()
         let group = ["Volt"].compactMap { obd.byKey[$0] }

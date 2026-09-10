@@ -190,7 +190,8 @@ final class TechLogTests: XCTestCase {
             stats: LinkStats(notifications: 8, bytes: 152, largest: 20),
             ms: 243,
             ok: true,
-            note: ""))
+            note: "",
+            reply: "61FF044F8F50"))
         tech.flush()
 
         let rows = try lines(url)
@@ -208,7 +209,9 @@ final class TechLogTests: XCTestCase {
         XCTAssertEqual(cells[7], "20", "the largest piece is the MTU in practice")
         XCTAssertEqual(cells[8], "243")
         XCTAssertEqual(cells[9], "1")
-        XCTAssertEqual(cells.count, 11, "the note column is there even when empty")
+        XCTAssertEqual(cells[11], "61FF044F8F50",
+                       "the answer itself, so a refused one can be explained")
+        XCTAssertEqual(cells.count, 12, "the note column is there even when empty")
 
         tech.stop()
     }
@@ -219,7 +222,8 @@ final class TechLogTests: XCTestCase {
         let url = try XCTUnwrap(tech.url)
         tech.log(TechLog.Exchange(at: Date(), mode: "obd", command: "010C050D",
                                  replyChars: 16, stats: LinkStats(notifications: 2, bytes: 24, largest: 20),
-                                 ms: 61, ok: true, note: "multipid-refused"))
+                                 ms: 61, ok: true, note: "multipid-refused",
+                                 reply: "410C0A1F41052D"))
         tech.stop()
 
         let rows = try lines(url)
@@ -246,7 +250,7 @@ final class TechLogTests: XCTestCase {
         try tech.start()
         tech.log(TechLog.Exchange(at: Date(), mode: "obd", command: "0100",
                                   replyChars: 8, stats: LinkStats(), ms: 30,
-                                  ok: true, note: ""))
+                                  ok: true, note: "", reply: "4100BE3EB811"))
         tech.stop()
 
         XCTAssertEqual(CsvLogger.logs(in: directory).count, 1)

@@ -37,7 +37,9 @@ struct ObdList: View {
     /// The requests the cycle actually costs, which is what the reader can act
     /// on: six PIDs off the list may remove a whole turnaround.
     private var footer: String {
-        let on = obd.params.filter { session.isSelected($0.key) }
+        let on = obd.params.filter {
+            session.isSelected($0.key) && !session.deadPids.contains($0.code)
+        }
         let perRequest = session.multiPid ? 6 : 1
         let requests = ObdReply.group(on, perRequest: perRequest).count
         let how = session.multiPid ? "до 6 за запрос" : "по одному (ЭБУ отказал в мульти-PID)"
@@ -69,10 +71,19 @@ struct ObdList: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text(param.label).lineLimit(2)
                     Spacer(minLength: 8)
-                    Text(Readout(param).text(session.values[param.key]))
-                        .font(.callout.monospacedDigit())
-                        .foregroundStyle(session.values[param.key]?.valid == true
-                                         ? .primary : .secondary)
+                    if session.deadPids.contains(param.code) {
+                        // This ECU publishes fifteen of the twenty-one; the
+                        // rest cost an adapter timeout each, so they are left
+                        // out of the cycle rather than retried every pass.
+                        Text("нет в ЭБУ")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    } else {
+                        Text(Readout(param).text(session.values[param.key]))
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(session.values[param.key]?.valid == true
+                                             ? .primary : .secondary)
+                    }
                 }
             }
         }
