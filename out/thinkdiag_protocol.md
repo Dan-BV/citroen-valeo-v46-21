@@ -9,10 +9,31 @@ snoop of the 13:02 session covers it from the link setup onward.
 
     55aa | tag(2) | len(2) | seq(1) | cmd(1) | payload | cksum(1)
 
-`tag` is `f0f8` phone→adapter and `f8f0` back. `len` counts `seq` through the
-end of the payload, checksum excluded. A reply echoes the request's `seq` and
-answers with `cmd | 0x40`. Replies to `27/01` carry the ECU's answer as a
-*nested* `55aa` frame inside their payload.
+`tag` is `f0f8` phone→adapter and `f8f0` back. `len` is big-endian and counts
+`seq` through the end of the payload, checksum excluded, so a whole frame is
+`7 + len` bytes. `cksum` is the **XOR of every byte from `tag` through the
+payload** — the `55aa` preamble and the checksum byte itself excluded. A reply
+echoes the request's `seq` and answers with `cmd | 0x40`. Replies to `27/01`
+carry the ECU's answer as a *nested* `55aa` frame inside their payload.
+
+`seq` is a transaction id rather than a stream position: the app opens with
+arbitrary values (`5f`, `20`, `2d`, `36`, `64`…) and only then settles into
+counting from `01`, wrapping through zero — 2708 exchanges in the 13:02 session
+ran it round ten times. All the adapter asks is that the reply carry it back.
+
+Every rule above is checked against all **12 040 captured frames** by
+`tools/thinkdiag/verify_frames.py`, which found no violation and no reply that
+failed to echo its request. Two of its other counts drove the design of
+`ios/Sources/ThinkDiagFrame.swift`:
+
+- **7778 payloads contain the bytes `55aa`** — 3894 frames, close to a third of
+  them — because of the nesting above. A reader that scanned for the next
+  preamble instead of trusting `len` would cut those frames in half. None of
+  those 7778 false starts is followed by a valid tag, so validating the tag
+  rejects every one of them in this corpus, with the checksum behind it.
+- **672 frames are longer than one BLE notification**, the widest 1636 bytes
+  against the 93 this link delivers. Reassembly is mandatory in both
+  directions, not only for the licence going out.
 
 ## Command map
 
@@ -122,9 +143,9 @@ The ELM clone is the surprise: it *has* a 136-byte MTU and still emits every
 reply in 20-byte pieces. The ceiling is its firmware, not the link, which is why
 no software change on our side can lift it.
 
-ThinkDiag hands whole frames over in one notification — 80 B, 51 B, 45 B, 41 B
-observed individually — and they decode as exactly the frames the Android
-capture documented: `55aa f8f0 0049 00 61 03 …` carrying the serial, `V1.00.000`
+ThinkDiag hands whole frames over in one notification wherever they fit — 80 B,
+51 B, 45 B, 41 B observed individually, and every engine page is inside the
+ceiling — and they decode as exactly the frames the Android capture documented: `55aa f8f0 0049 00 61 03 …` carrying the serial, `V1.00.000`
 and the build date, and `55aa f8f0 002c 01 61 05 …` carrying `V1.23.004`,
 `V23.05`, `V10.04`, `diagmini`. Same protocol over the LE link as over RFCOMM.
 

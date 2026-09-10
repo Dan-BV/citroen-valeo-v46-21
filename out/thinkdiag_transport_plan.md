@@ -38,10 +38,10 @@ depend on it.
 
 ## The work
 
-**W1 — the seam.** `actor Adapter` (`ios/Sources/ElmSession.swift:706`) already
-exposes everything `ElmSession` uses: `send(command:timeout:)`, `lastStats`,
-`lastMs`. Turn it into a protocol; today's body becomes `ElmAdapter`. Nothing
-in the session changes.
+**W1 — the seam. Done.** `protocol Adapter: Actor` in
+`ios/Sources/Adapter.swift` declares the eight members `ElmSession` uses;
+the old body is `actor ElmAdapter` in `ios/Sources/ElmAdapter.swift`. The
+session holds `any Adapter` and is otherwise unchanged.
 
 **W2 — the adapter type in settings.** `TransportConfig` gains a case beside
 `.ble(id:name:)`. `AdapterStore` persists it as `Codable` already, so the
@@ -52,11 +52,23 @@ ThinkDiag hides the scan list, because there is nothing to pick.
 **W3 — connect by name.** A scan that matches the advertised name and connects
 to the first hit, instead of connecting to a chosen identifier.
 
-**W4 — the framing.** Build and parse
+**W4 — the framing. Done.** `ios/Sources/ThinkDiagFrame.swift`:
 `55aa | tag(2) | len(2) | seq(1) | cmd(1) | payload | cksum(1)`; `f0f8` out,
-`f8f0` back, a reply echoes the request's `seq` with `cmd | 0x40`. Replies
-arrive whole in one notification on this link, but accumulate against `len`
-rather than assuming it.
+`f8f0` back, a reply echoes the request's `seq` with `cmd | 0x40`, and `cksum`
+is the XOR from `tag` through the payload — a rule the earlier notes did not
+have, now derived and checked.
+
+Two things this plan had wrong. Replies do **not** all arrive whole in one
+notification: 672 of the 12 040 captured frames are wider than the 93 bytes
+this link delivers, the widest by a factor of seventeen. And a reader cannot
+resynchronise on the preamble, because 7778 payload positions in the capture
+contain `55aa` themselves. So `ThinkDiagFrameReader` accumulates strictly
+against `len`, and treats a preamble as a candidate only when the tag is one of
+the two real ones and the checksum agrees.
+
+Proof: 21 tests in `ios/Tests/ThinkDiagFrameTests.swift`, four of them against
+frames copied out of the capture, plus `tools/thinkdiag/verify_frames.py` over
+the whole corpus — which cannot run in CI, because the captures stay local.
 
 **W5 — the handshake.** `21/03` and `21/05` for identity, then the licence
 frames replayed byte for byte. Writes go out in twenty-byte chunks, which the

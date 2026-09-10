@@ -83,6 +83,10 @@ targets:
       - path: Sources/StallReminder.swift
       - path: Sources/Adapter.swift
       - path: Sources/ElmAdapter.swift
+      # The ThinkDiag `55aa` codec. Pure value types with no transport under
+      # them, which is the whole reason it is worth having as its own file: it
+      # is the one part of that adapter CI can prove without the car.
+      - path: Sources/ThinkDiagFrame.swift
       - path: Sources/Sample.swift
       - path: Sources/CsvLogger.swift
       - path: Sources/CsvFile.swift
