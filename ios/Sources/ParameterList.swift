@@ -11,8 +11,12 @@ struct ParameterList: View {
     @ObservedObject var session: ElmSession
     let profile: Profile
 
+    /// Whether every parameter is offered with a switch, or only the chosen
+    /// ones are shown with their values. Owned by the screen around, which
+    /// keeps the toolbar button and the advice strip for it.
+    @Binding var editing: Bool
+
     @State private var query = ""
-    @State private var editing = false
 
     var body: some View {
         List {
@@ -29,36 +33,6 @@ struct ParameterList: View {
             }
         }
         .searchable(text: $query, prompt: "Параметр")
-        .safeAreaInset(edge: .top) {
-            if editing { advice }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button(editing ? "Готово" : "Выбор") { editing.toggle() }
-            }
-        }
-    }
-
-    /// The one thing worth saying out loud in edit mode: cycle time is paid
-    /// per page, so the cheapest way to a fast screen is fewer pages - not
-    /// fewer parameters.
-    @ViewBuilder
-    private var advice: some View {
-        let pages = session.polledPages
-        VStack(alignment: .leading, spacing: 2) {
-            Text("\(pages.count) стр. в круге"
-                 + (session.predictedCycleMs.map { " · ~\($0) мс" } ?? ""))
-                .font(.caption.monospacedDigit())
-            Text("Страница стоит один обмен независимо от того, сколько "
-                 + "параметров из неё взято. Дешевле убрать страницу, чем "
-                 + "параметры.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal)
-        .padding(.vertical, 6)
-        .background(.bar)
     }
 
     // MARK: - rows

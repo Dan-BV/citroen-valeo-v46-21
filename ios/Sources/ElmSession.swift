@@ -23,6 +23,13 @@ final class ElmSession: ObservableObject {
 
     @Published private(set) var state: State = .disconnected
     @Published private(set) var status = "Отключено"
+    /// Wall time of the last completed poll cycle. Kept apart from `status`
+    /// so the screen can set it large: it is the one number watched while
+    /// driving.
+    @Published private(set) var lastCycleMs: Int?
+    /// What `status` says while the cycle runs; the loop restores it after a
+    /// transient message such as a session reopen.
+    private var liveStatus = "Подключено"
     @Published private(set) var values: [String: Sample] = [:]
     /// Requests of pages the ECU did not answer when probed.
     @Published private(set) var deadPages: Set<String> = []
@@ -221,6 +228,7 @@ final class ElmSession: ObservableObject {
         mutePasses = 0
         state = .connecting
         status = "Подключение…"
+        lastCycleMs = nil
 
         // The screen must not sleep while a session runs: a suspended app
         // means a gap, and the ECU drops its session across a gap.
@@ -240,6 +248,7 @@ final class ElmSession: ObservableObject {
         adapter = nil
         state = .disconnected
         status = "Отключено"
+        lastCycleMs = nil
         setScreenHeld(false)
         StallReminder.shared.sessionEnded()
     }
@@ -285,7 +294,8 @@ final class ElmSession: ObservableObject {
         status = "Проверка доступных страниц…"
         let dead = try await io.locked { await self.probePages(adapter) }
         deadPages = dead
-        status = "Подключено" + (dead.isEmpty ? "" : " · без ответа: \(dead.count)")
+        liveStatus = "Подключено" + (dead.isEmpty ? "" : " · без ответа: \(dead.count)")
+        status = liveStatus
 
         await pollLoop(adapter)
     }
@@ -410,8 +420,8 @@ final class ElmSession: ObservableObject {
 
             values = live
             record(live)
-            let elapsed = Int(Date().timeIntervalSince(started) * 1000)
-            status = "Подключено · цикл \(elapsed) мс"
+            lastCycleMs = Int(Date().timeIntervalSince(started) * 1000)
+            if status != liveStatus { status = liveStatus }
 
             // A cycle where every page asked came back an error is the ECU
             // having dropped its diagnostic session, not a bad reply. Two in a
@@ -450,7 +460,7 @@ final class ElmSession: ObservableObject {
             return !Frames.isError(await self.at(adapter, "81", 2.5, note: "reopen"))
         }) ?? false
         if opened {
-            status = "Подключено"
+            status = liveStatus
             return
         }
         // The adapter itself may have lost the thread - a power blip on the
