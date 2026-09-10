@@ -162,26 +162,29 @@ final class ParityTests: XCTestCase {
     /// shift 6, so masking before shifting makes it identically zero on any
     /// byte - which is what this checks, with the top bits actually set.
     func testBitFieldsShiftBeforeMasking() throws {
-        let profile = try Profile.bundled(in: bundle)
-        let page = try XCTUnwrap(profile.pages.first { $0.id == "CA" })
-        let gearbox = try XCTUnwrap(page.params.first { $0.key == "TYPE_BOITE_VITESSES" })
-        let gear = try XCTUnwrap(page.params.first { $0.key == "RAPPORT_ENGAGE" })
-        XCTAssertEqual(gearbox.mask, 3)
-        XCTAssertEqual(gearbox.shift, 6)
+        // The rule is `(raw >> shift) & mask`, and it has to hold whether or not
+        // the profile currently carries a field that uses it. As of 2026-09-10
+        // it does not: the only two were the engaged gear and the gearbox type,
+        // dropped as hardware this car has none of. So the pair is built here
+        // rather than read out of the profile, and the rule stays covered.
+        func bitfield(mask: Int, shift: Int) throws -> Profile.Field {
+            let json = """
+            {"k": "BITFIELD", "l": "", "o": 2, "n": 1, "z": 1.0, "d": 0.0,
+             "u": "", "dec": 0, "lo": 0.0, "hi": 255.0,
+             "m": \(mask), "sh": \(shift)}
+            """
+            return try JSONDecoder().decode(Profile.Field.self, from: Data(json.utf8))
+        }
+        let high = try bitfield(mask: 3, shift: 6)    // as the gearbox type was
+        let low = try bitfield(mask: 63, shift: 0)    // as the engaged gear was
 
-        // A frame whose byte at the pair's offset is 0xC8: top bits 11, low
-        // bits 001000.
-        var bytes = [UInt8](repeating: 0, count: gearbox.offset + 1)
-        bytes[0] = 0x61
-        bytes[1] = 0xFF
-        bytes[gearbox.offset] = 0xC8
-        let frame = bytes.map { String(format: "%02X", $0) }.joined()
+        // A reply whose byte at offset 2 is 0xC8: top bits 11, low bits 001000.
+        let frame = "61FFC8"
+        let (rawHigh, _) = try XCTUnwrap(high.read(frame, marker: "61FF"))
+        XCTAssertEqual(rawHigh, 3, "0xC8 >> 6 & 3 = 3; masking first would give 0")
 
-        let (rawGearbox, _) = try XCTUnwrap(gearbox.read(frame, marker: page.marker))
-        XCTAssertEqual(rawGearbox, 3, "0xC8 >> 6 & 3 = 3; masking first would give 0")
-
-        let (rawGear, _) = try XCTUnwrap(gear.read(frame, marker: page.marker))
-        XCTAssertEqual(rawGear, 8, "mask 63, shift 0: 0xC8 & 63 = 8")
+        let (rawLow, _) = try XCTUnwrap(low.read(frame, marker: "61FF"))
+        XCTAssertEqual(rawLow, 8, "mask 63, shift 0: 0xC8 & 63 = 8")
     }
 
     func testErrorRepliesAreRecognised() {

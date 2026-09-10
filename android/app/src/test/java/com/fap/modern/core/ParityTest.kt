@@ -142,21 +142,23 @@ class ParityTest {
      */
     @Test
     fun `bit fields shift before masking`() {
-        val page = profile.pages.first { it.id == "CA" }
-        val gearbox = page.fields.first { it.key == "TYPE_BOITE_VITESSES" }
-        val gear = page.fields.first { it.key == "RAPPORT_ENGAGE" }
-        assertEquals(3, gearbox.bitMask)
-        assertEquals(6, gearbox.bitShift)
+        // The rule is (raw ushr shift) and mask, and it has to hold whether or
+        // not the profile currently carries a field that uses it. As of
+        // 2026-09-10 it does not: the only two were the engaged gear and the
+        // gearbox type, dropped as hardware this car has none of. So the pair
+        // is built here rather than read out of the profile.
+        fun bitfield(mask: Int, shift: Int) = Field(
+            key = "BITFIELD", label = "", offset = 2, length = 1,
+            scale = 1.0, zero = 0.0, unit = "", decimals = 0,
+            min = 0.0, max = 255.0, bitShift = shift, bitMask = mask,
+        )
+        val high = bitfield(mask = 3, shift = 6)   // as the gearbox type was
+        val low = bitfield(mask = 63, shift = 0)   // as the engaged gear was
 
-        // A frame whose byte at the pair's offset is 0xC8: top bits 11.
-        val bytes = ByteArray(gearbox.offset + 1)
-        bytes[0] = 0x61
-        bytes[1] = 0xFF.toByte()
-        bytes[gearbox.offset] = 0xC8.toByte()
-        val frame = bytes.joinToString("") { "%02X".format(it) }
-
-        assertEquals("0xC8 ushr 6 and 3", 3.0, gearbox.compute(0xC8), 1e-9)
-        assertEquals("mask 63, shift 0", 8.0, gear.compute(0xC8), 1e-9)
-        assertEquals(0xC8, Frames.extract(frame, page.marker, gearbox))
+        // A reply whose byte at offset 2 is 0xC8: top bits 11, low bits 001000.
+        val frame = "61FFC8"
+        assertEquals("0xC8 ushr 6 and 3", 3.0, high.compute(0xC8), 1e-9)
+        assertEquals("mask 63, shift 0", 8.0, low.compute(0xC8), 1e-9)
+        assertEquals(0xC8, Frames.extract(frame, "61FF", high))
     }
 }

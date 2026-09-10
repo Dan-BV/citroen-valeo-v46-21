@@ -25,8 +25,11 @@ struct Profile: Decodable {
         let low: Double
         let high: Double
         let states: [String: String]?
-        /// Bitfield extraction: `(raw >> shift) & mask`. Only two parameters
-        /// use it (the engaged gear and the gearbox type).
+        /// Bitfield extraction: `(raw >> shift) & mask`. No field in the
+        /// current profile uses it - the only two that did, the engaged gear
+        /// and the gearbox type, were dropped as hardware this car has none of
+        /// - but a regenerated profile may bring one back, so the path stays
+        /// and `ParityTests` covers the rule on a field built for it.
         let mask: Int?
         let shift: Int?
         /// Identification strings are shown as raw hex, not scaled numbers.
