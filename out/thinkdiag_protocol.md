@@ -106,6 +106,37 @@ then every ELM command times out — `ATZ` at its full 2500 ms, `ATD`, `ATE0`,
 the expected split: **the transport works, the protocol does not.** So the
 remaining work on the adapter is the `55aa` protocol, not the link.
 
+## What the LE link actually delivers, measured on the iPhone (2026-09-10)
+
+From the iPhone's own PacketLogger trace (`logs/Bluetooth/bluetoothd-hci-latest.pklg`
+inside a sysdiagnose; the archive stays local). The trace covers both adapters,
+so it compares them on the same radio, the same phone, within the same hour.
+
+| | our ELM327 clone | ThinkDiag |
+|---|---|---|
+| ATT MTU negotiated | requested 185, **granted 136** | requested 527, **granted 247** |
+| largest notification seen | **20 B** | **93 B** |
+| notifications at exactly 20 B | 8223 of 9917 | — |
+
+The ELM clone is the surprise: it *has* a 136-byte MTU and still emits every
+reply in 20-byte pieces. The ceiling is its firmware, not the link, which is why
+no software change on our side can lift it.
+
+ThinkDiag hands whole frames over in one notification — 80 B, 51 B, 45 B, 41 B
+observed individually — and they decode as exactly the frames the Android
+capture documented: `55aa f8f0 0049 00 61 03 …` carrying the serial, `V1.00.000`
+and the build date, and `55aa f8f0 002c 01 61 05 …` carrying `V1.23.004`,
+`V23.05`, `V10.04`, `diagmini`. Same protocol over the LE link as over RFCOMM.
+
+Writes go the other way in 20-byte chunks — the 527-byte licence frame is cut up
+by the app — but replies are what cost us: a request is five bytes, a page is
+183.
+
+**What that is worth**, against the measured cost model in
+`out/drives/2026-09-10_ios_baseline.md` (`ms = 49 + 9.5 x notifications`): a
+cycle of seven pages goes from 883 ms to about 412 ms, **2.15x**. Real, bounded,
+and after it the fixed 49 ms per exchange is 343 of the remaining 412.
+
 ## Verdict 3 — a new blocker: no CAN addressing on the wire
 
 `27/01` is not "send this request on CAN id X". Its payload is

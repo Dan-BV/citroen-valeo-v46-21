@@ -30,11 +30,37 @@ The cost of a page therefore tracks its length, not the ECU: 183 bytes cost 10
 notifications and 146 ms, while 66 bytes cost 4 and 89 ms. The stream is
 **notification-bound**, exactly the hypothesis the plan set out to test.
 
-What follows: a link that carried a whole page in one or two notifications
-instead of ten would cut the cycle several-fold, and nothing about the ECU or
-the request form has to change to get it. That is the case for testing an
-adapter with a larger MTU — ThinkDiag or otherwise. It is also why shaving
-bytes off a page is worth as much as shaving milliseconds.
+## What a page costs, and what it would cost on a wider link
+
+Fitting the six pages with enough samples gives
+
+    ms = 49 + 9.5 x notifications
+
+which the short AT commands corroborate independently: 36 of them arrived in a
+single notification each, median 60 ms against the 58.5 the model predicts.
+
+So an exchange carries a fixed cost of about 49 ms — request out, ECU turn,
+prompt back — and each further 20-byte piece adds 9.5.
+
+| page | notifications | now | at one notification |
+|------|---------------|-----|---------------------|
+| `21B08001` | 2 | 180 ms | ~59 ms |
+| `21C28001` | 10 | 146 ms | ~59 ms |
+| `21C08001` | 10 | 144 ms | ~59 ms |
+| `21CB8001` | 8 | 118 ms | ~59 ms |
+| `21CA8001` | 6 | 117 ms | ~59 ms |
+| `21C18001` | 5 | 90 ms | ~59 ms |
+| `21C48001` | 4 | 88 ms | ~59 ms |
+
+**A cycle of all seven: 883 ms now, about 412 ms if every page arrived in one
+notification — 2.15x.** Worth having, and less than it first looks: an earlier
+draft of this note guessed "several-fold", which the fit does not support. Past
+that point the fixed 49 ms rules, and 343 of those 412 ms are per-exchange
+overhead with no bytes in them at all.
+
+Which sets the order of the two levers. A wider link is worth 2.15x and needs a
+different adapter. Beyond it the only thing left is **fewer exchanges** — fewer
+pages, or pages asked for less often — and that needs no new hardware.
 
 iOS negotiates the MTU itself; an app cannot ask for more. So on this adapter
 there is no software fix for the 20-byte ceiling.

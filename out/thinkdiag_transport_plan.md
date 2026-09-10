@@ -79,6 +79,18 @@ needed.
 
 **S5 — compare against S1** and keep it only if it wins.
 
+**Expected gain, now measured rather than hoped for: 2.15x** — a seven-page
+cycle from 883 ms to about 412 ms, because ThinkDiag delivers a whole page in
+one notification where the ELM clone always uses twenty-byte pieces. Details in
+`out/thinkdiag_protocol.md` and the baseline. That is the number S3 and S4 have
+to be worth: the whole `55aa` protocol, the licence replay and the link handles,
+against roughly halving the cycle.
+
+The cheaper lever sits next to it and needs no hardware. Of the 412 ms that
+would remain, 343 is fixed per-exchange cost with no bytes in it. **Fewer
+exchanges** — fewer pages, or pages asked for less often — pays without any of
+the above, and should be tried first.
+
 ## Deliberately out of scope
 
 - The web and Android versions.
