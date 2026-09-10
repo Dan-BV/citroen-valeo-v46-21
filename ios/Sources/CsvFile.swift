@@ -48,6 +48,15 @@ final class CsvFile {
             .contentModificationDate ?? .distantPast
     }
 
+    /// When the file was opened, read back from the stamp in its name - the
+    /// modification date is when it was last written to, which is the other
+    /// end of the recording.
+    static func started(_ url: URL) -> Date? {
+        let name = url.deletingPathExtension().lastPathComponent
+        guard name.count >= 15 else { return nil }
+        return stamp.date(from: String(name.suffix(15)))
+    }
+
     // MARK: -
 
     func open(header: String) throws {
