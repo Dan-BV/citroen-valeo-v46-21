@@ -1,3 +1,4 @@
+import Foundation
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -32,6 +33,10 @@ enum DeviceAwake {
 
     private static func apply() {
         #if canImport(UIKit)
+        // Same reason as StallReminder's guard: the test bundle is not hosted
+        // by the app, and UIKit's shared application is not something to reach
+        // for from a bare test runner.
+        guard Bundle.main.bundleURL.pathExtension == "app" else { return }
         UIApplication.shared.isIdleTimerDisabled = holds > 0
         #endif
     }

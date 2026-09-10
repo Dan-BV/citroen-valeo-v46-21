@@ -20,6 +20,15 @@ import UserNotifications
 private let stallCategoryId = "session-stall"
 private let stallStopActionId = "session-stall-stop"
 
+/// Whether there is an app around this code at all.
+///
+/// The test bundle is deliberately not hosted by the app, so that
+/// `xcodebuild test` needs no install and no signing - and in a bare test
+/// runner `UNUserNotificationCenter.current()` raises: there is no bundle proxy
+/// for the process. Nothing in the tests wants a reminder, so every entry point
+/// below stands down rather than the session crashing on connect.
+private let hasAppBundle = Bundle.main.bundleURL.pathExtension == "app"
+
 @MainActor
 final class StallReminder {
 
@@ -46,6 +55,7 @@ final class StallReminder {
     /// Registers the category once, at launch, so the stop button exists by the
     /// time a notification can carry it.
     nonisolated static func configure(router: UNUserNotificationCenterDelegate) {
+        guard hasAppBundle else { return }
         let center = UNUserNotificationCenter.current()
         center.delegate = router
         let stop = UNNotificationAction(
@@ -64,6 +74,7 @@ final class StallReminder {
     /// permission has no visible purpose, and a prompt without a reason is a
     /// prompt that gets denied.
     func prepare() async {
+        guard hasAppBundle else { return }
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
         switch settings.authorizationStatus {
@@ -99,6 +110,7 @@ final class StallReminder {
     }
 
     private func post(quiet: TimeInterval, last: Bool) {
+        guard hasAppBundle else { return }
         let content = UNMutableNotificationContent()
         content.title = "Машина не отвечает"
         let minutes = max(1, Int(quiet / 60))
@@ -116,6 +128,7 @@ final class StallReminder {
     }
 
     private func clearDelivered() {
+        guard hasAppBundle else { return }
         let center = UNUserNotificationCenter.current()
         let ids = (1...maxReminders).map { "\(stallCategoryId)-\($0)" }
         center.removeDeliveredNotifications(withIdentifiers: ids)
