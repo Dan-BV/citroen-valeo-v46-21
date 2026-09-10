@@ -13,7 +13,7 @@ on:
       - 'tools/ios/**'
       - 'tools/parity/**'
       - 'data/parity/**'
-      - 'android/app/src/main/assets/v46_21_profile.json'
+      - 'data/profile/v46_21_profile.json'
       - '.github/workflows/ios.yml'
   workflow_dispatch:
 

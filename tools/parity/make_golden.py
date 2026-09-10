@@ -27,8 +27,7 @@ sys.path.insert(0, os.path.join(ROOT, 'tools', 'diagbox'))
 import decode  # noqa: E402  (needs the path above)
 
 ECU_JSON = os.path.join(ROOT, 'data', 'diagbox', 'V46_21_B7.json')
-PROFILE = os.path.join(ROOT, 'android', 'app', 'src', 'main', 'assets',
-                       'v46_21_profile.json')
+PROFILE = os.path.join(ROOT, 'data', 'profile', 'v46_21_profile.json')
 TRANSCRIPT = os.path.join(ROOT, 'tools', 'btsnoop', 'data',
                           'transcript_2026-08-27.json')
 OUT = os.path.join(ROOT, 'data', 'parity', 'golden.json')

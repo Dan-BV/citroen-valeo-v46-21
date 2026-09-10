@@ -1,13 +1,18 @@
 name: Android APK
 
 # The machine this is developed on has no JDK and no Android SDK, so CI is the
-# compiler: every push builds a debug APK and attaches it to the run.
+# compiler.
+#
+# MOTHBALLED 2026-09-10. The iOS app is the product; the Android client is
+# frozen and no longer developed, so this no longer runs on push - a red build
+# nobody intends to fix only costs attention. Kept, and still runnable by hand,
+# because freezing is not deleting.
+#
+# To revive it: the generated profile moved to data/profile/v46_21_profile.json,
+# so `Profile.fromAssets` and the two paths in ParityTest.kt need pointing at
+# it (or the file copying back into the app's assets), and the push trigger
+# needs restoring.
 on:
-  push:
-    paths:
-      - 'android/**'
-      - 'data/parity/**'
-      - '.github/workflows/android.yml'
   workflow_dispatch:
 
 jobs:

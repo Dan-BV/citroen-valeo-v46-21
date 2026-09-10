@@ -13,9 +13,10 @@ Talks to an ELM327 adapter via **Web Serial** (USB / classic-Bluetooth COM) or *
 
 ## iOS app
 `ios/` is a native SwiftUI app for the same ECU, because Safari on iOS has neither Web
-Bluetooth nor Web Serial. It bundles the **same** generated `v46_21_profile.json` as the
-Android app - referenced in place from `ios/project.yml`, never copied - so the byte maps
-cannot drift between the versions. Classic Bluetooth SPP and K-line are absent by design:
+Bluetooth nor Web Serial. **It is the product**; the web page and the Android app below are
+mothballed as of 2026-09-10 and no longer developed. It bundles the generated
+`data/profile/v46_21_profile.json` - referenced in place from `ios/project.yml`, never
+copied - so the byte maps cannot drift from what the generator emits. Classic Bluetooth SPP and K-line are absent by design:
 an iPhone can only reach an ELM327 clone over BLE.
 
 No Apple Developer account is involved:
@@ -69,13 +70,17 @@ whatever answers — `17 FF 00` for KWP modules, `19 02 09` for UDS ones. Severa
 one address; where the recognition frame cannot tell them apart the result lists every
 candidate rather than picking one. Live values freeze while it runs (~1 minute).
 
-Both embedded profiles are generated, not hand-written; regenerate with:
+Both embedded profiles are generated, not hand-written. **The copies inside `index.html`
+are frozen** at the profile of 2026-09-10 (102 live parameters): this page is mothballed,
+and regeneration no longer injects into it, so the two do not have to be kept in step. The
+command that feeds the iOS app is
+
 ```
-python tools/diagbox/make_profile.py --ecu-json data/diagbox/V46_21_B7.json     --out data/diagbox/v46_21_profile.js --inject index.html
-python tools/diagbox/make_scan.py --vehicle-json data/diagbox/vehicle_B7.json     --out data/diagbox/scan_B7.js --inject index.html
+python tools/diagbox/make_profile.py --ecu-json data/diagbox/V46_21_B7.json     --out data/diagbox/v46_21_profile.js --json-out data/profile/v46_21_profile.json
 ```
-They splice themselves between the `V46.21 PROFILE` and `SCAN PROFILE` markers in
-`index.html`.
+
+Add `--inject index.html` to bring the page back in step, and it splices itself between the
+`V46.21 PROFILE` and `SCAN PROFILE` markers there.
 
 Requires HTTPS (GitHub Pages provides it) or localhost — Web Bluetooth won't run from `file://`.
 
@@ -155,14 +160,19 @@ thing the web page cannot have: **classic Bluetooth SPP**. Android Chrome's Web
 Bluetooth speaks BLE only, so the working RFCOMM adapter is unreachable from the
 browser on a phone. Both transports are supported here.
 
-There is no JDK or Android SDK on the development machine, so **CI is the compiler**:
-every push touching `android/` runs `.github/workflows/android.yml`, which builds a
-debug APK and attaches it to the run. Download it from the run's Artifacts section
-(`gh run download <id> -n apk`) and sideload it.
+**Mothballed 2026-09-10**, along with the web page: the iOS app is the product and this
+client is frozen where it stands. `.github/workflows/android.yml` no longer runs on push -
+a red build nobody intends to fix only costs attention - but it is kept and can still be
+started by hand.
 
-It reads the very same generated profile as the web app — `make_profile.py` and
-`make_scan.py` write `android/app/src/main/assets/*.json` with `--json-out` — so the
-two clients cannot drift apart.
+Reviving it needs two small things, because the generated profile moved out of the app's
+assets to `data/profile/v46_21_profile.json`: point `Profile.fromAssets` and the two paths
+in `ParityTest.kt` at the new location (or copy the file back into `assets/`), and restore
+the workflow's push trigger.
+
+There is no JDK or Android SDK on the development machine, so CI was the compiler: a run
+builds a debug APK and attaches it. Download it from the run's Artifacts section
+(`gh run download <id> -n apk`) and sideload it.
 
 `ФИЛЬТР` picks what is polled, shown and logged. What a cycle costs is
 **requests, not parameters**: the loop pays one adapter turnaround per page and

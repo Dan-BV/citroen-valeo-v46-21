@@ -26,10 +26,11 @@ targets:
     sources:
       - path: Sources
       - path: Resources
-      # The generated profile is shared byte-for-byte with the Android app and
-      # index.html: tools/diagbox/make_profile.py emits one JSON body for all
-      # three. Referenced in place rather than copied, so it cannot drift.
-      - path: ../android/app/src/main/assets/v46_21_profile.json
+      # The generated profile, straight from tools/diagbox/make_profile.py.
+      # It used to live in the Android app's assets and be shared three ways;
+      # with the Android and web clients mothballed it sits in data/profile,
+      # where its owner is not in question. Referenced in place, never copied.
+      - path: ../data/profile/v46_21_profile.json
         type: file
         buildPhase: resources
     settings:
@@ -88,7 +89,7 @@ targets:
       - path: ../data/parity/golden.json
         type: file
         buildPhase: resources
-      - path: ../android/app/src/main/assets/v46_21_profile.json
+      - path: ../data/profile/v46_21_profile.json
         type: file
         buildPhase: resources
     settings:
