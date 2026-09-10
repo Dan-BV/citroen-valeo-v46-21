@@ -541,7 +541,15 @@ final class ElmSession: ObservableObject {
                 let sent = Date()
                 let reply: String
                 do {
-                    reply = try await io.locked { await at(adapter, request, 1.2) }
+                    reply = try await io.locked {
+                        // Re-applied every group, and cheap when unchanged:
+                        // reading fault codes switches the adapter to the PSA
+                        // header, and without this the loop would carry on
+                        // asking mode-01 PIDs on 6A8 and get nothing back for
+                        // the rest of the session.
+                        await adapter.applyHeader(obd.header.req, receive: obd.header.res)
+                        return await at(adapter, request, 1.2)
+                    }
                 } catch {
                     break
                 }

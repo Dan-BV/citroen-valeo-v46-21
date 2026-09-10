@@ -19,6 +19,34 @@ struct AdapterSheet: View {
                 if !probe.lines.isEmpty || probe.failure != nil || probe.running {
                     handshakeSection
                 }
+                Section("Диагностика") {
+                    NavigationLink {
+                        FaultsScreen(session: session)
+                    } label: {
+                        HStack {
+                            Text("Ошибки")
+                            Spacer()
+                            if !session.isConnected {
+                                Text("нужна связь")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    NavigationLink {
+                        IdentScreen(session: session)
+                    } label: {
+                        HStack {
+                            Text("Идентификация ЭБУ")
+                            Spacer()
+                            if !session.isConnected {
+                                Text("нужна связь")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
                 Section {
                     NavigationLink {
                         LogList(session: session)

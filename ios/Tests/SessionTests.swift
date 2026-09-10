@@ -200,6 +200,86 @@ final class SessionTests: XCTestCase {
         XCTAssertTrue(session.status.contains("ЭБУ не отвечает"))
     }
 
+    // MARK: - reading on demand, while the loop runs
+
+    /// Exercises the lock as much as the parsing: the poll loop is running, and
+    /// the two must not interleave commands on the one adapter.
+    func testFaultCodesAreReadWhileThePollLoopRuns() async throws {
+        let profile = try loadProfile()
+        let transport = try scripted(profile)
+        transport.script["17FF00"] = "5702007108123420"
+        let session = makeSession(profile, transport)
+
+        session.connect(.ble(id: UUID(), name: "scripted"))
+        try await settle({ !session.values.isEmpty }, 10, "the loop to be running")
+
+        let faults = try await session.readDtc()
+        XCTAssertEqual(faults.map(\.code), ["0071", "1234"])
+        XCTAssertEqual(faults.map(\.status), ["08", "20"])
+        XCTAssertEqual(faults[0].label, profile.dtc["0071"],
+                       "the description comes from the profile's own 291 codes")
+        session.disconnect()
+    }
+
+    func testClearingIsRefusedWhenTheEcuDoesNotConfirm() async throws {
+        let profile = try loadProfile()
+        let transport = try scripted(profile)
+        transport.script["14FF00"] = "7F1478"   // a negative response
+        let session = makeSession(profile, transport)
+
+        session.connect(.ble(id: UUID(), name: "scripted"))
+        try await settle({ !session.values.isEmpty }, 10, "the loop to be running")
+
+        do {
+            try await session.clearDtc()
+            XCTFail("a negative response must not read as success")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("не подтвердил"))
+        }
+        session.disconnect()
+    }
+
+    func testClearingSucceedsOnTheServiceAcknowledgement() async throws {
+        let profile = try loadProfile()
+        let transport = try scripted(profile)
+        transport.script["14FF00"] = "54"
+        let session = makeSession(profile, transport)
+
+        session.connect(.ble(id: UUID(), name: "scripted"))
+        try await settle({ !session.values.isEmpty }, 10, "the loop to be running")
+        try await session.clearDtc()
+        session.disconnect()
+    }
+
+    /// Identification fields are packed digits, not measurements: they have to
+    /// come out as the hex the official tool prints, or they cannot be compared
+    /// with a Diagbox printout at all.
+    func testIdentificationFieldsAreShownAsHexDigits() throws {
+        let profile = try loadProfile()
+        let block = try XCTUnwrap(profile.ident.first { $0.request == "2180" })
+        let reference = try XCTUnwrap(block.params.first { $0.key == "ID_REFERENCE_MATERIEL" })
+        XCTAssertEqual(reference.hex, true)
+
+        // marker, then a byte per offset; the reference sits at 2 and is 5 long
+        var bytes = [UInt8](repeating: 0, count: 16)
+        bytes[0] = 0x61
+        bytes[1] = 0x80
+        for (i, byte) in [0x96, 0x66, 0x53, 0x90, 0x80].enumerated() {
+            bytes[reference.offset + i] = UInt8(byte)
+        }
+        let frame = bytes.map { String(format: "%02X", $0) }.joined()
+
+        let rows = ElmSession.identRows(of: block, in: frame)
+        let shown = try XCTUnwrap(rows.first { $0.0 == reference.label }?.1)
+        XCTAssertEqual(shown, "9666539080")
+    }
+
+    func testAnIdentificationBlockTheEcuDoesNotAnswerIsSkipped() throws {
+        let profile = try loadProfile()
+        let block = try XCTUnwrap(profile.ident.first)
+        XCTAssertTrue(ElmSession.identRows(of: block, in: "").isEmpty)
+    }
+
     // MARK: - fault codes
 
     func testFaultCodesAreParsedWithTheirDescriptions() throws {
