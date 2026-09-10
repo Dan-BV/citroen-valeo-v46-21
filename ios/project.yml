@@ -81,6 +81,8 @@ targets:
       # Referenced by ElmSession, so the test bundle needs them to link.
       - path: Sources/DeviceAwake.swift
       - path: Sources/StallReminder.swift
+      - path: Sources/Adapter.swift
+      - path: Sources/ElmAdapter.swift
       - path: Sources/Sample.swift
       - path: Sources/CsvLogger.swift
       - path: Sources/CsvFile.swift

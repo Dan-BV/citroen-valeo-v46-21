@@ -62,7 +62,7 @@ final class ElmSession: ObservableObject {
 
     /// One adapter, several callers: the poll loop and any on-demand read.
     private let io = AsyncLock()
-    private var adapter: Adapter?
+    private var adapter: (any Adapter)?
     private var loop: Task<Void, Never>?
 
     private var history: [String: [Point]] = [:]
@@ -238,7 +238,7 @@ final class ElmSession: ObservableObject {
         StallReminder.shared.onStop = { [weak self] in self?.disconnect() }
         Task { await StallReminder.shared.prepare() }
 
-        let adapter = Adapter(transport: makeTransport(config))
+        let adapter = ElmAdapter(transport: makeTransport(config))
         self.adapter = adapter
         loop = Task { await run(adapter) }
     }
@@ -255,7 +255,7 @@ final class ElmSession: ObservableObject {
         StallReminder.shared.sessionEnded()
     }
 
-    private func run(_ adapter: Adapter) async {
+    private func run(_ adapter: any Adapter) async {
         do {
             try await adapter.open()
             status = "Адаптер открыт, инициализация ЭБУ…"
@@ -281,7 +281,7 @@ final class ElmSession: ObservableObject {
         held ? DeviceAwake.hold() : DeviceAwake.release()
     }
 
-    private func runProprietary(_ adapter: Adapter) async throws {
+    private func runProprietary(_ adapter: any Adapter) async throws {
         let alive = try await io.locked { await self.initEcu(adapter) }
         guard alive else {
             status = "ЭБУ не отвечает (адаптер / зажигание)"
@@ -302,7 +302,7 @@ final class ElmSession: ObservableObject {
         await pollLoop(adapter)
     }
 
-    private func initEcu(_ adapter: Adapter) async -> Bool {
+    private func initEcu(_ adapter: any Adapter) async -> Bool {
         await at(adapter, "ATZ", 2.5)
         for command in ["ATD", "ATE0", "ATL0", "ATH0", "ATS0", "ATAL"] {
             await at(adapter, command, 0.8)
@@ -336,7 +336,7 @@ final class ElmSession: ObservableObject {
 
     /// Ask every page once and remember the ones this ECU does not answer, so
     /// the cycle stops paying an adapter timeout for them.
-    private func probePages(_ adapter: Adapter) async -> Set<String> {
+    private func probePages(_ adapter: any Adapter) async -> Set<String> {
         for page in profile.pages {
             await adapter.applyHeader(profile.can.req, receive: profile.can.res)
             if await tryPage(page, adapter) { continue }
@@ -353,7 +353,7 @@ final class ElmSession: ObservableObject {
     /// cut short still carries the early fields, so checking the first field
     /// lets a truncated page pass as healthy - which is exactly how the whole
     /// of $C0, $C2, $CA and $CF went missing while looking connected.
-    private func tryPage(_ page: Profile.Page, _ adapter: Adapter) async -> Bool {
+    private func tryPage(_ page: Profile.Page, _ adapter: any Adapter) async -> Bool {
         let reply = await at(adapter, page.request, 1.5)
         lastReply[page.request] = reply.trimmingCharacters(in: .whitespacesAndNewlines)
         if Frames.isError(reply) { return false }
@@ -364,7 +364,7 @@ final class ElmSession: ObservableObject {
         return last.read(clean, marker: page.marker) != nil
     }
 
-    private func pollLoop(_ adapter: Adapter) async {
+    private func pollLoop(_ adapter: any Adapter) async {
         var live: [String: Sample] = [:]
         while !Task.isCancelled {
             cycle += 1
@@ -490,7 +490,7 @@ final class ElmSession: ObservableObject {
     /// the car went quiet every page answered `NO DATA` for ever and the only
     /// way out was a human reconnecting. Measured on 2026-09-10:
     /// `out/drives/2026-09-10_ios_baseline.md`.
-    private func reopen(_ adapter: Adapter) async {
+    private func reopen(_ adapter: any Adapter) async {
         mutePasses = 0
         lastReopen = Date()
         status = "Сессия ЭБУ потеряна, переоткрываю…"
@@ -508,7 +508,7 @@ final class ElmSession: ObservableObject {
         _ = try? await io.locked { await self.initEcu(adapter) }
     }
 
-    private func keepAliveIfIdle(_ adapter: Adapter) async {
+    private func keepAliveIfIdle(_ adapter: any Adapter) async {
         guard await adapter.idleFor() > 2.5 else { return }
         _ = try? await io.locked { await at(adapter, "3E", 0.8) }
     }
@@ -524,7 +524,7 @@ final class ElmSession: ObservableObject {
     /// are the exception; they are the same shape as the other AT commands, so
     /// their cost reads off those.
     @discardableResult
-    private func at(_ adapter: Adapter, _ command: String,
+    private func at(_ adapter: any Adapter, _ command: String,
                     _ timeout: TimeInterval, note: String = "") async -> String {
         let reply = await adapter.send(command, timeout)
         guard tech.isRunning else { return reply }
@@ -675,84 +675,5 @@ enum SessionError: LocalizedError, Equatable {
         case let .notCleared(what):
             return "ЭБУ не подтвердил стирание: \(what)"
         }
-    }
-}
-
-/// The adapter side of a session: one command at a time, plus the CAN header
-/// the adapter is currently set to.
-///
-/// An actor is right here - each method is a single exchange and does not need
-/// to stay indivisible across several of them; that is what `AsyncLock` is for.
-actor Adapter {
-    private let transport: any ElmTransport
-    private var header: String?
-    private var lastCommand = Date.distantPast
-
-    /// What the last exchange cost, for the technical log.
-    private(set) var lastStats = LinkStats()
-    private(set) var lastMs = 0
-
-    /// Set when the link itself failed, as against the ECU declining to
-    /// answer. To a caller that only sees an empty reply the two look
-    /// identical, and they could not be more different: one is a page to try
-    /// again, the other is a session to end.
-    ///
-    /// Swallowing this cost a drive on 2026-09-10. The adapter lost power with
-    /// the ignition, every write threw at once, and because a failed write
-    /// returned an empty string with no delay the loop went round two thousand
-    /// times a second - 66 000 dead exchanges and a 4.7 MB technical log in six
-    /// minutes, while the screen still read "Подключено · 0 мс".
-    private(set) var linkFailure: TransportError?
-
-    init(transport: any ElmTransport) {
-        self.transport = transport
-    }
-
-    func open() async throws {
-        try await transport.open()
-    }
-
-    nonisolated func close() {
-        transport.close()
-    }
-
-    func idleFor() -> TimeInterval {
-        Date().timeIntervalSince(lastCommand)
-    }
-
-    func applyHeader(_ header: String, receive: String) async {
-        guard self.header != header else { return }
-        await send("ATSH" + header, 0.6)
-        await send("ATCRA" + receive, 0.6)
-        self.header = header
-    }
-
-    /// Sends one ELM command (adds CR) and reads until the `>` prompt or the
-    /// timeout.
-    ///
-    /// The drain first is not optional. Anything still buffered belongs to an
-    /// earlier exchange - a reply that arrived after its timeout, or trailing
-    /// bytes after the prompt. Left in place it is read as the answer to the
-    /// next command, and from then on every read returns the previous page's
-    /// data: the marker no longer matches, so page after page looks dead.
-    @discardableResult
-    func send(_ command: String, _ timeout: TimeInterval) async -> String {
-        transport.drain()
-        let attempted = Date()
-        do {
-            try await transport.write(command + "\r")
-        } catch {
-            linkFailure = error as? TransportError ?? .notOpen
-            // Truthful numbers for the log: this exchange never happened.
-            lastMs = Int(Date().timeIntervalSince(attempted) * 1000)
-            lastStats = LinkStats()
-            return ""
-        }
-        lastCommand = Date()
-        let started = Date()
-        let reply = await transport.read(until: ">", timeout: timeout)
-        lastMs = Int(Date().timeIntervalSince(started) * 1000)
-        lastStats = transport.stats
-        return reply
     }
 }
