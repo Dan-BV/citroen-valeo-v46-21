@@ -231,7 +231,8 @@ final class ThinkDiagAdapterTests: XCTestCase {
         await adapter.applyHeader("6A8", receive: "688")
         fake.forget()
 
-        XCTAssertTrue(Frames.isError(await adapter.send("HELLO", 0.5)))
+        let reply = await adapter.send("HELLO", 0.5)
+        XCTAssertTrue(Frames.isError(reply), reply)
         XCTAssertTrue(fake.sent.isEmpty)
     }
 
