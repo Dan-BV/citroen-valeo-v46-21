@@ -76,6 +76,36 @@ powering the adapter within range and running
 
     python tools/ble/enumerate.py 9TFD
 
+## The GATT layout, measured on the iPhone (2026-09-10)
+
+Read with nRF Connect for Mobile against `9TFD20257708`.
+
+| | |
+|---|---|
+| service | `49535343-FE7D-4AE5-8FA9-9FAFD205E455` (primary) |
+| notify | `49535343-1E4D-4BD9-BA61-23C647249616`, with a CCCD |
+| write | `49535343-8841-43F4-A8D4-ECBE34729BB3`, Write + Write Without Response |
+
+Also present: Generic Access (1800), Generic Attribute (1801), and Device
+Information (180A) exposing Serial Number, Software Revision, Hardware
+Revision, Manufacturer Name and Model Number strings.
+
+**Advertised services: none.** The adapter advertises only its name, so a client
+has to connect first and then discover — which is what our `AdapterScanner`
+already does, scanning with `withServices: nil`.
+
+`49535343` is ASCII `ISSC`: this is the Microchip/ISSC **transparent UART**
+service, the generic BLE-to-serial bridge profile. That is good news for us —
+one notify characteristic, one write characteristic, no vendor framing of its
+own. `BleTransport` discovers its pair generically rather than from a hardcoded
+list, so it should bring this link up unchanged.
+
+Confirmed on the car: our app lists the adapter at -50 dBm and connects, and
+then every ELM command times out — `ATZ` at its full 2500 ms, `ATD`, `ATE0`,
+`ATL0`, `ATH0`, `ATS0`, `ATAL`, `ATI` at 800 ms each, all with no reply. Exactly
+the expected split: **the transport works, the protocol does not.** So the
+remaining work on the adapter is the `55aa` protocol, not the link.
+
 ## Verdict 3 — a new blocker: no CAN addressing on the wire
 
 `27/01` is not "send this request on CAN id X". Its payload is

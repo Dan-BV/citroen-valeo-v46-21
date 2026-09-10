@@ -38,8 +38,10 @@ Evidence and detail in `out/thinkdiag_protocol.md`.
 
 ## What is still unknown
 
-1. **The GATT layout.** Cannot come from an Android capture. One command with
-   the adapter powered and in range: `python tools/ble/enumerate.py 9TFD`.
+1. ~~The GATT layout.~~ **Done** — ISSC transparent UART, one notify and one
+   write characteristic, listed in `out/thinkdiag_protocol.md`. S2 and S3 are
+   both answered: the app already lists the adapter and brings the link up, and
+   every ELM command times out on it. Transport fine, protocol wrong.
 2. **Whether `55aa` over GATT is framed the same** as over RFCOMM, and at what
    MTU — which is the whole point of the exercise.
 3. **Whether the link handle is stable.** `2905` and `2a25` recur within the
