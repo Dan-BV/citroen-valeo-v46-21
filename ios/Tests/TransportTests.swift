@@ -69,7 +69,7 @@ final class TransportTests: XCTestCase {
 
     func testAWakeupArrivingBeforeTheWaitIsNotLost() async {
         let buffer = ByteBuffer()
-        buffer.append(Data("41 00>".utf8))
+        buffer.append(Data("41 00>".utf8))
 
         let started = Date()
         await buffer.waitForData(upTo: 5)
@@ -84,13 +84,13 @@ final class TransportTests: XCTestCase {
 
         Task {
             try? await Task.sleep(nanoseconds: 50_000_000)
-            buffer.append(Data("41 00>".utf8))
+            buffer.append(Data("41 00>".utf8))
         }
         await buffer.waitForData(upTo: 5)
 
         XCTAssertLessThan(Date().timeIntervalSince(started), 2,
                           "the append should have ended the wait, not the timeout")
-        XCTAssertEqual(buffer.take(upTo: ">"), "41 00")
+        XCTAssertEqual(buffer.take(upTo: ">"), "41 00")
     }
 
     func testTheWaitGivesUpWhenNothingArrives() async {
@@ -110,14 +110,14 @@ final class TransportTests: XCTestCase {
         Task {
             try? await Task.sleep(nanoseconds: 20_000_000)
             buffer.append(Data("41 ".utf8))
-            buffer.append(Data("00>".utf8))
+            buffer.append(Data("00>".utf8))
         }
         await buffer.waitForData(upTo: 5)
         // A second wait proves the slot was left in a usable state; resuming a
         // continuation twice would already have crashed the process.
         await buffer.waitForData(upTo: 0.1)
 
-        XCTAssertEqual(buffer.take(upTo: ">"), "41 00")
+        XCTAssertEqual(buffer.take(upTo: ">"), "41 00")
     }
 
     func testWaitingRepeatedlyKeepsWorking() async {
