@@ -108,7 +108,7 @@ struct AdapterSheet: View {
         scanner.reset()
         switch wanted {
         case .thinkDiag:
-            let config = TransportConfig.thinkDiag
+            let config = TransportConfig.thinkDiagMini
             AdapterStore.save(config)
             adapter = config
         case .elm:

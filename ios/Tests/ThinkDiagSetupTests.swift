@@ -43,7 +43,7 @@ final class ThinkDiagSetupTests: XCTestCase {
 
     func testBothKindsOfAdapterSurviveBeingStoredAndReadBack() throws {
         let defaults = UserDefaults(suiteName: "thinkdiag-tests-" + UUID().uuidString)!
-        for config in [TransportConfig.ble(id: UUID(), name: "Vgate"), .thinkDiag] {
+        for config in [TransportConfig.ble(id: UUID(), name: "Vgate"), .thinkDiagMini] {
             AdapterStore.save(config, to: defaults)
             XCTAssertEqual(AdapterStore.load(defaults), config)
         }
@@ -53,8 +53,8 @@ final class ThinkDiagSetupTests: XCTestCase {
     /// CoreBluetooth identifier - that identifier changes on every reinstall,
     /// and a SideStore resign is a reinstall.
     func testTheThinkDiagIsIdentifiedByItsAdvertisedName() {
-        XCTAssertEqual(TransportConfig.thinkDiag, .thinkDiag(name: "9TFD20257708"))
-        XCTAssertEqual(TransportConfig.thinkDiag.name, TransportConfig.thinkDiagName)
+        XCTAssertEqual(TransportConfig.thinkDiagMini, .thinkDiag(name: "9TFD20257708"))
+        XCTAssertEqual(TransportConfig.thinkDiagMini.name, TransportConfig.thinkDiagName)
     }
 
     // MARK: - importing the script

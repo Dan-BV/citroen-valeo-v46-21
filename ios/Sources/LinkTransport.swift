@@ -41,7 +41,10 @@ enum TransportConfig: Equatable, Codable {
     /// advertises. One adapter, so a constant rather than a choice.
     static let thinkDiagName = "9TFD20257708"
 
-    static var thinkDiag: TransportConfig { .thinkDiag(name: thinkDiagName) }
+    /// The one of these there is. Not called `thinkDiag`: a static member
+    /// cannot share a bare name with a case, and `TransportConfig.thinkDiag`
+    /// would then be ambiguous between this and the case's constructor.
+    static var thinkDiagMini: TransportConfig { .thinkDiag(name: thinkDiagName) }
 }
 
 /// What the link cost for one reply.
