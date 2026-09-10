@@ -535,7 +535,7 @@ final class ElmSession: ObservableObject {
                 selected.contains($0.key) && (retry || !deadPids.contains($0.code))
             }
 
-            for group in ObdReply.group(wanted, perRequest: multiPid ? 6 : 1) {
+            for group in ObdReply.group(wanted, singly: !multiPid) {
                 if Task.isCancelled { break }
                 let request = ObdReply.request(for: group)
                 let sent = Date()

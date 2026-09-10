@@ -164,14 +164,40 @@ enum ObdReply {
         return Int(String(digits[from..<valueEnd]), radix: 16)
     }
 
-    /// Split a wanted set into requests. ISO 15765-4 allows up to six PIDs in
-    /// one mode-01 request; whether the ECU honours it is another matter, which
-    /// is what the fallback in the session is for.
-    static func group(_ params: [ObdSet.Param], perRequest: Int = 6) -> [[ObdSet.Param]] {
-        guard perRequest > 1 else { return params.map { [$0] } }
-        return stride(from: 0, to: params.count, by: perRequest).map {
-            Array(params[$0..<min($0 + perRequest, params.count)])
+    /// One CAN frame carries seven payload bytes.
+    static let frameBudget = 7
+
+    /// Split a wanted set into requests, limited by the size of the ANSWER
+    /// rather than by a count of PIDs.
+    ///
+    /// Measured on the car 2026-09-10: a six-PID request, whose answer needs
+    /// three CAN frames, came back with the last frame duplicated and shifted
+    /// by one byte - 20 bytes where 14 were due. A two-PID request, whose
+    /// answer fits in one frame, came back exactly right. So the ECU does
+    /// honour several PIDs per request; it is this adapter that mis-merges the
+    /// answer when it spans frames, the same defect its ELM327 firmware already
+    /// shows with the expected-response-count suffix.
+    ///
+    /// Hence: pack PIDs while the answer still fits one frame. The answer is
+    /// the mode byte plus, per PID, its echoed code and its data.
+    static func group(_ params: [ObdSet.Param], singly: Bool = false) -> [[ObdSet.Param]] {
+        guard !singly else { return params.map { [$0] } }
+        var out: [[ObdSet.Param]] = []
+        var current: [ObdSet.Param] = []
+        var used = 1
+
+        for param in params {
+            let cost = 1 + param.wireLength
+            if !current.isEmpty, used + cost > frameBudget {
+                out.append(current)
+                current = []
+                used = 1
+            }
+            current.append(param)
+            used += cost
         }
+        if !current.isEmpty { out.append(current) }
+        return out
     }
 
     /// `01` plus each PID's code: `010C0D0511`.

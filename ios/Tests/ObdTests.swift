@@ -37,12 +37,33 @@ final class ObdTests: XCTestCase {
 
     // MARK: - requests
 
-    func testPidsAreGroupedSixToARequest() throws {
+    /// The grouping is bounded by the size of the ANSWER, because this adapter
+    /// corrupts one that spans CAN frames - see the regression below.
+    func testPidsAreGroupedToFitOneCanFrame() throws {
         let obd = try loadSet()
-        let groups = ObdReply.group(obd.params, perRequest: 6)
-        XCTAssertEqual(groups.map(\.count), [6, 6, 6, 3])
+        let groups = ObdReply.group(obd.params)
+
+        for group in groups {
+            let answer = 1 + group.reduce(0) { $0 + 1 + $1.wireLength }
+            XCTAssertLessThanOrEqual(answer, ObdReply.frameBudget,
+                                     "\(ObdReply.request(for: group)) would answer in \(answer) bytes")
+        }
         XCTAssertEqual(groups.flatMap { $0 }.map(\.key), obd.params.map(\.key),
                        "grouping must not drop or reorder anything")
+        XCTAssertGreaterThan(groups.count, 1)
+    }
+
+    /// A two-byte PID leaves room for one more single-byte one, not two.
+    func testATwoBytePidTakesMoreOfTheFrame() throws {
+        let obd = try loadSet()
+        let rpm = try XCTUnwrap(obd.byKey["RPM"])          // 2 bytes
+        let load = try XCTUnwrap(obd.byKey["Load"])        // 1
+        let coolant = try XCTUnwrap(obd.byKey["Coolant"])  // 1
+
+        // 1 + (1+2) + (1+1) = 6 fits; adding another (1+1) would make 8.
+        XCTAssertEqual(ObdReply.group([rpm, load, coolant]).map(\.count), [2, 1])
+        // 1 + 3 * (1+1) = 7 fits exactly.
+        XCTAssertEqual(ObdReply.group([load, coolant, load]).count, 1)
     }
 
     func testARequestIsTheModeFollowedByEachCode() throws {
@@ -54,8 +75,44 @@ final class ObdTests: XCTestCase {
 
     func testFallingBackToOnePidPerRequest() throws {
         let obd = try loadSet()
-        let groups = ObdReply.group(Array(obd.params.prefix(3)), perRequest: 1)
+        let groups = ObdReply.group(Array(obd.params.prefix(3)), singly: true)
         XCTAssertEqual(groups.map(\.count), [1, 1, 1])
+    }
+
+    // MARK: - what the car actually answered
+
+    /// Recorded on 2026-09-10. Six PIDs whose answer needs three CAN frames:
+    /// the adapter merged it wrongly, duplicating the last frame shifted by a
+    /// byte - 20 bytes where 14 were due. Reading it would have put five
+    /// values in the wrong place, so it has to be refused, and the grouping
+    /// above is what stops it being asked for in the first place.
+    func testTheGarbledSixPidAnswerFromTheCarIsRefused() throws {
+        let obd = try loadSet()
+        let group = ["RPM", "Load", "Coolant", "IAT", "MAP", "Throttle"]
+            .compactMap { obd.byKey[$0] }
+        XCTAssertEqual(ObdReply.request(for: group), "010C04050F0B11")
+        XCTAssertNil(ObdReply.walk("410C1140045505450F450B2C1128450F450B2C11",
+                                   expecting: group),
+                     "the tail is a shifted duplicate of the preceding frame")
+
+        // And the same request would no longer be built: it needs 14 bytes.
+        XCTAssertGreaterThan(ObdReply.group(group).count, 1)
+    }
+
+    /// Recorded in the same session: two PIDs whose answer fits one frame came
+    /// back exactly right and were accepted.
+    func testTheTwoPidAnswerFromTheCarIsRead() throws {
+        let obd = try loadSet()
+        let volt = try XCTUnwrap(obd.byKey["Volt"])
+        let baro = try XCTUnwrap(obd.byKey["Baro"])
+        XCTAssertEqual(ObdReply.request(for: [volt, baro]), "014233")
+
+        let raws = try XCTUnwrap(ObdReply.walk("4142385E3356", expecting: [volt, baro]))
+        XCTAssertEqual(raws["42"], 0x385E)
+        XCTAssertEqual(raws["33"], 0x56)
+        XCTAssertEqual(volt.value(0x385E), 14.43, accuracy: 1e-9, "14.43 V")
+        XCTAssertEqual(baro.value(0x56), 86, accuracy: 1e-9, "86 kPa")
+        XCTAssertEqual(ObdReply.group([volt, baro]).count, 1, "one frame, one request")
     }
 
     // MARK: - walking an answer

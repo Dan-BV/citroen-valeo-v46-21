@@ -40,9 +40,10 @@ struct ObdList: View {
         let on = obd.params.filter {
             session.isSelected($0.key) && !session.deadPids.contains($0.code)
         }
-        let perRequest = session.multiPid ? 6 : 1
-        let requests = ObdReply.group(on, perRequest: perRequest).count
-        let how = session.multiPid ? "до 6 за запрос" : "по одному (ЭБУ отказал в мульти-PID)"
+        let requests = ObdReply.group(on, singly: !session.multiPid).count
+        let how = session.multiPid
+            ? "по 1 CAN-кадру на ответ"
+            : "по одному (адаптер портит склейку)"
         return "\(on.count) из \(obd.params.count) · \(requests) запрос(ов) за круг · \(how)"
     }
 
