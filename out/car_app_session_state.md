@@ -375,3 +375,15 @@ telecoding read. Optional refinement: match the recognition answer against
 **Not extracted:** the security-access key algorithm for `27 83`/`27 84` — it is
 code inside `AWRoot/dtrd/comm/Cal458.dll`, not data in the databases. Needed for
 writing configuration, not for reading anything.
+
+## ThinkDiag as a second adapter protocol (2026-09-10)
+
+The phone's Bluetooth snoop of a ThinkDiag Mini session was lost to a flat
+battery — the BT stack keeps one snoop file and drops it on restart. The app's
+own frame log survived and turned out to carry the interesting part: Launch's
+`55aa` framing, the adapter identity exchange, and a generic request
+pass-through on `27/01`.
+
+Plan for making it a second transport, and the licence question that gates the
+whole thing → **`out/thinkdiag_transport_plan.md`**. Capture procedure →
+`tools/btsnoop/pull_btsnoop.ps1`. Memory: [[car-app-thinkdiag-adapter]].
