@@ -37,12 +37,25 @@ take from an unverified source.
 
 ## 3. Trigger the sysdiagnose
 
-Press and hold **both volume buttons and the side button together for about
-1-1.5 seconds**, then let go. A short vibration confirms it. Holding longer
-brings up the power-off slider instead, so it is a brief squeeze, not a long
-press.
+**Use AssistiveTouch, not the button gesture.** The three-button squeeze is
+documented but notoriously unreliable — Apple has an open radar titled
+"sysdiagnose Gesture Very Hard to Trigger", and sources disagree on whether it
+wants 250 ms or a 1-1.5 s hold. It failed in practice here.
 
-Then wait — generation takes up to ten minutes.
+1. Settings → Accessibility → Touch → **AssistiveTouch** → on. A floating
+   button appears.
+2. Same screen: **Custom Actions → Single-Tap → Analytics**. (Equivalently, add
+   Analytics to the **Top Level Menu** instead.)
+3. Tap the floating button. The device says it is gathering analytics.
+4. Wait — up to ten minutes.
+5. Turn AssistiveTouch back off afterwards, or the button stays on screen.
+
+If it answers "Failed to gather analytics", reboot and retry; that error shows
+up on some iOS versions.
+
+For the record, the gesture is: press and hold both volume buttons and the side
+button together, briefly, then release — a short vibration confirms it. Holding
+too long brings up the power-off slider instead.
 
 ## 4. Get the archive off the phone
 
