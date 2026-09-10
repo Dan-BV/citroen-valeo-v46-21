@@ -43,7 +43,9 @@ depend on it.
 the old body is `actor ElmAdapter` in `ios/Sources/ElmAdapter.swift`. The
 session holds `any Adapter` and is otherwise unchanged.
 
-**W2 — the adapter type in settings.** `TransportConfig` gains a case beside
+**W2 — the adapter type in settings. Next, and now the thing standing between
+here and the car:** nothing in the app constructs a `ThinkDiagAdapter` yet, so
+W6 cannot be attempted until this exists. `TransportConfig` gains a case beside
 `.ble(id:name:)`. `AdapterStore` persists it as `Codable` already, so the
 migration matters: a previously stored `.ble` value must still decode.
 A segmented control in `AdapterSheet` — ELM327 / ThinkDiag — and picking
@@ -128,10 +130,41 @@ two questions rather than one:
 Both are answered in one attempt: run the plan and read off the step it stopped
 at.
 
-**W7 — translation.** `ThinkDiagAdapter` interprets the finite ELM vocabulary
-the session actually sends — `ATZ ATD ATE0 ATL0 ATH0 ATS0 ATAL ATAT2 ATST19
-ATSP6 ATSH ATCRA ATFCSH ATFCSD ATFCSM` as configuration or no-ops, and `81`,
-`3E`, `17FF00`, `2180`, `21FE`, `21xx8001` as requests onto `27/01`.
+**W7 — translation. Done.** `ios/Sources/ThinkDiagAdapter.swift` is an
+`actor` conforming to `Adapter`, so the session cannot tell which kind of
+adapter it holds. The AT vocabulary is acknowledged with `OK` and never
+reaches the link — `?` would have made all fourteen configuration commands
+look like faults in the technical log. `applyHeader` looks up a link handle
+and costs **no exchange at all**, where the ELM path pays two writes.
+Everything else is hex and rides `27/01`.
+
+`ios/Sources/ThinkDiagRequest.swift` is the request and reply codec, and the
+shapes in it were derived from the capture rather than documented, so
+`tools/thinkdiag/verify_requests.py` re-checks them against **all 438**
+single-request exchanges:
+
+    request  01 64 00 01 ff 02 | L | 61 01 | n | link(2) | reqlen | request
+             L = 6 + reqlen, n = 1 + reqlen
+    reply    01 00 nn nn | 55aa | ? ? | module(2) | length | answer
+
+Zero violations. The reply length comes in two widths — one byte, or two with
+**bit 12 set** and the count in the low twelve — and the wide form has to be
+tried first: on one of the 438 answers a byte in that position happened to
+equal the count of everything after it, and the narrow reading swallowed the
+first byte of a `62 21 02 …` reply.
+
+The answer is handed to the session as hex, whole, and `Frames.extract` counts
+its offsets from the marker exactly as on the ELM path. That is safe because
+the same script checks it: the header the codec strips never contains the
+marker the extraction goes looking for, in any of the 438. A bare `01ff…`
+status becomes `NO DATA`, which `Frames.isError` already reads.
+
+Proof: 15 tests in `ios/Tests/ThinkDiagAdapterTests.swift`, driven against a
+fake that speaks the real framing in both directions — parsing what the
+adapter writes and answering with `cmd | 0x40` and the same sequence id. The
+bytes on both sides are the captured ones, so the strongest of them asserts
+that asking for engine page CB puts *exactly* the official app's payload on
+the wire.
 
 **W8 — the measurement stays honest.** Report `LinkStats` — notifications,
 bytes, largest — exactly as `BleTransport` does, so `TechLog` and `tools/tech`
