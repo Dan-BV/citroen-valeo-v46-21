@@ -47,24 +47,34 @@ sessions.
 
 **So: no cloud round-trip to reproduce.** The gate is passed.
 
-## Verdict 2 — classic Bluetooth SPP only, no BLE
+## Verdict 2 — the adapter is dual-mode; Android chose SPP, iOS uses LE
+
+An earlier reading of this capture said the adapter had no BLE at all. That was
+wrong: it described what the *Android ThinkDiag app* chose, not what the adapter
+can do. The same snoop contains the evidence, in the scan that preceded the
+connection.
 
 From the HCI snoop of the 13:02 session (11 420 packets):
 
-- ATT packets on CID `0x0004`: **zero**. There is no GATT traffic at all.
-- L2CAP connection requests to PSM 1 (SDP) and **PSM 3 (RFCOMM)**.
-- The `55aa` payload rides RFCOMM on L2CAP CID `0x45`, DLCI 2, UIH frames, one-
-  and two-byte length forms (`09 ef …`, `0b ff … 01`) — the same shape as the
-  August ELM327 capture.
+- 442 LE advertising reports from `DC:0D:30:51:4E:36`, carrying a Complete Local
+  Name of `9TFD20257708` and TX power, with the flags byte at `0x01` — the
+  "BR/EDR not supported" bit is *not* set, i.e. dual mode.
+- The session itself then ran over classic Bluetooth: L2CAP connection requests
+  to PSM 1 (SDP) and PSM 3 (RFCOMM), payload on CID `0x45`, DLCI 2, UIH frames,
+  the same shape as the August ELM327 capture. Zero ATT packets — because the
+  Android app never opened a GATT link, not because there is none to open.
 
-Consequences for platform reach:
+The bonded-device list agrees: the phone records it as `[ DUAL ]`.
 
-- **Android** — works. `BluetoothTransport` already speaks RFCOMM SPP.
-- **iOS** — impossible. Classic SPP needs MFi hardware; CoreBluetooth cannot
-  reach this adapter. The plan anticipated this branch.
-- **Web** — Web Bluetooth is BLE-only, so that path is out. On Windows the
-  adapter can pair as a Bluetooth COM port, which the existing Web Serial path
-  reaches without any new transport code.
+So each platform reaches it its own way, and the iPhone reaching it over LE — as
+the ThinkDiag iOS app does — is consistent with everything here.
+
+**What is still unknown, and cannot come from an Android capture:** the GATT
+service and characteristic pair the LE link uses, and whether the `55aa`
+framing over GATT is chunked differently than over RFCOMM. Resolve it by
+powering the adapter within range and running
+
+    python tools/ble/enumerate.py 9TFD
 
 ## Verdict 3 — a new blocker: no CAN addressing on the wire
 

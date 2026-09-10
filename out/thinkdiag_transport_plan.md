@@ -1,132 +1,87 @@
 # ThinkDiag as a second adapter protocol — plan
 
-Goal: let the app talk to a ThinkDiag Mini alongside the ELM327 adapters, and
-let the user pick which kind of adapter to use from the settings.
+**Scope: the iOS app only.** The web and Android versions are out of scope as of
+2026-09-10. **Priority: the engine data stream.** No work on the BSI or any
+other module until the engine stream is optimised.
 
-## Why this is not a drop-in
+## Why bother — the hypothesis this has to earn
 
-ThinkDiag does not speak ELM327. It speaks Launch's own binary framing, and the
-app's whole transport layer is built around ELM text ending in a `>` prompt.
+The engine stream on iOS is notification-bound, not ECU-bound. A proprietary
+`21xx8001` page answers with 40-70 bytes and the BLE link hands them over about
+20 at a time, one notification per connection event; measured elsewhere in the
+same session, a page that answers costs 78 ms and one that does not costs a full
+169 ms timeout, out of a 2353 ms cycle.
 
-Frame layout, from the 2026-09-10 capture:
+ThinkDiag is worth building **only if its LE link moves that number** — a larger
+MTU, or fewer round-trips per page. That is measurable with instruments the app
+already has: `LinkStats` counts notifications, bytes and the largest piece;
+`TechLog` records it per exchange; `tools/tech` analyses the log. So the honest
+order is measure first, build second.
 
-    55aa | tag(2) | len(2) | seq(1) | cmd(1) | payload | cksum(1)
+## What the 2026-09-10 capture settled
 
-`tag` is `f0f8` phone→adapter and `f8f0` back; a reply echoes the request's
-`seq` and answers with `cmd | 0x40`.
+Evidence and detail in `out/thinkdiag_protocol.md`.
 
-What is already decoded (`tools/btsnoop/data/2026-09-10_0952_thinkdiag_eobd2.log`,
-a 2-minute EOBD2 session — 492 request/reply pairs):
+- **The licence payload is static and replayable.** Two sessions minutes apart
+  sent byte-identical blobs; the adapter's one varying reply is never referenced
+  again. No Launch cloud round-trip.
+- **The adapter is dual-mode.** It advertises LE as `9TFD20257708` (442
+  advertising reports in the snoop, "BR/EDR not supported" bit clear) and the
+  phone bonds it as `[ DUAL ]`. The Android app happened to choose classic SPP;
+  the iPhone reaches it over LE. An earlier note in this plan claimed iOS could
+  not reach it at all — that was a conclusion drawn from one app's choice, and
+  it was wrong.
+- **Addressing is a handle, not a CAN id.** `27/01` carries
+  `64 00 01 ff | len(2) | 61 01 | n | link(2) | reqlen | request`, where `link`
+  is resolved inside the adapter's own vehicle software: `2905` engine, `2a25`
+  BSI. No CAN identifier appears in the stream in any encoding.
 
-| cmd | sub | meaning |
-|-----|-----|---------|
-| `21` | `03` | adapter serial, firmware version, build date |
-| `21` | `05` | firmware/bootloader/protocol versions, model `diagmini` |
-| `27` | `01` | **generic pass-through** — protocol descriptor + the request verbatim |
-| `21` | `18` | ~527 bytes, high entropy — licence/activation |
-| `27` | `01` | one frame of 250+ high-entropy bytes ending in ASCII `Launch_Limited_ED` |
+## What is still unknown
 
-The pass-through is the good news: `02 01 14` went out untouched and came back
-as `41 14 88 88`, so an arbitrary request such as `21CB8001` would go through
-the same way. The licence frames are the risk.
+1. **The GATT layout.** Cannot come from an Android capture. One command with
+   the adapter powered and in range: `python tools/ble/enumerate.py 9TFD`.
+2. **Whether `55aa` over GATT is framed the same** as over RFCOMM, and at what
+   MTU — which is the whole point of the exercise.
+3. **Whether the link handle is stable.** `2905` and `2a25` recur within the
+   13:02 session, but the two short CITROEN sessions used a different descriptor
+   form, so cross-session stability is not yet shown.
+4. **Whether a link has to be opened** before `27/01` will accept a handle, or
+   whether the handle alone is enough after the licence frames.
 
-## Phase 0 — the gate — DONE (2026-09-10)
+## Steps
 
-Captured a full CITROEN session: system scan plus data-stream reads on the BSI
-and the engine, with the HCI snoop covering it from link setup on. Findings and
-evidence → **`out/thinkdiag_protocol.md`**. Three answers:
+**S1 — measure the baseline, without ThinkDiag.** Record a tech log of the
+engine stream on the current adapter and get notifications-per-page and
+ms-per-page. Every later claim is judged against this, and the number is worth
+having whatever happens to ThinkDiag.
 
-1. **The licence is static.** Two CITROEN sessions minutes apart sent
-   byte-identical `21/18` and licence payloads, and the adapter's one varying
-   reply is never referenced again. No cloud round-trip to reproduce — this gate
-   is passed.
-2. **Classic SPP only, no BLE.** Zero ATT packets; RFCOMM on PSM 3, DLCI 2.
-   That decides platform reach, and it rules iOS out entirely.
-3. **A new blocker: no CAN addressing on the wire.** `27/01` names a two-byte
-   link handle (`2905` engine, `2a25` BSI), and no CAN identifier appears in the
-   stream in any encoding. The identifiers live in the adapter's downloaded
-   vehicle software.
+**S2 — enumerate the GATT** (`tools/ble/enumerate.py 9TFD`). Services,
+characteristics, properties, MTU.
 
-Blocker 3 is what now sets the cost. Reaching the engine means replaying the
-link-setup sequence the app performs, which is tied to a vehicle-software
-version rather than being a stable primitive — so the next step is not Phase 1
-but a decision about whether that replay is worth owning. Options, cheapest
-first:
+**S3 — probe with what already exists.** `AdapterScanner` scans with
+`withServices: nil` and `BleTransport` calls `discoverServices(nil)` and picks a
+notify/write pair generically, so the app should already list the adapter and
+may already bring up a byte pipe. Find out, and log which characteristics it
+chose and the negotiated MTU. No new transport code until this says one is
+needed.
 
-- **Android only, replay the setup.** The one platform that can talk to this
-  adapter at all. Prove the replay works before touching the app's structure.
-- **Look for a raw-CAN command.** Nothing in this capture exposes one; it would
-  take either more captures across different vehicle software or work on the
-  adapter's own firmware. Unbounded.
-- **Stop here** and keep the capture for its reference value.
+**S4 — speak the protocol.** `55aa` framing, the licence replay, then
+`21CB8001` on handle `2905`. One page answering correctly is the milestone.
 
-## Phase 1 — raise the seam
+**S5 — compare against S1** and keep it only if it wins.
 
-The current abstraction is ELM-shaped and sits one level too low: `ElmTransport`
-is a byte pipe and the reads end on a `>` prompt. ThinkDiag replaces both the
-transport *and* the command layer, so the seam has to become "send this request,
-get these bytes back".
+## Deliberately out of scope
 
-- **iOS** — cheapest. `actor Adapter` (`ios/Sources/ElmSession.swift:706`)
-  already exposes `send(command:_:)`, `lastStats` and `lastMs`, and `ElmSession`
-  uses nothing else. Make `Adapter` a protocol; today's body becomes
-  `ElmAdapter`.
-- **Web** — nearly free. `ElmSerial` and `ElmBle` already share `cmd()`/`close()`
-  and are picked in one line (`index.html:512`). A third class with the same
-  interface slots in.
-- **Android** — largest change. `ElmSession` holds an `ElmTransport` directly and
-  frames inline (`ElmSession.kt:132`); the `Adapter` seam does not exist yet and
-  has to be extracted first. `ParityTest.kt` must stay green through it.
+- The web and Android versions.
+- The BSI and every other module. The BSI DID sweep from this capture is
+  documented in `out/thinkdiag_protocol.md` and stays parked until the engine
+  stream is optimised.
+- New iOS transport plumbing before S3 proves it is needed.
 
-One thing that makes this tractable: the ELM vocabulary the session actually
-uses is a finite list — `ATZ ATD ATE0 ATL0 ATH0 ATS0 ATAL ATV0 ATSP6 ATSH ATCRA
-ATFCSH ATFCSD ATFCSM` plus raw hex requests. A ThinkDiag adapter has to
-*interpret* those into a protocol descriptor, not forward them.
+## Kill conditions
 
-## Phase 2 — adapter choice in settings
-
-"Тип подключения" already exists in the web settings modal
-(`index.html:139`) but it selects the *link* (Serial / BLE). Adapter kind is a
-separate axis — a ThinkDiag is reached over Bluetooth, an ELM over Serial, BLE
-or Wi-Fi — so it needs its own control rather than a third option in that list.
-
-- **Web** — new select beside `#connType`, persisted with the existing
-  `lsGet`/`lsSet` helpers.
-- **Android** — `TransportConfig` gains a ThinkDiag case; picker in
-  `MainActivity`.
-- **iOS** — `TransportConfig` is `.ble`-only today; add a ThinkDiag case and
-  surface it in `AdapterSheet`. `AdapterStore` already persists `Codable`.
-
-UI strings in Russian, per `CLAUDE.md`.
-
-## Phase 3 — the ThinkDiag adapter itself
-
-- Framing: build and parse `55aa`, maintain the sequence counter, checksum.
-- Handshake: `21/03`, `21/05`, then the licence exchange as Phase 0 decided.
-- Configure the protocol descriptor for `6A8`/`688`.
-- Map each request onto `27/01`; reassemble the reply, which arrives as a
-  nested `55aa` frame inside the response payload.
-- Report `LinkStats` and feed `TechLog` the same way the ELM path does, so the
-  technical analyser keeps working across both.
-
-## Phase 4 — proof
-
-- Parity: extend the existing fixtures (`ParityTest.kt`, `ParityTests.swift`) so
-  a recorded ThinkDiag exchange decodes to the same samples as the ELM path.
-- On the car: a ThinkDiag run against a COM7 ELM run, same pages, compare
-  cycle time and values.
-
-## Platform reach — measured
-
-- **Android** — works. `BluetoothTransport` already speaks RFCOMM SPP.
-- **iOS** — impossible. Classic SPP needs MFi hardware. Drop it from scope.
-- **Web** — Web Bluetooth cannot reach a classic-SPP device. On Windows the
-  adapter pairs as a Bluetooth COM port, which the existing Web Serial path
-  already handles with no new transport code.
-
-## What to expect
-
-This is a new transport, not a speedup: days rather than hours, and gated on a
-licence question that may end it. The value that does *not* depend on the gate
-is the capture itself — a reference V46.21 dialogue from the official tool,
-useful for calibration whether or not the app ever drives this adapter.
+- S1 shows the engine stream is not notification-bound — then ThinkDiag cannot
+  help, whatever else is true.
+- S2 or S3 shows no usable GATT pipe.
+- S4 needs setup we cannot reproduce without Launch's vehicle software. In that
+  case stop and keep the capture for its reference value.
