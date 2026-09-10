@@ -19,18 +19,6 @@ final class ElmSession: ObservableObject {
         case failed
     }
 
-    /// Where the readings come from. Kept apart rather than mixed, because
-    /// the two use different CAN headers and switching costs two adapter
-    /// turnarounds - as much as a small page.
-    enum Mode: Equatable {
-        /// The proprietary V46.21 pages: everything the ECU knows, but a page
-        /// answers with 40-70 bytes and BLE needs a notification per 20.
-        case proprietary
-        /// Standard mode-01 PIDs, up to six per request. Far fewer bytes, so
-        /// this is the fast one - at the price of only the standard readings.
-        case obd
-    }
-
     // MARK: - what the screen watches
 
     @Published private(set) var state: State = .disconnected
@@ -39,19 +27,10 @@ final class ElmSession: ObservableObject {
     /// Requests of pages the ECU did not answer when probed.
     @Published private(set) var deadPages: Set<String> = []
 
-    /// Codes of standard PIDs this ECU does not publish. Measured on the car:
-    /// seven of the twenty-one answer nothing, and each of those costs a full
-    /// adapter timeout - 169 ms against 78 for one that answers, which was
-    /// 1183 ms of a 2353 ms cycle spent waiting for nothing.
-    @Published private(set) var deadPids: Set<String> = []
-
     // MARK: -
 
     private let profile: Profile
-    private let obd: ObdSet?
     private let makeTransport: (TransportConfig) -> any ElmTransport
-
-    private(set) var mode: Mode = .proprietary
 
     private let logger = CsvLogger()
     private let tech = TechLog()
@@ -73,10 +52,6 @@ final class ElmSession: ObservableObject {
     @Published private(set) var loggedRows = 0
 
     var logURL: URL? { logger.url }
-
-    /// Whether the ECU honours several PIDs in one request. Assumed until an
-    /// answer cannot be walked, then dropped for the rest of the session.
-    private(set) var multiPid = true
 
     /// One adapter, several callers: the poll loop and any on-demand read.
     private let io = AsyncLock()
@@ -141,18 +116,10 @@ final class ElmSession: ObservableObject {
     var isBusy: Bool { loop != nil }
 
     init(profile: Profile,
-         obd: ObdSet? = nil,
          makeTransport: @escaping (TransportConfig) -> any ElmTransport) {
         self.profile = profile
-        self.obd = obd
         self.makeTransport = makeTransport
-        self.selected = Self.defaultSelection(profile)
-        if let obd {
-            // The standard set starts fully on: it is cheap, and trimming it
-            // is what the selection screen is for.
-            self.selected.formUnion(obd.params.map(\.key))
-        }
-    }
+        self.selected = Self.defaultSelection(profile)    }
 
     // MARK: - selection
 
@@ -203,6 +170,20 @@ final class ElmSession: ObservableObject {
         plan.breakdown(profile.pages.filter(anyOn))
     }
 
+    /// How many of a page's parameters are wanted, out of how many it carries.
+    ///
+    /// This is the number the reader trades against: a page costs one adapter
+    /// turnaround whether one parameter is taken from it or twenty-five, so a
+    /// page carrying two wanted readings is expensive and one carrying twenty
+    /// is nearly free. Measured on the car, a page runs 4.7 to 12.9 ms per
+    /// parameter it delivers - which is why the fastest way to a small set is
+    /// the one page that covers most of it, not more requests.
+    func wantedOn(_ page: Profile.Page) -> (wanted: Int, total: Int) {
+        // Not count(where:) - that is Swift 6, and this target builds as 5.
+        let wanted = page.params.lazy.filter { self.selected.contains($0.key) }.count
+        return (wanted, page.params.count)
+    }
+
     func rawReply(_ request: String) -> String? { lastReply[request] }
 
     func lastPageMs(_ request: String) -> Int? { lastMs[request] }
@@ -211,10 +192,8 @@ final class ElmSession: ObservableObject {
 
     // MARK: - session
 
-    func connect(_ config: TransportConfig, mode: Mode = .proprietary) {
+    func connect(_ config: TransportConfig) {
         guard !isBusy else { return }
-        self.mode = mode
-        multiPid = true
         history = [:]
         lastReply = [:]
         lastMs = [:]
@@ -244,10 +223,7 @@ final class ElmSession: ObservableObject {
             try await adapter.open()
             status = "Адаптер открыт, инициализация ЭБУ…"
             if techToFile { try? tech.start() }
-            switch mode {
-            case .proprietary: try await runProprietary(adapter)
-            case .obd: try await runObd(adapter)
-            }
+            try await runProprietary(adapter)
         } catch {
             if !Task.isCancelled {
                 status = "Ошибка: \(error.localizedDescription)"
@@ -422,7 +398,8 @@ final class ElmSession: ObservableObject {
         guard tech.isRunning else { return reply }
         tech.log(TechLog.Exchange(
             at: Date(),
-            mode: mode == .obd ? "obd" : "v4621",
+            // One mode now; the column stays because the analyser reads it.
+            mode: "v4621",
             command: command,
             replyChars: reply.count,
             stats: await adapter.lastStats,
@@ -460,135 +437,6 @@ final class ElmSession: ObservableObject {
     func flushLog() {
         logger.flush()
         tech.flush()
-    }
-
-    // MARK: - the standard OBD-II set
-
-    private func runObd(_ adapter: Adapter) async throws {
-        guard let obd else {
-            status = "Стандартный набор недоступен: нет obd2.json"
-            state = .failed
-            return
-        }
-        let alive = try await io.locked { await self.initObd(adapter, obd) }
-        guard alive else {
-            status = "ЭБУ не отвечает на стандартный OBD (зажигание?)"
-            state = .failed
-            return
-        }
-        state = .connected
-        startLogging(keys: obd.params.map(\.key).filter(selected.contains))
-        status = "Проверка PID…"
-        deadPids = try await io.locked { await self.probePids(adapter, obd) }
-        status = "Подключено · стандартный OBD"
-            + (deadPids.isEmpty ? "" : " · без ответа: \(deadPids.count)")
-        await pollObd(adapter, obd)
-    }
-
-    /// Same adapter setup as the proprietary session, but addressed to the
-    /// engine ECU's standard identifiers instead of the PSA ones, and the
-    /// header is set once here rather than per page.
-    private func initObd(_ adapter: Adapter, _ obd: ObdSet) async -> Bool {
-        await at(adapter, "ATZ", 2.5)
-        for command in ["ATD", "ATE0", "ATL0", "ATH0", "ATS0", "ATAL"] {
-            await at(adapter, command, 0.8)
-        }
-        await at(adapter, "ATAT2", 0.8)
-        await at(adapter, "ATST" + Self.pollST, 0.8)
-        await at(adapter, "ATSP6", 0.8)
-        await adapter.applyHeader(obd.header.req, receive: obd.header.res)
-        await at(adapter, "ATFCSH" + obd.header.req, 0.8)
-        await at(adapter, "ATFCSD300000", 0.8)
-        await at(adapter, "ATFCSM1", 0.8)
-        // `0100` answers with the supported-PID bitmask; all that matters here
-        // is that mode 01 is answered at all. No `81` - that is KWP, and the
-        // standard set does not need a session opened.
-        let reply = await at(adapter, "0100", 2.5)
-        return !Frames.isError(reply) && Frames.clean(reply).hasPrefix("4100")
-    }
-
-    /// Ask each wanted PID once and remember the ones the ECU does not
-    /// publish, the same way pages are probed. Without this the cycle pays an
-    /// adapter timeout per unsupported PID, every pass, for nothing.
-    private func probePids(_ adapter: Adapter, _ obd: ObdSet) async -> Set<String> {
-        var dead: Set<String> = []
-        for param in obd.params where selected.contains(param.key) {
-            if Task.isCancelled { break }
-            let reply = await at(adapter, param.pid, 1.5, note: "probe")
-            if Frames.isError(reply)
-                || ObdReply.walk(Frames.clean(reply), expecting: [param]) == nil {
-                dead.insert(param.code)
-            }
-        }
-        return dead
-    }
-
-    private func pollObd(_ adapter: Adapter, _ obd: ObdSet) async {
-        var live: [String: Sample] = [:]
-        while !Task.isCancelled {
-            cycle += 1
-            let started = Date()
-            // A written-off PID is retried now and then in case the silence
-            // was transient, like a dead page.
-            let retry = cycle % 20 == 0
-            let wanted = obd.params.filter {
-                selected.contains($0.key) && (retry || !deadPids.contains($0.code))
-            }
-
-            for group in ObdReply.group(wanted, singly: !multiPid) {
-                if Task.isCancelled { break }
-                let request = ObdReply.request(for: group)
-                let sent = Date()
-                let reply: String
-                do {
-                    reply = try await io.locked {
-                        // Re-applied every group, and cheap when unchanged:
-                        // reading fault codes switches the adapter to the PSA
-                        // header, and without this the loop would carry on
-                        // asking mode-01 PIDs on 6A8 and get nothing back for
-                        // the rest of the session.
-                        await adapter.applyHeader(obd.header.req, receive: obd.header.res)
-                        return await at(adapter, request, 1.2)
-                    }
-                } catch {
-                    break
-                }
-                let now = Date()
-                lastMs[request] = Int(now.timeIntervalSince(sent) * 1000)
-                lastReply[request] = reply.trimmingCharacters(in: .whitespacesAndNewlines)
-                if Frames.isError(reply) { continue }
-
-                guard let raws = ObdReply.walk(Frames.clean(reply), expecting: group) else {
-                    // Either the ECU ignored the extra PIDs, or one answered
-                    // with a different length than the table expects - and then
-                    // every value after it would be read from the wrong place.
-                    if group.count > 1 {
-                        multiPid = false
-                        status = "ЭБУ не принял мульти-PID, читаю по одному"
-                        tech.log(TechLog.Exchange(
-                            at: now, mode: "obd", command: request,
-                            replyChars: reply.count, stats: LinkStats(), ms: 0,
-                            ok: false, note: "multipid-refused",
-                            reply: Frames.clean(reply)))
-                    }
-                    continue
-                }
-                for param in group {
-                    guard let raw = raws[param.code] else { continue }
-                    deadPids.remove(param.code)
-                    let sample = Sample(value: param.value(raw), raw: raw,
-                                        at: now, valid: true)
-                    live[param.key] = sample
-                    append(Point(at: now, value: sample.value), to: param.key)
-                }
-            }
-
-            values = live
-            record(live)
-            let elapsed = Int(Date().timeIntervalSince(started) * 1000)
-            let per = multiPid ? "по 6" : "по одному"
-            status = "Стандартный OBD · цикл \(elapsed) мс · \(per)"
-        }
     }
 
     // MARK: - on demand

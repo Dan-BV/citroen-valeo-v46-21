@@ -220,10 +220,10 @@ final class TechLogTests: XCTestCase {
         let tech = TechLog(directory: directory)
         try tech.start()
         let url = try XCTUnwrap(tech.url)
-        tech.log(TechLog.Exchange(at: Date(), mode: "obd", command: "010C050D",
-                                 replyChars: 16, stats: LinkStats(notifications: 2, bytes: 24, largest: 20),
-                                 ms: 61, ok: true, note: "multipid-refused",
-                                 reply: "410C0A1F41052D"))
+        tech.log(TechLog.Exchange(at: Date(), mode: "v4621", command: "21C18001",
+                                 replyChars: 84, stats: LinkStats(notifications: 5, bytes: 85, largest: 20),
+                                 ms: 78, ok: true, note: "probe",
+                                 reply: "61FF03248E617676"))
         tech.stop()
 
         let rows = try lines(url)
@@ -248,9 +248,9 @@ final class TechLogTests: XCTestCase {
 
         let tech = TechLog(directory: directory)
         try tech.start()
-        tech.log(TechLog.Exchange(at: Date(), mode: "obd", command: "0100",
-                                  replyChars: 8, stats: LinkStats(), ms: 30,
-                                  ok: true, note: "", reply: "4100BE3EB811"))
+        tech.log(TechLog.Exchange(at: Date(), mode: "v4621", command: "81",
+                                  replyChars: 8, stats: LinkStats(), ms: 168,
+                                  ok: true, note: "", reply: "C1D08F"))
         tech.stop()
 
         XCTAssertEqual(CsvLogger.logs(in: directory).count, 1)

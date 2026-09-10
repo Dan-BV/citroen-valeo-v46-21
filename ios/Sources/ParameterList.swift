@@ -29,11 +29,36 @@ struct ParameterList: View {
             }
         }
         .searchable(text: $query, prompt: "Параметр")
+        .safeAreaInset(edge: .top) {
+            if editing { advice }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button(editing ? "Готово" : "Выбор") { editing.toggle() }
             }
         }
+    }
+
+    /// The one thing worth saying out loud in edit mode: cycle time is paid
+    /// per page, so the cheapest way to a fast screen is fewer pages - not
+    /// fewer parameters.
+    @ViewBuilder
+    private var advice: some View {
+        let pages = session.polledPages
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(pages.count) стр. в круге"
+                 + (session.predictedCycleMs.map { " · ~\($0) мс" } ?? ""))
+                .font(.caption.monospacedDigit())
+            Text("Страница стоит один обмен независимо от того, сколько "
+                 + "параметров из неё взято. Дешевле убрать страницу, чем "
+                 + "параметры.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+        .background(.bar)
     }
 
     // MARK: - rows
@@ -93,6 +118,12 @@ struct ParameterList: View {
                     .foregroundStyle(.orange)
             }
             if editing {
+                // What the page costs against what it delivers: the trade the
+                // reader is actually making.
+                let use = session.wantedOn(page)
+                Text("\(use.wanted)/\(use.total)")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(use.wanted == 0 ? .secondary : .primary)
                 periodMenu(page)
                 Toggle("", isOn: Binding(
                     get: { page.params.contains { session.isSelected($0.key) } },

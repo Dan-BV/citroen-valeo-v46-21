@@ -1,11 +1,10 @@
 import Foundation
 
-/// What a screen needs to know about a reading, whichever set it came from.
+/// What a screen needs to know about a reading.
 ///
-/// The proprietary profile and the standard OBD-II table describe a parameter
-/// differently - one has enumerated states and bit fields, the other only
-/// linear formulas - but a row and a graph want the same handful of facts. This
-/// keeps one list and one graph instead of a pair of each.
+/// A row and a graph want the same handful of facts about a parameter, and not
+/// the byte layout around it. Kept as its own type because both of them read it
+/// and neither should reach into the profile.
 struct Readout: Identifiable {
     let key: String
     let label: String
@@ -29,17 +28,6 @@ struct Readout: Identifiable {
         high = field.high
         isNumeric = field.kind == .numeric
         state = { raw in field.states?[String(raw)] ?? "?\(raw)" }
-    }
-
-    init(_ param: ObdSet.Param) {
-        key = param.key
-        label = param.label
-        unit = param.unit
-        decimals = param.decimals
-        low = param.low
-        high = param.high
-        isNumeric = true
-        state = { _ in nil }
     }
 
     /// How the value reads on screen: the text state if it has one, otherwise
