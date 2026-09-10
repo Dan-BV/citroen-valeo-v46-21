@@ -38,6 +38,29 @@ LIVE = [
 # Pages worth reading once in a while rather than every cycle.
 SLOW = {'B0', 'CF'}
 
+# Fields Diagbox lists for the platform that this car cannot answer, because it
+# does not have the hardware behind them: four belong to an automatic gearbox
+# and its ECU, one to an electric vacuum pump. Checked against ten recorded
+# drives - 18 949 cycles - where each held one value and never moved, and each
+# is a signal that would have to move if the part existed.
+#
+# Dropping them buys no time: a cycle pays one adapter turnaround per page and
+# nothing for the fields inside it. It buys a parameter list that only shows
+# what this car can actually tell us.
+#
+# Deliberately NOT here, though also motionless across those drives: the
+# immobiliser and $CF after-sales blocks, which are static by nature and
+# already on a slow period; and fault-ish flags that read "nothing wrong" -
+# crash detection, starter engaged, the high-speed fan relay, camshaft
+# coherence. Those are silent, not absent.
+DEAD = {
+    'RAPPORT_ENGAGE',                            # engaged gear, reads 8 always
+    'TYPE_BOITE_VITESSES',                       # gearbox type, reads 0
+    'AUTORISATION_DEMARRAGE_CALCULATEURS_BV',    # start allowed by gearbox ECU
+    'INFORMATION_POINT_DUR_PEDALE_ACCELERATEUR', # kickdown detent
+    'ETAT_COMMANDE_POMPE_VIDE_ELECTRIQUE',       # reads 255, the not-fitted code
+}
+
 IDENT = [
     ('ZA', 'Идентификация $80'),
     ('ZI', 'Идентификация $FE'),
@@ -235,7 +258,7 @@ def main():
         params = []
         for b in u['frames'].get('ANSWEROK', []):
             f = field(b)
-            if not f or f['k'] in seen:
+            if not f or f['k'] in seen or f['k'] in DEAD:
                 continue          # engine speed and voltage repeat on every page
             seen.add(f['k'])
             params.append(f)
