@@ -113,7 +113,8 @@ final class SessionTests: XCTestCase {
 
     private func makeSession(_ profile: Profile,
                              _ transport: ScriptedTransport) -> ElmSession {
-        ElmSession(profile: profile, makeTransport: { _ in transport })
+        ElmSession(profile: profile,
+                   makeAdapter: { _ in ElmAdapter(transport: transport) })
     }
 
     private func settle(_ until: () -> Bool, _ seconds: TimeInterval = 10,

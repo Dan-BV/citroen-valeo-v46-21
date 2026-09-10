@@ -43,16 +43,48 @@ depend on it.
 the old body is `actor ElmAdapter` in `ios/Sources/ElmAdapter.swift`. The
 session holds `any Adapter` and is otherwise unchanged.
 
-**W2 — the adapter type in settings. Next, and now the thing standing between
-here and the car:** nothing in the app constructs a `ThinkDiagAdapter` yet, so
-W6 cannot be attempted until this exists. `TransportConfig` gains a case beside
-`.ble(id:name:)`. `AdapterStore` persists it as `Codable` already, so the
-migration matters: a previously stored `.ble` value must still decode.
-A segmented control in `AdapterSheet` — ELM327 / ThinkDiag — and picking
-ThinkDiag hides the scan list, because there is nothing to pick.
+**W2 and W3 — the adapter type in settings, and connecting by name. Done.**
 
-**W3 — connect by name.** A scan that matches the advertised name and connects
-to the first hit, instead of connecting to a chosen identifier.
+`TransportConfig` gained `.thinkDiag(name:)` beside `.ble(id:name:)`, and the
+migration is covered by a test that decodes a literal stored `.ble` blob —
+re-encoding today's enum would prove nothing about what is already on the
+phone. `BleTransport` now recognises a device either by identifier or by the
+name in its advertisement, preferring the advertisement over
+`peripheral.name`, which the system caches and can answer with a name from an
+earlier pairing. Only an identifier can skip the scan, so the ThinkDiag costs
+about a second more to find — the price of not depending on an identifier that
+changes with every SideStore resign.
+
+`ElmSession` takes `makeAdapter` rather than `makeTransport`: there are two
+kinds of adapter now and only the caller knows which a config means. Nothing
+below that line can tell them apart.
+
+In `AdapterSheet`, a segmented control picks the type. Choosing ThinkDiag
+selects the adapter outright — there is one and nothing to pick from a list —
+so the scan list is replaced by the activation section. The ELM verdict line
+and its recheck button are hidden for it, because `ElmProbe` asks in ELM327
+text and a ThinkDiag does not answer that.
+
+**The activation script is imported, not file-dropped.** It cannot be in the
+app: it is the adapter's own licence, and this repository is public. The first
+plan was to have it placed in Documents by hand, which was worse for a reason
+that matters — a file wrong by one digit looks exactly like a file that is
+right, and it would only reveal itself at the car, on a 525-byte licence step
+nobody can check by eye. So `ThinkDiagScriptStore` takes a file the user picks,
+parses it before writing anything, and the settings screen says what is loaded
+and what is wrong with what was not.
+
+It is kept in **Application Support, not Documents**: `UIFileSharingEnabled`
+exposes Documents so the drive logs can be pulled off, and the licence has no
+business being visible there. The imported copy is also excluded from backup,
+so it does not travel to iCloud. Documents is still read as a fallback, because
+dropping the file there over a cable is the shortest route from a Windows
+machine.
+
+Without a script the adapter still runs the six opening queries and reports the
+identity before failing with `noScript` — the link carrying `55aa` and the
+right model answering are worth knowing on their own, and that is exactly what
+the first minutes at the car want to establish.
 
 **W4 — the framing. Done.** `ios/Sources/ThinkDiagFrame.swift`:
 `55aa | tag(2) | len(2) | seq(1) | cmd(1) | payload | cksum(1)`; `f0f8` out,

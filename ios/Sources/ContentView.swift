@@ -41,7 +41,18 @@ struct SessionScreen: View {
         self.profile = profile
         _session = StateObject(wrappedValue: ElmSession(
             profile: profile,
-            makeTransport: { BleTransport(config: $0) }
+            makeAdapter: { config in
+                switch config {
+                case .ble:
+                    return ElmAdapter(transport: BleTransport(config: config))
+                case .thinkDiag:
+                    // Read at connect time rather than once at launch: a
+                    // script imported since is the one to use, and one just
+                    // removed must not go on working from memory.
+                    return ThinkDiagAdapter(transport: BleTransport(config: config),
+                                            script: ThinkDiagScriptStore.current())
+                }
+            }
         ))
         _adapter = State(initialValue: AdapterStore.load())
     }

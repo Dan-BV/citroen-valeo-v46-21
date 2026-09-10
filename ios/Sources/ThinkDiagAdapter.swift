@@ -149,6 +149,11 @@ actor ThinkDiagAdapter: Adapter {
         // Checked last, so the report above survives to say how far it got.
         guard identity.isDiagMini else { throw ThinkDiagError.notDiagMini(identity.model) }
         report.append("адаптер: " + identity.summary)
+
+        // Last of all. Without a script the six queries above still ran, and
+        // what they proved is worth keeping: the adapter is the right one and
+        // this link does carry `55aa`. Only then say what is missing.
+        guard script != nil else { throw ThinkDiagError.noScript }
     }
 
     /// The AT vocabulary, which is all ELM327 configuration - echo, headers,
@@ -230,6 +235,7 @@ actor ThinkDiagAdapter: Adapter {
 enum ThinkDiagError: LocalizedError, Equatable {
     case stopped(step: String, number: Int, of: Int)
     case notDiagMini(String)
+    case noScript
 
     var errorDescription: String? {
         switch self {
@@ -239,6 +245,9 @@ enum ThinkDiagError: LocalizedError, Equatable {
             return model.isEmpty
                 ? "Адаптер не назвал свою модель"
                 : "Это не ThinkDiag Mini, модель «\(model)»"
+        case .noScript:
+            return "Адаптер отвечает, но сценарий активации не импортирован — "
+                + "загрузи его в настройках"
         }
     }
 }

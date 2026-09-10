@@ -1,14 +1,20 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Everything that is setup rather than reading: which adapter, the ECU
 /// diagnostics that need a live link, and - folded away - what the profile
 /// holds and which build this is.
 ///
-/// Choosing a device checks it on the spot: the scan list folds, the AT
+/// Choosing an ELM327 clone checks it on the spot: the scan list folds, the AT
 /// handshake runs, and the one line that matters lands under the adapter's
 /// name - the chip's own banner, or why it did not answer. The exchange
 /// itself is not shown; the session runs the same commands and the tech log
 /// keeps every reply.
+///
+/// The ThinkDiag has no scan list and no AT handshake to run. There is one of
+/// them and it is found by the name it advertises, so choosing the *type* is
+/// the whole choice - and what needs saying instead is whether its activation
+/// script is loaded, because without that it cannot open a session.
 struct AdapterSheet: View {
     @ObservedObject var session: ElmSession
     let profile: Profile
@@ -18,11 +24,22 @@ struct AdapterSheet: View {
     @StateObject private var probe = ElmProbe()
     @Environment(\.dismiss) private var dismiss
 
+    @State private var script: ThinkDiagScript?
+    @State private var importing = false
+    @State private var scriptProblem: String?
+
+    private enum Kind: Hashable { case elm, thinkDiag }
+
     var body: some View {
         NavigationStack {
             List {
+                typeSection
                 adapterSection
-                scanSection
+                if kind == .elm {
+                    scanSection
+                } else {
+                    activationSection
+                }
                 Section("Диагностика") {
                     NavigationLink {
                         FaultsScreen(session: session)
@@ -48,6 +65,55 @@ struct AdapterSheet: View {
                     }
                 }
             }
+            .task { script = ThinkDiagScriptStore.current() }
+            .fileImporter(isPresented: $importing,
+                          allowedContentTypes: [.json],
+                          onCompletion: received)
+        }
+    }
+
+    // MARK: - which kind
+
+    private var kind: Kind {
+        if case .thinkDiag = adapter { return .thinkDiag }
+        return .elm
+    }
+
+    /// Derived rather than held in its own `@State`: the chosen adapter is the
+    /// only truth about which kind is in use, and a second copy of that would
+    /// be a second thing to keep in step.
+    private var kindBinding: Binding<Kind> {
+        Binding(get: { kind }, set: { switchTo($0) })
+    }
+
+    @ViewBuilder
+    private var typeSection: some View {
+        Section {
+            Picker("Тип", selection: kindBinding) {
+                Text("ELM327").tag(Kind.elm)
+                Text("ThinkDiag").tag(Kind.thinkDiag)
+            }
+            .pickerStyle(.segmented)
+            .disabled(session.isBusy)
+        }
+    }
+
+    /// Changing type drops whatever was chosen. The two are found in different
+    /// ways - one by a stored identifier, one by an advertised name - so there
+    /// is nothing to carry across, and a stale choice of the other kind would
+    /// only ever fail to connect.
+    private func switchTo(_ wanted: Kind) {
+        guard wanted != kind, !session.isBusy else { return }
+        probe.stop()
+        scanner.reset()
+        switch wanted {
+        case .thinkDiag:
+            let config = TransportConfig.thinkDiag
+            AdapterStore.save(config)
+            adapter = config
+        case .elm:
+            AdapterStore.forget()
+            adapter = nil
         }
     }
 
@@ -60,27 +126,37 @@ struct AdapterSheet: View {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(adapter.name)
-                        verdictLine
+                        if kind == .elm {
+                            verdictLine
+                        } else {
+                            thinkDiagLine
+                        }
                     }
                     Spacer()
-                    // The check reruns on demand from right here; there is no
-                    // separate button for it and no exchange to scroll to.
-                    Button {
-                        Task { await probe.run(adapter) }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
+                    if kind == .elm {
+                        // The check reruns on demand from right here; there is
+                        // no separate button for it and no exchange to scroll
+                        // to. Nothing to rerun for a ThinkDiag: `ElmProbe`
+                        // asks in ELM327 text, which it does not answer.
+                        Button {
+                            Task { await probe.run(adapter) }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(probe.running || session.isBusy)
+                        .accessibilityLabel("Проверить адаптер")
                     }
-                    .buttonStyle(.borderless)
-                    .disabled(probe.running || session.isBusy)
-                    .accessibilityLabel("Проверить адаптер")
                 }
-                Button("Забыть", role: .destructive) {
-                    session.disconnect()
-                    probe.stop()
-                    AdapterStore.forget()
-                    self.adapter = nil
+                if kind == .elm {
+                    Button("Забыть", role: .destructive) {
+                        session.disconnect()
+                        probe.stop()
+                        AdapterStore.forget()
+                        self.adapter = nil
+                    }
+                    .disabled(session.isBusy)
                 }
-                .disabled(session.isBusy)
             } else {
                 Text("Не выбран — найди его ниже и нажми на строку")
                     .foregroundStyle(.secondary)
@@ -126,6 +202,84 @@ struct AdapterSheet: View {
             Label("Не достучался: \(reason)", systemImage: "xmark.circle")
                 .font(.caption)
                 .foregroundStyle(.red)
+        }
+    }
+
+    /// What to say under a ThinkDiag's name. There is nothing to check by
+    /// asking it - `ElmProbe` speaks ELM327 text - so the useful state is
+    /// whether the thing it needs to open a session is loaded.
+    @ViewBuilder
+    private var thinkDiagLine: some View {
+        if session.isBusy {
+            Text(session.status)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if script != nil {
+            Label("Готов, сценарий активации загружен", systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+        } else {
+            Label("Нужен сценарий активации", systemImage: "exclamationmark.circle")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        }
+    }
+
+    /// The licence and activation frames, which are not in the app and cannot
+    /// be: they are this adapter's own credentials and the repository is
+    /// public. So they are imported, and checked here rather than at the car -
+    /// the licence step alone is 525 bytes, and a file wrong by one digit
+    /// looks exactly like a file that is right.
+    @ViewBuilder
+    private var activationSection: some View {
+        Section {
+            if let script {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(script.summary)
+                        .font(.callout)
+                    Text("снят \(script.capturedAt)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("Не импортирован")
+                    .foregroundStyle(.secondary)
+            }
+            Button(script == nil ? "Импортировать сценарий…" : "Заменить сценарий…") {
+                importing = true
+            }
+            .disabled(session.isBusy)
+            if script != nil {
+                Button("Удалить сценарий", role: .destructive) {
+                    ThinkDiagScriptStore.remove()
+                    script = ThinkDiagScriptStore.current()
+                    scriptProblem = nil
+                }
+                .disabled(session.isBusy)
+            }
+            if let scriptProblem {
+                Label(scriptProblem, systemImage: "xmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        } header: {
+            Text("Активация")
+        } footer: {
+            Text("Файл thinkdiag_script.json — лицензия адаптера. "
+                 + "Сделай его командой tools/thinkdiag/make_script.py и перенеси "
+                 + "на телефон по кабелю: он остаётся только здесь и в резервную "
+                 + "копию не попадает.")
+        }
+    }
+
+    private func received(_ result: Result<URL, Error>) {
+        scriptProblem = nil
+        do {
+            script = try ThinkDiagScriptStore.importFile(at: try result.get())
+        } catch {
+            scriptProblem = error.localizedDescription
+            // A bad file replaces nothing, so say what is still loaded.
+            script = ThinkDiagScriptStore.current()
         }
     }
 

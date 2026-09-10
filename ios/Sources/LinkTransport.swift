@@ -1,22 +1,47 @@
 import Foundation
 
-/// How the adapter is reached.
+/// Which adapter to reach, and how it is found.
 ///
-/// One case only, unlike the Android version: on iOS an ELM327 clone has to
-/// speak BLE. Classic Bluetooth SPP needs MFi hardware, and the K-line and
-/// USB-serial paths of the web version have no iOS equivalent either.
+/// Both cases are BLE: on iOS there is no other way to reach either of these.
+/// Classic Bluetooth SPP needs MFi hardware, and the K-line and USB-serial
+/// paths of the web version have no iOS equivalent. What differs is how the
+/// device is identified, and that difference is not cosmetic - see below.
 enum TransportConfig: Equatable, Codable {
+
+    /// An ELM327 clone, by the identifier it was picked out of the scan list
+    /// under.
+    ///
     /// `id` is CoreBluetooth's per-app peripheral identifier - deliberately not
     /// a MAC address like `TransportConfig.Ble.address` on Android. iOS never
     /// hands out the MAC, and this identifier is a different value in every
     /// app, so it is only ever meaningful to us.
+    ///
+    /// Picking from a list is unavoidable for these: four unnamed devices with
+    /// a strong signal sat next to the car during the first scan.
     case ble(id: UUID, name: String)
+
+    /// The ThinkDiag, by the **name it advertises** - its case serial, which
+    /// is stable.
+    ///
+    /// Not by the CoreBluetooth identifier, unlike the clone above. That
+    /// identifier is per-app and changes when the app is reinstalled, which
+    /// happens on every SideStore resign - so an adapter chosen once would
+    /// stop being found for no reason the user could see. And there is nothing
+    /// to pick from a list: there is one of these and no second one.
+    case thinkDiag(name: String)
 
     var name: String {
         switch self {
         case let .ble(_, name): return name
+        case let .thinkDiag(name): return name
         }
     }
+
+    /// The serial printed on the adapter's case, which is also what it
+    /// advertises. One adapter, so a constant rather than a choice.
+    static let thinkDiagName = "9TFD20257708"
+
+    static var thinkDiag: TransportConfig { .thinkDiag(name: thinkDiagName) }
 }
 
 /// What the link cost for one reply.

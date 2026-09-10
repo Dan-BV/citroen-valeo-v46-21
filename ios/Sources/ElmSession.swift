@@ -37,7 +37,12 @@ final class ElmSession: ObservableObject {
     // MARK: -
 
     private let profile: Profile
-    private let makeTransport: (TransportConfig) -> any LinkTransport
+    /// Which adapter to build for a chosen config.
+    ///
+    /// A factory rather than a transport, because there are two kinds of
+    /// adapter now and only the caller knows which a config means. Everything
+    /// below this line talks to `any Adapter` and cannot tell them apart.
+    private let makeAdapter: (TransportConfig) -> any Adapter
 
     private let logger = CsvLogger()
     private let tech = TechLog()
@@ -140,9 +145,9 @@ final class ElmSession: ObservableObject {
     var isBusy: Bool { loop != nil }
 
     init(profile: Profile,
-         makeTransport: @escaping (TransportConfig) -> any LinkTransport) {
+         makeAdapter: @escaping (TransportConfig) -> any Adapter) {
         self.profile = profile
-        self.makeTransport = makeTransport
+        self.makeAdapter = makeAdapter
         self.selected = Self.defaultSelection(profile)    }
 
     // MARK: - selection
@@ -238,7 +243,7 @@ final class ElmSession: ObservableObject {
         StallReminder.shared.onStop = { [weak self] in self?.disconnect() }
         Task { await StallReminder.shared.prepare() }
 
-        let adapter = ElmAdapter(transport: makeTransport(config))
+        let adapter = makeAdapter(config)
         self.adapter = adapter
         loop = Task { await run(adapter) }
     }

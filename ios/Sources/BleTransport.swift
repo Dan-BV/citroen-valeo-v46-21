@@ -15,7 +15,17 @@ import Foundation
 /// crash; at ELM327 speeds a 20 ms poll costs nothing.
 final class BleTransport: NSObject, LinkTransport {
 
-    private let wanted: UUID
+    /// How the wanted device is recognised in a scan.
+    ///
+    /// Two ways, because the two adapters are chosen differently: an ELM327
+    /// clone is picked out of a list and remembered by identifier, while the
+    /// ThinkDiag is found by the name it advertises. See `TransportConfig`.
+    private enum Target {
+        case identifier(UUID)
+        case advertisedName(String)
+    }
+
+    private let target: Target
     private let name: String
     private let queue = DispatchQueue(label: "com.fap.modern.ble")
     private let buffer = ByteBuffer()
@@ -44,7 +54,10 @@ final class BleTransport: NSObject, LinkTransport {
     init(config: TransportConfig) {
         switch config {
         case let .ble(id, name):
-            self.wanted = id
+            self.target = .identifier(id)
+            self.name = name
+        case let .thinkDiag(name):
+            self.target = .advertisedName(name)
             self.name = name
         }
         super.init()
@@ -172,7 +185,11 @@ final class BleTransport: NSObject, LinkTransport {
     /// The adapter is usually still in CoreBluetooth's cache from the scan that
     /// picked it, in which case no scan is needed at all.
     private func find(_ central: CBCentralManager) async throws -> CBPeripheral {
-        if let known = central.retrievePeripherals(withIdentifiers: [wanted]).first {
+        // Only an identifier can skip the scan. A name has to be heard, which
+        // is the price of not depending on an identifier that changes with
+        // every reinstall - about a second, once per connection.
+        if case let .identifier(wanted) = target,
+           let known = central.retrievePeripherals(withIdentifiers: [wanted]).first {
             return known
         }
         central.scanForPeripherals(withServices: nil)
@@ -218,8 +235,22 @@ extension BleTransport: CBCentralManagerDelegate {
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
                         advertisementData: [String: Any], rssi RSSI: NSNumber) {
-        guard peripheral.identifier == wanted else { return }
+        guard isWanted(peripheral, advertisementData) else { return }
         mutate { $0.found = peripheral }
+    }
+
+    private func isWanted(_ peripheral: CBPeripheral, _ advertisement: [String: Any]) -> Bool {
+        switch target {
+        case let .identifier(wanted):
+            return peripheral.identifier == wanted
+        case let .advertisedName(wanted):
+            // The advertisement first: `peripheral.name` is cached by the
+            // system and can be a name the device used at some earlier
+            // pairing, while the Complete Local Name in the packet is what it
+            // is calling itself right now.
+            let advertised = advertisement[CBAdvertisementDataLocalNameKey] as? String
+            return advertised == wanted || (advertised == nil && peripheral.name == wanted)
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
