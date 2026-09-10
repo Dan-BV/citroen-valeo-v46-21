@@ -384,6 +384,10 @@ own frame log survived and turned out to carry the interesting part: Launch's
 `55aa` framing, the adapter identity exchange, and a generic request
 pass-through on `27/01`.
 
-Plan for making it a second transport, and the licence question that gates the
-whole thing → **`out/thinkdiag_transport_plan.md`**. Capture procedure →
+Plan for making it a second transport → **`out/thinkdiag_transport_plan.md`**.
+The licence question that gated it is answered — the payload is static and
+replayable — but the capture turned up a harder blocker: no CAN identifier ever
+crosses the wire, so `27/01` addresses a link handle the adapter's own vehicle
+software resolves. Protocol findings, the BSI DID sweep and the official DTC
+scan → **`out/thinkdiag_protocol.md`**. Capture procedure →
 `tools/btsnoop/pull_btsnoop.ps1`. Memory: [[car-app-thinkdiag-adapter]].

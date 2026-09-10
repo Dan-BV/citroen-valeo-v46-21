@@ -30,25 +30,35 @@ The pass-through is the good news: `02 01 14` went out untouched and came back
 as `41 14 88 88`, so an arbitrary request such as `21CB8001` would go through
 the same way. The licence frames are the risk.
 
-## Phase 0 — the gate
+## Phase 0 — the gate — DONE (2026-09-10)
 
-**No app code until this is answered.** The whole feature depends on whether the
-licence exchange can be reproduced without Launch's servers.
+Captured a full CITROEN session: system scan plus data-stream reads on the BSI
+and the engine, with the HCI snoop covering it from link setup on. Findings and
+evidence → **`out/thinkdiag_protocol.md`**. Three answers:
 
-1. Capture a **CITROEN / V46.21** session with `tools/btsnoop/pull_btsnoop.ps1`
-   (toggle Bluetooth off→on first, and pull before the phone reboots — the BT
-   stack keeps only one snoop file and loses it on restart).
-2. Diff the `21/18` blob and the `Launch_Limited_ED` frame against 2026-09-10:
-   - **byte-identical** → static token, replayable, continue to Phase 1;
-   - **different** → per-session challenge against Launch's cloud. Stop, and
-     record the finding — that outcome kills the feature, and knowing why is
-     worth more than a half-built transport.
-3. Two more answers come free from the same capture:
-   - the protocol descriptor for CAN `6A8`/`688` (today's is EOBD2-shaped);
-   - whether the app reaches the adapter over classic RFCOMM/SPP or BLE GATT,
-     which decides platform reach (see below).
+1. **The licence is static.** Two CITROEN sessions minutes apart sent
+   byte-identical `21/18` and licence payloads, and the adapter's one varying
+   reply is never referenced again. No cloud round-trip to reproduce — this gate
+   is passed.
+2. **Classic SPP only, no BLE.** Zero ATT packets; RFCOMM on PSM 3, DLCI 2.
+   That decides platform reach, and it rules iOS out entirely.
+3. **A new blocker: no CAN addressing on the wire.** `27/01` names a two-byte
+   link handle (`2905` engine, `2a25` BSI), and no CAN identifier appears in the
+   stream in any encoding. The identifiers live in the adapter's downloaded
+   vehicle software.
 
-Deliverable: `out/thinkdiag_protocol.md` — command reference plus the verdict.
+Blocker 3 is what now sets the cost. Reaching the engine means replaying the
+link-setup sequence the app performs, which is tied to a vehicle-software
+version rather than being a stable primitive — so the next step is not Phase 1
+but a decision about whether that replay is worth owning. Options, cheapest
+first:
+
+- **Android only, replay the setup.** The one platform that can talk to this
+  adapter at all. Prove the replay works before touching the app's structure.
+- **Look for a raw-CAN command.** Nothing in this capture exposes one; it would
+  take either more captures across different vehicle software or work on the
+  adapter's own firmware. Unbounded.
+- **Stop here** and keep the capture for its reference value.
 
 ## Phase 1 — raise the seam
 
@@ -106,17 +116,13 @@ UI strings in Russian, per `CLAUDE.md`.
 - On the car: a ThinkDiag run against a COM7 ELM run, same pages, compare
   cycle time and values.
 
-## Platform reach
+## Platform reach — measured
 
-Decided by Phase 0's RFCOMM-vs-GATT answer:
-
-- **Android** — either link, no obstacle.
-- **iOS** — BLE only; classic SPP needs MFi hardware. If ThinkDiag is SPP-only,
-  iOS cannot use it at all.
-- **Web** — Web Bluetooth is BLE-only and Web Serial cannot reach a Bluetooth
-  device that is not exposed as a COM port. Same condition as iOS, except on
-  Windows where the adapter may pair as a Bluetooth COM port and reach the
-  Serial path.
+- **Android** — works. `BluetoothTransport` already speaks RFCOMM SPP.
+- **iOS** — impossible. Classic SPP needs MFi hardware. Drop it from scope.
+- **Web** — Web Bluetooth cannot reach a classic-SPP device. On Windows the
+  adapter pairs as a Bluetooth COM port, which the existing Web Serial path
+  already handles with no new transport code.
 
 ## What to expect
 

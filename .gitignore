@@ -9,6 +9,7 @@ tools/btsnoop/data/*.zip
 # payload, and this repository is public — keep them local. Covers both the
 # app's own frame logs and the raw HCI snoops, which record the same exchange.
 tools/btsnoop/data/*thinkdiag*
+tools/btsnoop/data/*9TFD*
 tools/btsnoop/data/*BT_HCI*
 tools/btsnoop/data/*btsnoop_postreboot*
 __pycache__/

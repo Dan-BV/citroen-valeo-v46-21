@@ -1,0 +1,120 @@
+# ThinkDiag Mini — protocol findings and the Phase 0 verdict
+
+Source captures (2026-09-10, kept local — see `.gitignore`): an EOBD2 session at
+09:52, and two CITROEN / V46.21 sessions at 13:01 and 13:02 covering a full
+system scan plus data-stream reads on the BSI and the engine. The Bluetooth HCI
+snoop of the 13:02 session covers it from the link setup onward.
+
+## Frame format
+
+    55aa | tag(2) | len(2) | seq(1) | cmd(1) | payload | cksum(1)
+
+`tag` is `f0f8` phone→adapter and `f8f0` back. `len` counts `seq` through the
+end of the payload, checksum excluded. A reply echoes the request's `seq` and
+answers with `cmd | 0x40`. Replies to `27/01` carry the ECU's answer as a
+*nested* `55aa` frame inside their payload.
+
+## Command map
+
+| cmd/sub | direction | meaning |
+|---------|-----------|---------|
+| `21/03` | out | adapter serial, firmware version, build date |
+| `21/05` | out | firmware/bootloader/protocol versions, model `diagmini` |
+| `21/11`, `21/17`, `21/2a`, `21/29`, `25/05` | out | further startup queries |
+| `21/18` | out | 524-byte licence payload |
+| `61/18` | in | 7-byte answer, 4 bytes of which vary per session |
+| `27/01` | out | run a request on an established link |
+| `67/01` | in | the ECU's answer, nested |
+
+## Verdict 1 — the licence is static, so it is replayable
+
+This was the gate the whole feature hung on.
+
+| capture | `21/18` (524 B) | licence frame in `27/01` |
+|---------|-----------------|--------------------------|
+| EOBD2 09:52 | sha `ac35b649…` | 298 B, sha `9ac72b5c…` |
+| CITROEN 13:01 | sha `3699 7748…` | 1626 B, sha `bab0486d…` |
+| CITROEN 13:02 | sha `3699 7748…` | 1626 B, sha `bab0486d…` |
+
+The two CITROEN sessions — separate connections minutes apart — send
+**byte-identical** payloads. The blob differs between EOBD2 and CITROEN, so it
+is per-diagnostic-application data, not a per-session challenge.
+
+The adapter's 7-byte `61/18` answer does vary (`…74432e4c…`, `…91c33ea0…`,
+`…4277ad81…`), which would matter if it seeded later traffic. It does not: those
+bytes never appear again in anything the phone sends. Checked in both CITROEN
+sessions.
+
+**So: no cloud round-trip to reproduce.** The gate is passed.
+
+## Verdict 2 — classic Bluetooth SPP only, no BLE
+
+From the HCI snoop of the 13:02 session (11 420 packets):
+
+- ATT packets on CID `0x0004`: **zero**. There is no GATT traffic at all.
+- L2CAP connection requests to PSM 1 (SDP) and **PSM 3 (RFCOMM)**.
+- The `55aa` payload rides RFCOMM on L2CAP CID `0x45`, DLCI 2, UIH frames, one-
+  and two-byte length forms (`09 ef …`, `0b ff … 01`) — the same shape as the
+  August ELM327 capture.
+
+Consequences for platform reach:
+
+- **Android** — works. `BluetoothTransport` already speaks RFCOMM SPP.
+- **iOS** — impossible. Classic SPP needs MFi hardware; CoreBluetooth cannot
+  reach this adapter. The plan anticipated this branch.
+- **Web** — Web Bluetooth is BLE-only, so that path is out. On Windows the
+  adapter can pair as a Bluetooth COM port, which the existing Web Serial path
+  reaches without any new transport code.
+
+## Verdict 3 — a new blocker: no CAN addressing on the wire
+
+`27/01` is not "send this request on CAN id X". Its payload is
+
+    64 00 01 ff | len(2) | 61 01 | n | link(2) | reqlen | request
+
+where `link` is a two-byte handle. Neither `6A8` nor `688` appears anywhere in
+the phone→adapter stream, in any byte order or width, and neither do `752`,
+`652`, `6D4`, `674`, `7E0` or `7E8`. The CAN identifiers live inside the
+adapter's downloaded vehicle software; the phone only names a handle.
+
+Handles seen in the 13:02 session, by the requests they carried:
+
+| link | requests | module |
+|------|----------|--------|
+| `2905` | `21C0/C1/C2/C3/C4/CA/CB 8001`, `21B0 8001`, `2180`, `21FE`, `81`, `82` | engine, V46.21 |
+| `2a25` | `22DAxx`, `22DDxx`, `22D4xx`, `22E7FF`, `2221xx`, `22F080`, `22F190`, `10C0` | BSI |
+| ~35 others | `1003` + `22F0xx` + `1902` + `1001` | the system scan, one handle each |
+
+So driving this adapter means reproducing the link-setup sequence the app
+performs before it can address the engine at all — replay tied to a particular
+vehicle-software version, not a stable primitive. No raw-CAN command appears in
+this capture.
+
+## What is worth keeping regardless
+
+The capture is a reference dialogue from the official tool, and two parts of it
+are useful to the app whether or not we ever drive this adapter.
+
+**Engine.** ThinkDiag polls exactly the pages the profile already has — B0, C0,
+C1, C2, C3, C4, CA, CB — with the `21xx8001` request form, confirming the form
+the FAP calibration settled on. Nothing new to add.
+
+**BSI.** This is new territory: the profile is engine-only. A full DID sweep on
+handle `2a25`, with substantial answers:
+
+| request | reply bytes |
+|---------|-------------|
+| `22E7FF` | 493 |
+| `222104` | 411 |
+| `22D40D` | 191 |
+| `22D40F` | 181 |
+| `22D413` | 169 |
+| `22D405` | 133 |
+| `22D417` | 111 |
+| `22D419`, `22D401`, `22D407`, `22D41B`, `22D4xx` … | 8–175 |
+| `22F080`, `22F190`, `2201`, `2221` | 22–27 |
+| `22DAxx`, `22DDxx`, `22D87x`, `22DB8D` | 5–8 |
+
+**DTCs.** The scan uses UDS `19 02 09` — ReadDTCInformation by status mask —
+against every module, after `1003`. The app reads faults differently; this is
+the official sweep for comparison.

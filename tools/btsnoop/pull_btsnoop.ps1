@@ -59,7 +59,9 @@ try {
 $appLog = "/sdcard/Android/data/com.us.thinkdiag.plus/files/ThinkCar/ThinkDiag/Log/DiagnoseLog"
 $latest = (& $adb shell "ls -t $appLog 2>/dev/null | head -2") -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 foreach ($f in $latest) {
-    & $adb pull "$appLog/$f" (Join-Path $dataDir "$name`_$f") 2>&1 | Out-Null
+    # "thinkdiag" in the name is what .gitignore matches on - these logs
+    # carry the adapter's serial and licence payload and must stay local.
+    & $adb pull "$appLog/$f" (Join-Path $dataDir "$name`_thinkdiag_$f") 2>&1 | Out-Null
     Write-Host "  pulled app log: $f"
 }
 
