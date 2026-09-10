@@ -31,10 +31,39 @@ final class ElmProbe: ObservableObject {
         ("ATI", 0.8),    // identify, for the log
     ]
 
+    /// What the handshake amounts to, for a screen that wants one line rather
+    /// than the exchange.
+    enum Verdict: Equatable {
+        case unchecked
+        case running
+        /// An ELM327 answered; the payload is its `ATI` banner, "ELM327 v1.5".
+        case elm(String)
+        /// Something answered the AT commands, but did not call itself ELM327.
+        case other(String)
+        /// The link opened and every command timed out.
+        case silent
+        /// The link itself could not be opened.
+        case failed(String)
+    }
+
     @Published private(set) var lines: [Line] = []
     @Published private(set) var running = false
     @Published private(set) var failure: String?
     @Published private(set) var connected = false
+
+    var verdict: Verdict {
+        if running { return .running }
+        if let failure { return .failed(failure) }
+        guard !lines.isEmpty else { return .unchecked }
+        let answers = lines.filter(\.answered)
+        guard let first = answers.first else { return .silent }
+        // The banner comes back to ATZ as well as ATI, and a clone may garble
+        // one of them, so take the first that names the chip.
+        if let banner = answers.first(where: { $0.reply.uppercased().contains("ELM327") }) {
+            return .elm(banner.reply)
+        }
+        return .other(first.reply)
+    }
 
     private var transport: (any ElmTransport)?
 
@@ -62,6 +91,8 @@ final class ElmProbe: ObservableObject {
             failure = error.localizedDescription
         }
         running = false
+        // The check is over: leave the adapter free for the session.
+        stop()
     }
 
     func stop() {

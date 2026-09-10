@@ -1,7 +1,14 @@
 import SwiftUI
 
-/// Everything that is setup rather than reading: which adapter, what the
-/// profile holds, and the raw AT handshake for when the transport misbehaves.
+/// Everything that is setup rather than reading: which adapter, the ECU
+/// diagnostics that need a live link, and - folded away - what the profile
+/// holds and which build this is.
+///
+/// Choosing a device checks it on the spot: the scan list folds, the AT
+/// handshake runs, and the one line that matters lands under the adapter's
+/// name - the chip's own banner, or why it did not answer. The exchange
+/// itself is not shown; the session runs the same commands and the tech log
+/// keeps every reply.
 struct AdapterSheet: View {
     @ObservedObject var session: ElmSession
     let profile: Profile
@@ -16,55 +23,22 @@ struct AdapterSheet: View {
             List {
                 adapterSection
                 scanSection
-                if !probe.lines.isEmpty || probe.failure != nil || probe.running {
-                    handshakeSection
-                }
                 Section("Диагностика") {
                     NavigationLink {
                         FaultsScreen(session: session)
                     } label: {
-                        HStack {
-                            Text("Ошибки")
-                            Spacer()
-                            if !session.isConnected {
-                                Text("нужна связь")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        needsLink("Ошибки")
                     }
                     NavigationLink {
                         IdentScreen(session: session)
                     } label: {
-                        HStack {
-                            Text("Идентификация ЭБУ")
-                            Spacer()
-                            if !session.isConnected {
-                                Text("нужна связь")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        needsLink("Идентификация ЭБУ")
                     }
                 }
-                Section {
-                    NavigationLink {
-                        LogList(session: session)
-                    } label: {
-                        HStack {
-                            Text("Логи поездок")
-                            Spacer()
-                            if session.logURL != nil {
-                                Label("запись", systemImage: "record.circle")
-                                    .font(.caption)
-                                    .foregroundStyle(.red)
-                            }
-                        }
-                    }
-                }
-                profileSection
+                aboutSection
             }
-            .navigationTitle("Адаптер")
+            .navigationTitle("Настройки")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Закрыть") {
@@ -81,20 +55,28 @@ struct AdapterSheet: View {
 
     @ViewBuilder
     private var adapterSection: some View {
-        Section("Выбранный") {
+        Section("Адаптер") {
             if let adapter {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(adapter.name)
-                    Text(session.status)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(adapter.name)
+                        verdictLine
+                    }
+                    Spacer()
+                    // The check reruns on demand from right here; there is no
+                    // separate button for it and no exchange to scroll to.
+                    Button {
+                        Task { await probe.run(adapter) }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(probe.running || session.isBusy)
+                    .accessibilityLabel("Проверить адаптер")
                 }
-                Button("Проверить рукопожатие") {
-                    Task { await probe.run(adapter) }
-                }
-                .disabled(probe.running || session.isBusy)
                 Button("Забыть", role: .destructive) {
                     session.disconnect()
+                    probe.stop()
                     AdapterStore.forget()
                     self.adapter = nil
                 }
@@ -106,14 +88,58 @@ struct AdapterSheet: View {
         }
     }
 
+    /// The handshake in one line. Green with the chip's banner is the only
+    /// state that means "go"; everything else says what is wrong.
+    @ViewBuilder
+    private var verdictLine: some View {
+        switch probe.verdict {
+        case .unchecked:
+            if session.isBusy {
+                Text(session.status)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Не проверен")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        case .running:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.mini)
+                Text("Проверяю…")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        case let .elm(banner):
+            Label(banner, systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+        case let .other(reply):
+            Label("Отвечает, но не как ELM327: \(reply)", systemImage: "questionmark.circle")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        case .silent:
+            Label("Связь есть, на команды не отвечает", systemImage: "xmark.circle")
+                .font(.caption)
+                .foregroundStyle(.red)
+        case let .failed(reason):
+            Label("Не достучался: \(reason)", systemImage: "xmark.circle")
+                .font(.caption)
+                .foregroundStyle(.red)
+        }
+    }
+
     @ViewBuilder
     private var scanSection: some View {
         Section {
-            Button(scanner.scanning ? "Остановить" : "Искать адаптер") { scanner.toggle() }
-                .disabled(session.isBusy)
+            Button(scanner.scanning ? "Остановить поиск" : "Искать адаптер") {
+                scanner.toggle()
+            }
+            .disabled(session.isBusy)
             if scanner.found.isEmpty {
-                Text(scanner.scanning ? "Поиск…" : "Пока ничего не найдено")
-                    .foregroundStyle(.secondary)
+                if scanner.scanning {
+                    Text("Поиск…").foregroundStyle(.secondary)
+                }
             } else {
                 ForEach(scanner.found) { device in
                     Button {
@@ -142,49 +168,45 @@ struct AdapterSheet: View {
         }
     }
 
-    /// Only useful when something is wrong: the session runs the same commands
-    /// itself, but here each reply is visible with its round trip.
+    /// Out of the way, not gone: the profile numbers are what to quote when a
+    /// value looks wrong, and the build is what to quote after an update.
     @ViewBuilder
-    private var handshakeSection: some View {
-        Section("Рукопожатие") {
-            if let failure = probe.failure {
-                Label(failure, systemImage: "xmark.octagon").foregroundStyle(.red)
-            }
-            ForEach(probe.lines) { line in
-                HStack(alignment: .top) {
-                    Text(line.command)
-                        .font(.caption.monospaced())
-                        .frame(width: 52, alignment: .leading)
-                    Text(line.reply)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(line.answered ? .primary : .secondary)
-                    Spacer()
-                    Text("\(line.ms) мс")
-                        .font(.caption2.monospaced())
-                        .foregroundStyle(.secondary)
-                }
+    private var aboutSection: some View {
+        Section {
+            DisclosureGroup {
+                row("ЭБУ", "\(profile.ecu) · \(profile.platform)")
+                row("CAN", "\(profile.can.req) → \(profile.can.res)")
+                row("Страницы", "\(profile.pages.count)")
+                row("Живые параметры", "\(profile.liveParamCount)")
+                row("Поля идентификации", "\(profile.identFieldCount)")
+                row("Коды неисправностей", "\(profile.dtc.count)")
+            } label: {
+                row("О программе", "\(BuildInfo.version) · \(BuildInfo.commit)")
             }
         }
     }
 
-    @ViewBuilder
-    private var profileSection: some View {
-        Section("Профиль") {
-            row("ЭБУ", "\(profile.ecu) · \(profile.platform)")
-            row("CAN", "\(profile.can.req) → \(profile.can.res)")
-            row("Страницы", "\(profile.pages.count)")
-            row("Живые параметры", "\(profile.liveParamCount)")
-            row("Поля идентификации", "\(profile.identFieldCount)")
-            row("Коды неисправностей", "\(profile.dtc.count)")
-            row("Сборка", "\(BuildInfo.version) · \(BuildInfo.commit)")
+    private func needsLink(_ title: String) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            if !session.isConnected {
+                Text("нужна связь")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
     private func choose(_ device: AdapterScanner.Found) {
-        scanner.stop()
+        scanner.reset()
         let config = TransportConfig.ble(id: device.id, name: device.name)
         AdapterStore.save(config)
         adapter = config
+        // Prove the choice right away. Not while a session holds the link:
+        // two connections to one adapter would fight over it.
+        guard !session.isBusy else { return }
+        Task { await probe.run(config) }
     }
 
     private func row(_ name: String, _ value: String) -> some View {

@@ -39,6 +39,13 @@ final class AdapterScanner: NSObject, ObservableObject {
         scanning = false
     }
 
+    /// Stop and forget what was found, so the list folds away once a device
+    /// has been chosen.
+    func reset() {
+        stop()
+        found.removeAll()
+    }
+
     private func beginScanIfReady() {
         guard let central, central.state == .poweredOn else { return }
         central.scanForPeripherals(withServices: nil, options: [
