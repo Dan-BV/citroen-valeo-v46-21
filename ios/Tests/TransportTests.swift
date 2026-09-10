@@ -60,6 +60,78 @@ final class TransportTests: XCTestCase {
         XCTAssertNil(buffer.take(upTo: ">"))
     }
 
+    // MARK: - waiting for data without a busy-wait
+
+    // A read waits to be woken by the notification that carries the data. The
+    // wakeup has to survive arriving early, arriving twice, and never arriving
+    // at all, because CoreBluetooth does all three - and a wait that hangs
+    // stalls the whole session, so these are load-bearing.
+
+    func testAWakeupArrivingBeforeTheWaitIsNotLost() async {
+        let buffer = ByteBuffer()
+        buffer.append(Data("41 00>".utf8))
+
+        let started = Date()
+        await buffer.waitForData(upTo: 5)
+
+        XCTAssertLessThan(Date().timeIntervalSince(started), 2,
+                          "data was already there, so the wait had nothing to wait for")
+    }
+
+    func testDataArrivingWakesAParkedReader() async {
+        let buffer = ByteBuffer()
+        let started = Date()
+
+        Task {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            buffer.append(Data("41 00>".utf8))
+        }
+        await buffer.waitForData(upTo: 5)
+
+        XCTAssertLessThan(Date().timeIntervalSince(started), 2,
+                          "the append should have ended the wait, not the timeout")
+        XCTAssertEqual(buffer.take(upTo: ">"), "41 00")
+    }
+
+    func testTheWaitGivesUpWhenNothingArrives() async {
+        let buffer = ByteBuffer()
+        let started = Date()
+
+        await buffer.waitForData(upTo: 0.1)
+
+        let took = Date().timeIntervalSince(started)
+        XCTAssertGreaterThanOrEqual(took, 0.05, "it must not return before its timeout")
+        XCTAssertLessThan(took, 3, "and it must return")
+    }
+
+    func testBeingWokenTwiceIsHarmless() async {
+        let buffer = ByteBuffer()
+
+        Task {
+            try? await Task.sleep(nanoseconds: 20_000_000)
+            buffer.append(Data("41 ".utf8))
+            buffer.append(Data("00>".utf8))
+        }
+        await buffer.waitForData(upTo: 5)
+        // A second wait proves the slot was left in a usable state; resuming a
+        // continuation twice would already have crashed the process.
+        await buffer.waitForData(upTo: 0.1)
+
+        XCTAssertEqual(buffer.take(upTo: ">"), "41 00")
+    }
+
+    func testWaitingRepeatedlyKeepsWorking() async {
+        let buffer = ByteBuffer()
+        for i in 0..<5 {
+            Task {
+                try? await Task.sleep(nanoseconds: 10_000_000)
+                buffer.append(Data("\(i)>".utf8))
+            }
+            await buffer.waitForData(upTo: 5)
+            XCTAssertEqual(buffer.take(upTo: ">"), "\(i)")
+        }
+    }
+
     // MARK: - the remembered adapter
 
     func testTheChosenAdapterSurvivesARestart() throws {

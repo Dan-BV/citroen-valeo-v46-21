@@ -89,10 +89,12 @@ trip, with the occasional full timeout on top — one 1200 ms read closes sessio
   whatever state the app is in, because with the screen held awake the app is
   usually still in the foreground when this happens.
 
-Still open, and it matters for background operation: `BleTransport.read` waits
-by polling a buffer every 2 ms. In the foreground that is a deliberate trade -
-the comment there explains why a continuation was avoided - but as a background
-busy-wait it burns CPU continuously and is the kind of thing iOS terminates for
-energy use. Worth replacing with a signalled wait before trusting long
-background sessions.
+- **The busy-wait is gone.** `BleTransport.read` used to poll its buffer every
+  2 ms; it now waits to be woken by the notification that carries the data
+  (`ByteBuffer.waitForData`). Held for the length of a drive in the background,
+  a 2 ms poll is exactly what iOS terminates an app for. The wakeup is a
+  lock-guarded slot rather than a bare continuation because CoreBluetooth will
+  deliver a callback twice or not at all, and resuming a continuation twice is
+  a crash; five tests in `TransportTests` pin that down - woken early, woken
+  twice, never woken, and repeatedly.
 

@@ -98,12 +98,15 @@ final class BleTransport: NSObject, ElmTransport {
 
     func read(until terminator: Character, timeout: TimeInterval) async -> String {
         let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
+        while true {
             if let reply = buffer.take(upTo: terminator) { return reply }
-            // 2 ms rather than 5: with a measured 48 ms per exchange even the
-            // polling granularity is worth something, and this costs nothing
-            // but wakeups.
-            try? await Task.sleep(nanoseconds: 2_000_000)
+            let left = deadline.timeIntervalSinceNow
+            if left <= 0 { break }
+            // Woken by the notification that carries the data rather than by a
+            // timer. The 2 ms poll this replaces cost nothing but wakeups in
+            // the foreground; held for the length of a drive in the background
+            // it is a busy-wait, and that is what iOS terminates an app for.
+            await buffer.waitForData(upTo: left)
         }
         return buffer.takeAll()
     }

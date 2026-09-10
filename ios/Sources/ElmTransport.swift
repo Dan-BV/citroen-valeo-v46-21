@@ -122,10 +122,27 @@ enum Chunker {
 /// so a reply is accumulated here until the ELM327 prompt shows up. This is the
 /// counterpart of the queue behind `InputStream` in the Kotlin transport, and
 /// it is a separate type so it can be tested without any hardware.
-final class ByteBuffer {
+final class ByteBuffer: @unchecked Sendable {
     private let lock = NSLock()
     private var text = ""
     private var link = LinkStats()
+
+    /// A reader parked in `waitForData`, and a wakeup that arrived while none
+    /// was parked.
+    ///
+    /// Reads used to wait by polling this buffer every 2 ms. In the foreground
+    /// that only costs wakeups, but a background session polls for as long as
+    /// the drive lasts, and a continuous busy-wait is what iOS terminates an
+    /// app for. So the data itself ends the wait.
+    ///
+    /// This has to be the same lock that guards `text`: appending and waking
+    /// are one step, or a reader can park just after the data it wanted arrived
+    /// and then sit there until its timeout. And it has to survive being woken
+    /// twice or never, because CoreBluetooth does both - hence a guarded slot
+    /// and a flag rather than a bare continuation, resuming one of those twice
+    /// being a crash.
+    private var waiter: CheckedContinuation<Void, Never>?
+    private var signalled = false
 
     /// What arrived since the last `clear()`.
     var stats: LinkStats {
@@ -143,11 +160,83 @@ final class ByteBuffer {
         // better than letting it derail the hex parsing downstream.
         let ascii = String(data: data, encoding: .ascii)
             ?? String(decoding: data, as: UTF8.self)
-        lock.lock(); defer { lock.unlock() }
+        var wake: CheckedContinuation<Void, Never>?
+        lock.lock()
         text += ascii
         link.notifications += 1
         link.bytes += data.count
         link.largest = max(link.largest, data.count)
+        if let parked = waiter {
+            waiter = nil
+            wake = parked
+        } else {
+            signalled = true
+        }
+        lock.unlock()
+        // Outside the lock: resuming a continuation runs its task, and that
+        // task's next move is to come straight back here for the data.
+        wake?.resume()
+    }
+
+    /// Returns once `append` has been called, or after `timeout`, whichever
+    /// comes first.
+    ///
+    /// An early return is allowed and harmless - the caller re-checks the
+    /// buffer either way - which is what makes the flag above safe to keep at
+    /// one slot.
+    func waitForData(upTo timeout: TimeInterval) async {
+        if takeSignal() { return }
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.park() }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(max(0, timeout) * 1_000_000_000))
+            }
+            await group.next()
+            group.cancelAll()
+            // Whichever arm lost is still outstanding. The sleeper takes the
+            // cancellation; a parked reader has to be let go by hand, or the
+            // group would wait for it forever.
+            self.release()
+            await group.waitForAll()
+        }
+    }
+
+    private func takeSignal() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        if signalled {
+            signalled = false
+            return true
+        }
+        return false
+    }
+
+    private func park() async {
+        var stale: CheckedContinuation<Void, Never>?
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            lock.lock()
+            if signalled {
+                signalled = false
+                lock.unlock()
+                continuation.resume()
+                return
+            }
+            // There is one reader - the session serialises through an actor -
+            // but if that ever stops being true, let the previous one go rather
+            // than stranding it.
+            stale = waiter
+            waiter = continuation
+            lock.unlock()
+            stale?.resume()
+        }
+    }
+
+    /// Lets a parked reader go without claiming that data arrived.
+    private func release() {
+        lock.lock()
+        let parked = waiter
+        waiter = nil
+        lock.unlock()
+        parked?.resume()
     }
 
     /// Everything before the first `terminator`, which is consumed but not
