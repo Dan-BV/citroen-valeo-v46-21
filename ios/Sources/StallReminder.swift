@@ -19,6 +19,8 @@ import UserNotifications
 /// would not be able to reach main-actor-isolated statics.
 private let stallCategoryId = "session-stall"
 private let stallStopActionId = "session-stall-stop"
+/// Kept out of the reminder ids so ending a session cannot clear it.
+private let sessionEndedId = "session-ended"
 
 /// Whether there is an app around this code at all.
 ///
@@ -50,7 +52,10 @@ final class StallReminder {
 
     private var sent = 0
     private var lastSent: Date?
-    private var authorized = false
+    /// Whether a reminder could actually be delivered. Worth surfacing:
+    /// without the permission the app looks like it is watching the car
+    /// while in fact nothing will ever be said.
+    private(set) var authorized = false
 
     /// Registers the category once, at launch, so the stop button exists by the
     /// time a notification can carry it.
@@ -85,6 +90,8 @@ final class StallReminder {
         default:
             authorized = true
         }
+        UNUserNotificationCenter.current()
+            .removeDeliveredNotifications(withIdentifiers: [sessionEndedId])
         reset()
     }
 
@@ -98,6 +105,23 @@ final class StallReminder {
     /// The session ended - nothing left to remind anyone about.
     func sessionEnded() {
         reset()
+    }
+
+    /// The session ended because the link died, rather than because anyone
+    /// asked. A separate notification from the stall reminder, and separate on
+    /// purpose: that one asks whether to stop, this one reports that it
+    /// already has, so it must survive the teardown that clears the other.
+    func linkLost() {
+        guard hasAppBundle, authorized else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Запись остановлена"
+        content.body = "Связь с адаптером потеряна. "
+            + "Если вы ушли от машины — так и должно быть."
+        content.sound = .default
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: sessionEndedId,
+                                  content: content,
+                                  trigger: nil))
     }
 
     /// Called once a cycle with how long the car has been quiet.

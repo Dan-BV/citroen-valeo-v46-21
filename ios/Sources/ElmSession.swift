@@ -98,6 +98,8 @@ final class ElmSession: ObservableObject {
 
     /// Consecutive poll cycles in which every page asked came back an error.
     private var mutePasses = 0
+    /// Re-opening is cheap but not free, and a silent ECU stays silent.
+    private var lastReopen = Date.distantPast
 
     /// Adapter reply timeout, in ELM units of 4 ms: 0x19 = 100 ms. The default
     /// is 0x32 (200 ms) and the ceiling 0xFF (1020 ms); with adaptive timing on
@@ -423,13 +425,32 @@ final class ElmSession: ObservableObject {
             lastCycleMs = Int(Date().timeIntervalSince(started) * 1000)
             if status != liveStatus { status = liveStatus }
 
+            // The adapter being gone is not a page that failed to answer,
+            // and telling them apart is the difference between ending the
+            // session and polling a pipe that cannot reply.
+            if await adapter.linkFailure != nil {
+                linkLost()
+                return
+            }
+
+            // Belt and braces for any other way of failing instantly: a cycle
+            // that asked and heard nothing waits before the next one. Without
+            // it a link that fails without blocking spins at two thousand
+            // exchanges a second, which is how 2026-09-10 filled a 4.7 MB log
+            // with nothing.
+            if asked > 0, !answered {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+
             // A cycle where every page asked came back an error is the ECU
             // having dropped its diagnostic session, not a bad reply. Two in a
             // row rules out a single glitch.
             if asked > 0 {
                 mutePasses = answered ? 0 : mutePasses + 1
             }
-            if mutePasses >= 2 { await reopen(adapter) }
+            if mutePasses >= 2, Date().timeIntervalSince(lastReopen) > 5 {
+                await reopen(adapter)
+            }
 
             let quiet = Date().timeIntervalSince(lastValidAt)
             let stalled = quiet >= stallAfter
@@ -446,6 +467,23 @@ final class ElmSession: ObservableObject {
         }
     }
 
+    /// The adapter itself is gone - ignition off and the port unpowered, out
+    /// of range, a flat adapter battery. End the session rather than poll
+    /// something that cannot answer, and say so on screen instead of leaving
+    /// "Подключено" up.
+    ///
+    /// Teardown is left to `run`, which stops the log, closes the adapter and
+    /// releases the screen as soon as this returns.
+    private func linkLost() {
+        status = "Связь с адаптером потеряна · запись остановлена"
+        // Or the strip would keep showing the cycle time of a session that is
+        // no longer running - which is exactly how this looked from the car:
+        // "Подключено · 0 мс" with nothing behind it.
+        lastCycleMs = nil
+        state = .failed
+        StallReminder.shared.linkLost()
+    }
+
     /// Re-open a diagnostic session the ECU has dropped.
     ///
     /// `81` is what opens it, and until now that ran only at connect - so once
@@ -454,6 +492,7 @@ final class ElmSession: ObservableObject {
     /// `out/drives/2026-09-10_ios_baseline.md`.
     private func reopen(_ adapter: Adapter) async {
         mutePasses = 0
+        lastReopen = Date()
         status = "Сессия ЭБУ потеряна, переоткрываю…"
         let opened = (try? await io.locked {
             await adapter.applyHeader(self.profile.can.req, receive: self.profile.can.res)
@@ -653,6 +692,18 @@ actor Adapter {
     private(set) var lastStats = LinkStats()
     private(set) var lastMs = 0
 
+    /// Set when the link itself failed, as against the ECU declining to
+    /// answer. To a caller that only sees an empty reply the two look
+    /// identical, and they could not be more different: one is a page to try
+    /// again, the other is a session to end.
+    ///
+    /// Swallowing this cost a drive on 2026-09-10. The adapter lost power with
+    /// the ignition, every write threw at once, and because a failed write
+    /// returned an empty string with no delay the loop went round two thousand
+    /// times a second - 66 000 dead exchanges and a 4.7 MB technical log in six
+    /// minutes, while the screen still read "Подключено · 0 мс".
+    private(set) var linkFailure: TransportError?
+
     init(transport: any ElmTransport) {
         self.transport = transport
     }
@@ -687,9 +738,14 @@ actor Adapter {
     @discardableResult
     func send(_ command: String, _ timeout: TimeInterval) async -> String {
         transport.drain()
+        let attempted = Date()
         do {
             try await transport.write(command + "\r")
         } catch {
+            linkFailure = error as? TransportError ?? .notOpen
+            // Truthful numbers for the log: this exchange never happened.
+            lastMs = Int(Date().timeIntervalSince(attempted) * 1000)
+            lastStats = LinkStats()
             return ""
         }
         lastCommand = Date()
