@@ -10,12 +10,21 @@ Files app - and this script produces it from a capture that stays local.
     python tools/thinkdiag/make_script.py
     python tools/thinkdiag/make_script.py --log <path> --out <path>
 
-What it takes: every phone->adapter frame from the first `21/18` up to and
-including the `27/01` whose reply is `01ff00`. That is the activation exchange
-and nothing else. What comes before is the six-query opening, which has nothing
-secret in it and is compiled into the app (`ThinkDiagHandshake.opening`). What
-comes after is per-module addressing, which is W6's problem, not the
-handshake's.
+What it takes, in two blocks:
+
+  1. the **activation** - every phone->adapter frame from the first `21/18` up
+     to and including the `27/01` whose reply is `01ff00`;
+  2. the **link setup** for one module - the short run of configuration frames
+     that precedes the app's first request on a handle, ending in the frame
+     that opens the handle itself.
+
+Block 2 was missing until the drive of 2026-09-10 22:38, which got the whole
+activation through and then had every single page refused. The handle the
+requests named had never been created, because opening it is a frame we were
+not sending. See `link_setup`.
+
+What comes before block 1 is the six-query opening, which has nothing secret in
+it and is compiled into the app (`ThinkDiagHandshake.opening`).
 
 One of the steps is known NOT to be a replay. The `27/01` request whose payload
 starts `01 60 28 00` - the response to the activation challenge - is 32 bytes of
@@ -63,6 +72,14 @@ LABELS = {
 # the labels so the warning still fires if a label is renamed.
 VARYING = '01602800'
 
+# Replies that are a bare acknowledgement rather than data. Used to find where
+# a module's link setup begins - see link_setup.
+ACKS = ('01ff00', '0100010555aa010001')
+
+# The engine on V46.21. A handle is not a CAN identifier and cannot be derived
+# from one; this is the one the capture shows carrying `21xx8001`.
+DEFAULT_LINK = '2905'
+
 
 def exchanges(path):
     """(cmd, payload, reply) triples, with the app's duplicate logging collapsed.
@@ -108,10 +125,46 @@ def activation(path):
     return None                                   # never reached the end
 
 
-def label_for(payload, n, cmd):
+def link_setup(path, link):
+    """The frames that open a module's link, up to and including the open.
+
+    The drive of 2026-09-10 22:38 got the whole activation through and then had
+    every single page refused - one notification, thirteen bytes, an `01ff…`
+    status. The capture says why: before the app's first request on a handle it
+    sends a short run of configuration frames ending in
+
+        01 60 18 0c | 55aa 08 6101 03 <link> 30 00 0a <cksum>
+
+    which is the handle being opened. We were not sending any of it, so the
+    handle the requests named had never been created.
+
+    The run is found by walking back from that frame over exchanges the adapter
+    only acknowledged - `01ff00`, or the `0100010555aa010001` the `016105ff…`
+    frames get. Anything with a substantive reply belongs to the module before
+    it, not to this setup.
+    """
+    ex = exchanges(path)
+    opens = '55aa08610103' + link
+    at = next((i for i, (cmd, payload, _) in enumerate(ex)
+               if cmd == 0x27 and opens in payload), None)
+    if at is None:
+        return None
+    start = at
+    while start > 0 and ex[start - 1][2] in ACKS:
+        start -= 1
+    return ex[start:at + 1]
+
+
+def label_for(payload, n, cmd, link):
+    if ('55aa08610103' + link) in payload:
+        return 'открытие канала ' + link
     hits = [(len(prefix), name) for prefix, name in LABELS.items()
             if payload.startswith(prefix)]
-    return max(hits)[1] if hits else 'шаг %d (%02x)' % (n, cmd)
+    if hits:
+        return max(hits)[1]
+    if payload.startswith(('016105ff', '016004', '016001ffff')):
+        return 'подготовка канала %d' % n
+    return 'шаг %d (%02x)' % (n, cmd)
 
 
 def largest_log():
@@ -135,6 +188,8 @@ def main():
     ap.add_argument('--log', help='ThinkDiag app frame log (default: the largest CITROEN one)')
     ap.add_argument('--out', default=DEFAULT_OUT)
     ap.add_argument('--application', default='CITROEN V46.21')
+    ap.add_argument('--link', default=DEFAULT_LINK,
+                    help='module handle whose link setup to capture (default %s)' % DEFAULT_LINK)
     args = ap.parse_args()
 
     path = args.log or largest_log()
@@ -149,6 +204,14 @@ def main():
         print('Capture a session that gets as far as reading a data stream.')
         return 1
 
+    setup = link_setup(path, args.link)
+    if setup is None:
+        print('%s never opens the link %s, so there is no setup to replay.'
+              % (os.path.basename(path), args.link))
+        print('Capture a session that reads a data stream from that module.')
+        return 1
+    steps += setup
+
     out = {
         'application': args.application,
         'capturedAt': os.path.basename(path),
@@ -159,7 +222,7 @@ def main():
     varying = None
     for n, (cmd, payload, reply) in enumerate(steps, start=1):
         step = {
-            'label': label_for(payload, n, cmd),
+            'label': label_for(payload, n, cmd, args.link),
             'cmd': '%02x' % cmd,
             'payload': payload,
         }

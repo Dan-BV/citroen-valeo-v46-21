@@ -38,7 +38,7 @@ actor ThinkDiagAdapter: Adapter {
     /// What an ELM327 prints when the ECU says nothing, and what the session's
     /// `Frames.isError` already knows how to read. The equivalent here is a
     /// bare `01ff…` status reply.
-    static let noData = "NO DATA\r"
+    static let noData = "NO DATA"
 
     private let transport: any LinkTransport
     private let script: ThinkDiagScript?
@@ -110,8 +110,10 @@ actor ThinkDiagAdapter: Adapter {
 
         let frame = ThinkDiagFrame.request(seq: sequence.next(), cmd: 0x27, payload: payload)
         guard let reply = await exchange(frame, timeout: timeout) else { return "" }
-        if ThinkDiagRequest.isStatus(reply.payload) { return Self.noData }
-        guard let answer = ThinkDiagRequest.answer(in: reply.payload) else { return Self.noData }
+        if ThinkDiagRequest.isStatus(reply.payload) { return refusal(reply.payload) }
+        guard let answer = ThinkDiagRequest.answer(in: reply.payload) else {
+            return refusal(reply.payload)
+        }
         // Hex text, because that is what the session's `Frames` reads. The
         // answer is handed over whole, marker and all, and the field offsets
         // are counted from the marker exactly as on the ELM path.
@@ -181,6 +183,23 @@ actor ThinkDiagAdapter: Adapter {
         let request = step.frame(seq: sequence.next())
         let reply = await exchange(request, timeout: timeout)
         return ThinkDiagHandshake.judge(step, request: request, reply: reply)
+    }
+
+    /// A request the adapter would not carry out.
+    ///
+    /// `NO DATA` because that is what the session's `Frames.isError` already
+    /// reads, and the status bytes ride along with it because they are the
+    /// difference between two very different things: the ECU saying nothing,
+    /// and the adapter refusing to ask it. On 2026-09-10 every page came back
+    /// as a refusal - one notification, thirteen bytes - and the code was
+    /// nowhere in the technical log, so the log said only `DAA` and left the
+    /// reason to guesswork.
+    ///
+    /// Safe to append: every marker test in the session is behind an
+    /// `isError` check, and a four-byte `01ff02xx` status cannot contain a
+    /// `61xx` marker anyway.
+    private func refusal(_ payload: Data) -> String {
+        "\(Self.noData) \(payload.hexString.uppercased())\r"
     }
 
     /// A reply in the report: short ones whole, long ones by length.

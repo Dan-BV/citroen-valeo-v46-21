@@ -170,3 +170,79 @@ exchange is about entitlement for something we do not use. If they did not, the
 refusal is the blocker and the response has to be computed rather than replayed
 - the algorithm being inside the ThinkDiag APK, which is the kill condition
 this plan named.
+
+
+---
+
+# What the technical log settled
+
+`fap_tech_20260910_223801.csv`, from the same 22:38 attempt. `open()` had
+succeeded, so the log started, and it holds the answer the report could not
+give.
+
+    command       reply_chars  notif  link_bytes  largest  ms  ok  reply
+    ATZ                    48      0           0        0   0   1  DA123004100000979865497037
+    ATD … ATFCSM1           3      0           0        0   0   1
+    81                      8      1          13       13  33   0  DAA
+    21B08001                8      1          13       13  34   0  DAA
+    21C08001                8      1          13       13  50   0  DAA
+    21C18001                8      1          13       13  35   0  DAA
+
+Two things, both decisive.
+
+**The translation layer works exactly as designed.** All thirteen AT commands
+were acknowledged with `OK` at zero notifications, zero bytes and zero
+milliseconds - they never touched the link. `ATZ` answered with the adapter's
+own identity. Nothing in the session had to know it was not talking to an
+ELM327.
+
+**And the adapter answered every request - with a refusal.** One notification,
+13 bytes, in 33 to 50 ms. Thirteen bytes framed is a four-byte payload, and
+`send` only returns `NO DATA` for a payload beginning `01 ff`. So this is not
+silence and not a dead link: it is the adapter declining to run the request.
+
+## Why, and it is not the activation
+
+The capture says what we were missing. Before the app's first request on a
+handle it sends a short run of configuration frames, ending in one that opens
+the handle:
+
+    -> 016004000000                                <- 01ff00
+    -> 016001ffff020500ff01                        <- 01ff00
+    -> 016105ff010855aa0460020003650003fc          <- 0100010555aa010001
+    -> 016105ff010a55aa06600100012a470b0003fc      <- 0100010555aa010001
+    -> 016105ff010755aa03600400670003fc            <- 0100010555aa010001
+    -> 0160180c55aa08610103290530000a7d            <- 01ff00
+    -> 01640001ff020761010229050181                <- …c1d08f   ← 81 answers
+
+That last setup frame is `01 60 18 0c | 55aa 08 6101 03 2905 30 00 0a 7d` — the
+nested checksum checks out, and it is plainly **the handle being opened**. We
+were sending none of it and then naming handle `2905` in requests that had
+never had one created. Of course they were refused.
+
+The `2a470b` in the fourth frame is per-module, not per-session: the BSI's
+version of the same frame carries `23f3b6`. So it replays.
+
+## Changed
+
+`make_script.py` now captures a second block - the link setup for one handle,
+default `2905`, found by walking back from the open frame over exchanges the
+adapter merely acknowledged. The script is 12 steps and 2648 bytes now, so the
+opening is 18 steps.
+
+And a refusal now carries its status code: `send` returns `NO DATA 01FF02xx`
+rather than a bare `NO DATA`, so the technical log stops saying only `DAA` and
+leaving the reason to guesswork. Safe to append - every marker test in the
+session sits behind an `isError` check, and a four-byte `01ff02xx` cannot
+contain a `61xx` marker.
+
+## Still open
+
+Step 6, the activation blob, was refused with `01ff02 0200000004`. Whether that
+matters is now testable rather than guessable: if the link setup is accepted
+and `81` answers, the activation exchange was about an entitlement we do not
+use and the refusal is harmless. If the setup is refused too, then the
+challenge-response has to be computed and the algorithm is in the APK - the
+kill condition.
+
+One attempt separates those.
