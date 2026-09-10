@@ -391,3 +391,48 @@ crosses the wire, so `27/01` addresses a link handle the adapter's own vehicle
 software resolves. Protocol findings, the BSI DID sweep and the official DTC
 scan → **`out/thinkdiag_protocol.md`**. Capture procedure →
 `tools/btsnoop/pull_btsnoop.ps1`. Memory: [[car-app-thinkdiag-adapter]].
+
+## Session of 2026-09-10 — measured, mothballed, and about to build
+
+**Scope from here: the iOS app only.** The web page and the Android client are
+mothballed (`.github/workflows/android.yml` no longer runs on push; regeneration
+no longer injects into `index.html`; the README says what reviving Android
+needs). The generated profile moved to `data/profile/v46_21_profile.json`, which
+iOS reads in place.
+
+**The engine stream is measured.** `out/drives/2026-09-10_ios_baseline.md`:
+`ms = 49 + 9.5 x notifications`, cross-checked on 36 single-notification AT
+commands. A page costs one adapter turnaround plus its length; a seven-page
+cycle is 721 ms modelled, 755 ms observed. The ELM clone caps every
+notification at 20 bytes despite a 136-byte MTU, so the ceiling is its
+firmware.
+
+**ThinkDiag is decided and priced.** `out/thinkdiag_protocol.md` and
+`out/thinkdiag_transport_plan.md`. The licence payload is static and replayable;
+the LE link is a plain ISSC transparent UART that the app's generic notify/write
+discovery already brings up; MTU 247 and whole frames per notification make it
+worth **2.15x** (883 ms to about 412). No transport work is needed - only the
+`55aa` protocol. The open question is addressing: `27/01` names a two-byte link
+handle (`2905` engine, `2a25` BSI) and no CAN identifier ever crosses the wire,
+so whether that handle works after the licence frames alone is the first
+experiment and the kill condition.
+
+**Poll optimisation is deferred by decision**, not forgotten:
+`out/engine_stream_pages.md` prices every page and shows there is no free one to
+drop - the halving comes from deciding what a drive is for.
+
+**Five dead fields were dropped** from the profile through the generator's
+`DEAD` set: four automatic-gearbox signals and an electric vacuum pump. That
+took the only two masked fields with them, so the parity test that guards
+`(raw >> shift) & mask` now builds its own pair.
+
+**Session lifecycle was fixed twice.** The screen is held awake while a session
+runs, the stream survives a locked screen (`bluetooth-central`), a dropped ECU
+session re-opens itself, and a dead link now *ends* the session instead of
+spinning at 2000 exchanges a second. Still open: the stall reminder needs a
+notification permission that may never have been granted - `StallReminder`
+exposes whether it was, and the UI does not show it yet.
+
+Captures from this session stay local by `.gitignore`: the ThinkDiag frame logs,
+the raw HCI snoops and the iPhone sysdiagnose all carry the adapter serial and
+its licence payload, and this repository is public.
