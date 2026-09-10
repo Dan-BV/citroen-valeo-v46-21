@@ -70,16 +70,51 @@ Proof: 21 tests in `ios/Tests/ThinkDiagFrameTests.swift`, four of them against
 frames copied out of the capture, plus `tools/thinkdiag/verify_frames.py` over
 the whole corpus — which cannot run in CI, because the captures stay local.
 
-**W5 — the handshake.** `21/03` and `21/05` for identity, then the licence
-frames replayed byte for byte. Writes go out in twenty-byte chunks, which the
-existing `Chunker` already does.
+**W5 — the handshake. Done, as a plan the transport will run.**
+`ios/Sources/ThinkDiagIdentity.swift` decodes the `len(2) | bytes` strings that
+`61/03` and `61/05` answer with — five and four of them, NUL-terminated inside
+their own length. `ios/Sources/ThinkDiagHandshake.swift` holds the six-query
+opening, the judgement of a reply, and the loader for everything after it.
+
+**Split in two, because half of it cannot be committed.** The opening is six
+one-byte queries with nothing secret in them, so it is compiled in. The licence
+and activation frames are 2564 bytes of the adapter's own credentials, so they
+are loaded at runtime from `thinkdiag_script.json` in the app's Documents
+folder — the same folder the drive logs come out of, reachable from the Files
+app. `tools/thinkdiag/make_script.py` produces that file from a local capture;
+`tools/thinkdiag/data/` is git-ignored.
+
+**And it turned up a correction that matters more than the code.** The
+activation is *not* a pure replay. See the correction in
+`out/thinkdiag_protocol.md`: one `27/01` step carries 32 session-unique bytes,
+and the earlier "licence is static" check had looked only at the `61/18`
+answer. The licence blobs themselves — 2469 of those 2564 bytes — do replay.
+
+Every step carries a label for one reason: so the app can name the step the
+adapter stopped answering at. That is the whole instrument W6 needs.
+
+**W5b — bytes through the transport.** Not done, and the plan was wrong to say
+there is no transport work. `ByteBuffer` accumulates a `String`, and
+`ElmTransport.read(until:timeout:)` returns one, so the ELM path is text all
+the way down — a `55aa` payload put through it is mangled the moment a byte
+goes above 0x7f. `ByteBuffer` has to hold bytes and convert on the way out.
+Contained, and the existing tests still apply, but it is its own change and it
+touches the working ELM path.
 
 **W6 — addressing.** Requests ride `27/01` as
 `64 00 01 ff | len(2) | 61 01 | n | link(2) | reqlen | request`, with link
-`2905` for the engine. **The first experiment of the build**: whether that
-handle works on its own after the licence frames, or whether a setup exchange
-has to be replayed to create it. No CAN identifier ever crosses the wire, so
-there is nothing else to try if it does not.
+`2905` for the engine. **The first experiment of the build**, and it now has
+two questions rather than one:
+
+1. Does the adapter accept the replayed activation response — the step with 32
+   session-unique bytes? If not, the response has to be computed, and the
+   algorithm is in the ThinkDiag APK.
+2. If the prologue completes, does handle `2905` work on its own, or does a
+   setup exchange have to be replayed to create it? No CAN identifier ever
+   crosses the wire, so there is nothing else to try if it does not.
+
+Both are answered in one attempt: run the plan and read off the step it stopped
+at.
 
 **W7 — translation.** `ThinkDiagAdapter` interprets the finite ELM vocabulary
 the session actually sends — `ATZ ATD ATE0 ATL0 ATH0 ATS0 ATAL ATAT2 ATST19
@@ -99,7 +134,8 @@ pages and periods, so the comparison means something.
 ## Kill condition
 
 W6 needing a setup sequence we cannot reproduce without Launch's vehicle
-software. Then stop: the capture keeps its documentary value, and the
+software — or the activation response having to be computed rather than
+replayed. Then stop: the capture keeps its documentary value, and the
 poll-period work is the fallback for the same order of gain.
 
 ## Deliberately out of scope

@@ -47,7 +47,7 @@ failed to echo its request. Two of its other counts drove the design of
 | `27/01` | out | run a request on an established link |
 | `67/01` | in | the ECU's answer, nested |
 
-## Verdict 1 — the licence is static, so it is replayable
+## Verdict 1 — the licence is static; the activation is not
 
 This was the gate the whole feature hung on.
 
@@ -66,7 +66,42 @@ The adapter's 7-byte `61/18` answer does vary (`…74432e4c…`, `…91c33ea0…
 bytes never appear again in anything the phone sends. Checked in both CITROEN
 sessions.
 
-**So: no cloud round-trip to reproduce.** The gate is passed.
+**So: no cloud round-trip to reproduce** for the licence itself.
+
+### Correction (2026-09-10, while building W5): the activation is not a replay
+
+The check above is sound but it looked in one place only — the `61/18` answer —
+and there is a second varying exchange it did not cover. Walking the whole
+prologue frame by frame, the sequence after the licence is:
+
+| # | phone → adapter | adapter → phone |
+|---|-----------------|-----------------|
+| 1 | `21/18`, 525 B — **identical** in all three sessions | 8 B, 4 bytes varying |
+| 2 | `21/17`, 317 B — **identical** | `1700` |
+| 3 | `27/01` `016020`, 3 B | 24 B, identical — the case serial in ASCII |
+| 4 | `27/01` `01602801…`, 53 B — **identical** | 10 B, **4 bytes varying** |
+| 5 | `27/01` `01602800…`, 39 B — **32 bytes vary in every session** | 18 B, varying |
+| 6 | `27/01` `01602802…`, 1627 B — **identical** | `01ff00` |
+
+Step 5 is the problem. It is `01 60 28 00 22`, then 32 bytes that differ
+completely between the three CITROEN sessions, then `b3 ab`. No two-byte run of
+step 4's answer appears anywhere in it, so it is not a simple echo — it is
+either computed with a key the official app holds, or generated fresh by the
+app. The same shape is in the EOBD2 session, with 16 varying bytes instead of
+32, so it is part of the adapter's session setup rather than something specific
+to the vehicle software.
+
+**What this changes.** The licence blobs (steps 1, 2 and 6 — 2469 of the 2564
+bytes) do replay, and that part of the verdict stands. But there is a
+challenge–response in the middle of the prologue, and whether the adapter
+accepts a replayed response is now an open question rather than a settled one.
+It is the cheapest experiment available: send the captured bytes and see. The
+handshake is a labelled step list precisely so the app can say which step it
+stopped at.
+
+If replay is rejected, the response has to be computed, and the algorithm is in
+the ThinkDiag APK. That is a much larger piece of work than this plan assumed,
+and it belongs in the same bracket as the kill condition rather than in W5.
 
 ## Verdict 2 — the adapter is dual-mode; Android chose SPP, iOS uses LE
 

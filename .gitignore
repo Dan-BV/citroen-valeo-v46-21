@@ -35,3 +35,8 @@ Payload/
 source.json
 ios/build-test/
 ios/test.log
+
+# The ThinkDiag licence and activation replay, produced by
+# tools/thinkdiag/make_script.py. Carries the adapter licence blob and its
+# activation credentials: local only, never committed.
+tools/thinkdiag/data/
