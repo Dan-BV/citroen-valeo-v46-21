@@ -52,10 +52,17 @@ Evidence and detail in `out/thinkdiag_protocol.md`.
 
 ## Steps
 
-**S1 — measure the baseline, without ThinkDiag.** Record a tech log of the
-engine stream on the current adapter and get notifications-per-page and
-ms-per-page. Every later claim is judged against this, and the number is worth
-having whatever happens to ThinkDiag.
+**S1 — measure the baseline, without ThinkDiag. DONE** →
+`out/drives/2026-09-10_ios_baseline.md`. 1338 healthy page reads: median 118 ms
+and 6 notifications per page, and `largest` pinned at **20 bytes** in every
+single one. The stream is notification-bound, as hypothesised, and iOS will not
+let an app ask for a bigger MTU — so on this adapter the ceiling has no software
+fix. A page costs what its length costs: 183 bytes → 10 notifications → 146 ms.
+
+The same logs caught a defect that outranks the ThinkDiag work: when the screen
+goes off the ECU drops the diagnostic session, every page then answers
+`NO DATA`, and the app never re-opens it because `81` runs only on connect.
+Fixes listed in the baseline document.
 
 **S2 — enumerate the GATT** (`tools/ble/enumerate.py 9TFD`). Services,
 characteristics, properties, MTU.
