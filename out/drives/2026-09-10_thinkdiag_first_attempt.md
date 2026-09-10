@@ -91,3 +91,82 @@ answer in one attempt are the same two W6 was always for — whether the replaye
 activation response at step 11 is accepted, and whether the engine handle
 `2905` works once the prologue is through — with the difference that a silent
 status query no longer stops it short of asking them.
+
+
+---
+
+# Second attempt — 22:38, app 1.0.40 (`6a51ba5`)
+
+All twelve steps ran.
+
+    1. идентификация: 71 Б, 223 мс
+    2. идентификация (повтор): 71 Б, 55 мс
+    3. версии: 42 Б, 59 мс
+    4. запрос 2a: 2 Б, 59 мс
+    5. запрос 25/05: 2 Б, 61 мс
+    6. запрос 11: нет ответа — 1510 мс, 0 увед., 0 Б
+    6. запрос 11: 2 Б, 34 мс
+    7. лицензия: 8 Б, 135 мс
+    8. активация: 2 Б, 68 мс
+    9. сведения об адаптере: 24 Б, 30 мс
+    10. запрос активации: 10 Б, 30 мс
+    11. ответ на запрос активации: 5 Б, 26 мс
+    12. блок активации: неожиданный ответ 01ff020200000004
+    адаптер: diagmini · V1.23.004 · V1.00.000 · 979865497037
+
+## `21/11` is flaky, not conditional
+
+The first attempt got nothing in 1510 ms — **zero notifications, zero bytes**,
+so the adapter genuinely said nothing rather than answering something we
+rejected. The retry answered in 34 ms. The guess that it was conditional on an
+application state the official app sets up was wrong; it simply drops one
+sometimes. The retry earns its place.
+
+## The licence replays
+
+Step 7 sent 525 bytes and got an 8-byte answer in 135 ms - the same length as
+the captured `61/18`. Step 8 sent 317 and got 2, as captured. Step 9 got 24, as
+captured. **The licence blobs replay, as the original verdict said.** 82-chunk
+writes are not the problem either: 525 bytes went out in 27 chunks without
+trouble.
+
+## The activation does not
+
+Two of the last three answers are the wrong length for an accepted activation:
+
+| step | captured reply | this attempt |
+|------|----------------|--------------|
+| 10 запрос активации | 10 B | 10 B |
+| 11 ответ на запрос активации | **18 B** | **5 B** |
+| 12 блок активации | **`01ff00`** | **`01ff02 0200000004`** |
+
+`01ff00` is this adapter saying yes; `01ff02` is what it answered 26 times in
+the capture when a request could not be served. So step 12 was refused, and
+step 11's 5 bytes are very likely a refusal too - the challenge–response is
+real and a replayed response does not satisfy it.
+
+**Not yet certain**, because the report recorded only counts for steps 10 and
+11. Two things would settle it, and both are one line of report away:
+
+1. **Step 10's ten bytes.** If they differ from the captured
+   `0100890bef0a034c2508`, the challenge is per-session and a replay cannot
+   work by construction. If they are identical, something else is wrong and
+   replay is still on the table.
+2. **Step 11's five bytes.** `01ff02…` means refused.
+
+So `describe` now puts any reply of 24 bytes or fewer into the report whole.
+The identity replies stay counts - 71 bytes of hex is not something to read on
+a phone.
+
+## The question this attempt does not answer
+
+`open()` **succeeded**: `.unexpected` is not fatal, so the session went on to
+initialise the ECU and ask for pages. Whether those answered is the second half
+of W6, and it is not in this screenshot - it is in the status line and in the
+technical log, which does start once the opening is through.
+
+If the pages answered, step 12's refusal does not matter and the activation
+exchange is about entitlement for something we do not use. If they did not, the
+refusal is the blocker and the response has to be computed rather than replayed
+- the algorithm being inside the ThinkDiag APK, which is the kill condition
+this plan named.

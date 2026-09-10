@@ -135,7 +135,7 @@ actor ThinkDiagAdapter: Adapter {
 
             switch result {
             case let .answered(payload):
-                openingReport.append("\(index + 1). \(step.label): \(payload.count) Б, \(lastMs) мс")
+                openingReport.append("\(index + 1). \(step.label): \(describe(payload)), \(lastMs) мс")
             case let .unexpected(payload):
                 // Not a failure. The expectations come from three sessions
                 // with one adapter, so an answer we did not predict is far
@@ -181,6 +181,22 @@ actor ThinkDiagAdapter: Adapter {
         let request = step.frame(seq: sequence.next())
         let reply = await exchange(request, timeout: timeout)
         return ThinkDiagHandshake.judge(step, request: request, reply: reply)
+    }
+
+    /// A reply in the report: short ones whole, long ones by length.
+    ///
+    /// Every answer in the activation exchange is short, and its bytes are the
+    /// only way to tell an answer from a refusal - `01ff00` is this adapter
+    /// saying yes and `01ff02` is it saying no. The drive of 2026-09-10 22:38
+    /// got through all twelve steps and could not say which of the two the last
+    /// three were, because only a count was recorded.
+    ///
+    /// The identity replies are 71 bytes and only their length ever mattered,
+    /// so the cut is above the 24 bytes the longest interesting answer takes.
+    private func describe(_ payload: Data) -> String {
+        payload.count <= 24
+            ? "\(payload.count) Б \(payload.hexString)"
+            : "\(payload.count) Б"
     }
 
     /// What the link actually delivered for the exchange just finished.

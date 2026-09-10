@@ -121,6 +121,25 @@ final class ThinkDiagAdapterTests: XCTestCase {
         XCTAssertTrue(last.contains("0 Б"), last)
     }
 
+    /// `01ff00` is this adapter saying yes and `01ff02` is it saying no, so a
+    /// count alone cannot tell an accepted activation from a refused one - and
+    /// on 2026-09-10 at 22:38 the opening got through all twelve steps without
+    /// the report being able to say which had happened.
+    func testShortAnswersGoIntoTheReportWhole() async throws {
+        let fake = FakeThinkDiag()
+        fake.answers["01602802ccdd"] = "01ff020200000004"     // a refusal, as seen
+        let adapter = ThinkDiagAdapter(transport: fake, script: script)
+        try await adapter.open()
+
+        let report = await adapter.openingReport
+        XCTAssertTrue(report.contains { $0.contains("01ff020200000004") },
+                      report.joined(separator: " | "))
+        // The 71-byte identity reply stays a count: its bytes never mattered,
+        // and a report nobody can read on a phone screen is no report.
+        XCTAssertTrue(report[0].contains("71 Б"), report[0])
+        XCTAssertFalse(report[0].contains("0300193265"), report[0])
+    }
+
     /// An unexpected-but-present answer is a gap in what we know, not a fault.
     func testAnUnexpectedAnswerIsNotedAndTheOpeningCarriesOn() async throws {
         let fake = FakeThinkDiag()
