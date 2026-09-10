@@ -86,6 +86,14 @@ identity before failing with `noScript` — the link carrying `55aa` and the
 right model answering are worth knowing on their own, and that is exactly what
 the first minutes at the car want to establish.
 
+**The opening report reaches the screen.** `Adapter` gained
+`openingReport: [String]`, empty by default and so unchanged for `ElmAdapter`;
+`ElmSession` publishes it after `open()` succeeds *or* throws, and the
+activation section shows it as «Последняя попытка», expanded already when the
+session failed. The status line names the step, the list shows all eight. This
+is the instrument W6 is run with: without it the only evidence of a failed
+attempt would be one line of error text.
+
 **W4 — the framing. Done.** `ios/Sources/ThinkDiagFrame.swift`:
 `55aa | tag(2) | len(2) | seq(1) | cmd(1) | payload | cksum(1)`; `f0f8` out,
 `f8f0` back, a reply echoes the request's `seq` with `cmd | 0x40`, and `cksum`

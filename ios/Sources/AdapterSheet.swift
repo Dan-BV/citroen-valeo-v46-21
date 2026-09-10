@@ -27,6 +27,7 @@ struct AdapterSheet: View {
     @State private var script: ThinkDiagScript?
     @State private var importing = false
     @State private var scriptProblem: String?
+    @State private var reportOpen = false
 
     private enum Kind: Hashable { case elm, thinkDiag }
 
@@ -262,6 +263,7 @@ struct AdapterSheet: View {
                     .font(.caption)
                     .foregroundStyle(.red)
             }
+            openingReportRow
         } header: {
             Text("Активация")
         } footer: {
@@ -269,6 +271,37 @@ struct AdapterSheet: View {
                  + "Сделай его командой tools/thinkdiag/make_script.py и перенеси "
                  + "на телефон по кабелю: он остаётся только здесь и в резервную "
                  + "копию не попадает.")
+        }
+    }
+
+    /// The whole diagnosis for this adapter, when it fails: which of the eight
+    /// opening exchanges stopped answering. Two of them are still open
+    /// questions - whether a replayed activation response is accepted, and
+    /// whether the engine handle works once the prologue is through - and this
+    /// list is what answers both in one attempt.
+    ///
+    /// Open by default when the session failed, because that is exactly when
+    /// nobody should have to go looking for it.
+    @ViewBuilder
+    private var openingReportRow: some View {
+        if !session.openingReport.isEmpty {
+            DisclosureGroup(isExpanded: $reportOpen) {
+                ForEach(Array(session.openingReport.enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            } label: {
+                HStack {
+                    Text("Последняя попытка")
+                    Spacer()
+                    Text("\(session.openingReport.count) шагов")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .onAppear { reportOpen = session.state == .failed }
         }
     }
 

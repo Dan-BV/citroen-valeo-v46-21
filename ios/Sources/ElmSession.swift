@@ -34,6 +34,14 @@ final class ElmSession: ObservableObject {
     /// Requests of pages the ECU did not answer when probed.
     @Published private(set) var deadPages: Set<String> = []
 
+    /// How the last attempt to bring the link up went, step by step.
+    ///
+    /// Empty for an ELM327 clone, which has nothing to say. A ThinkDiag's
+    /// opening is eight exchanges of a reverse-engineered protocol, and when
+    /// it fails the whole diagnosis is which step stopped answering - so it
+    /// has to reach the screen, not only the actor that recorded it.
+    @Published private(set) var openingReport: [String] = []
+
     // MARK: -
 
     private let profile: Profile
@@ -261,12 +269,17 @@ final class ElmSession: ObservableObject {
     }
 
     private func run(_ adapter: any Adapter) async {
+        openingReport = []
         do {
             try await adapter.open()
+            openingReport = await adapter.openingReport
             status = "Адаптер открыт, инициализация ЭБУ…"
             if techToFile { try? tech.start() }
             try await runProprietary(adapter)
         } catch {
+            // Before the status, because the status is one line and this is
+            // the part that says where it went wrong.
+            openingReport = await adapter.openingReport
             if !Task.isCancelled {
                 status = "Ошибка: \(error.localizedDescription)"
                 state = .failed

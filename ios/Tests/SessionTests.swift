@@ -129,6 +129,43 @@ final class SessionTests: XCTestCase {
 
     // MARK: - the session
 
+    /// A ThinkDiag's whole diagnosis is its opening report - which of the eight
+    /// exchanges stopped answering - and the actor that records it is not the
+    /// thing anyone can read. So the session has to publish it, and it has to
+    /// do that on the path where the opening is what failed.
+    func testTheSessionPublishesWhereAThinkDiagOpeningStopped() async throws {
+        let profile = try loadProfile()
+        let fake = FakeThinkDiagOpening()
+        let session = ElmSession(profile: profile,
+                                 makeAdapter: { _ in
+                                     ThinkDiagAdapter(transport: fake, script: nil)
+                                 })
+
+        session.connect(.thinkDiagMini)
+        try await settle({ session.state == .failed }, 10, "the opening to fail")
+
+        // Six queries answered, then the line naming the adapter. Without an
+        // activation script it can go no further, and saying so is the point.
+        XCTAssertEqual(session.openingReport.count, 7,
+                       session.openingReport.joined(separator: " | "))
+        XCTAssertTrue(session.openingReport.first?.contains("идентификация") == true,
+                      session.openingReport.first ?? "")
+        XCTAssertTrue(session.openingReport.last?.contains("diagmini") == true,
+                      session.openingReport.last ?? "")
+        XCTAssertTrue(session.status.contains("сценарий"), session.status)
+    }
+
+    /// An ELM327 clone has nothing to report, and the screen must not grow an
+    /// empty section for it.
+    func testAnElmSessionReportsNothingAboutItsOpening() async throws {
+        let profile = try loadProfile()
+        let session = makeSession(profile, try scripted(profile))
+        session.connect(.ble(id: UUID(), name: "scripted"))
+        try await settle({ session.isConnected }, 10, "the session to connect")
+        XCTAssertTrue(session.openingReport.isEmpty)
+        session.disconnect()
+    }
+
     func testTheEcuSessionOpensAndPollsRecordedFrames() async throws {
         let profile = try loadProfile()
         let transport = try scripted(profile)

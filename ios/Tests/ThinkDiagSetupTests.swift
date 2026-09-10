@@ -136,7 +136,7 @@ final class ThinkDiagSetupTests: XCTestCase {
     /// is worth keeping: the adapter answered, and this link carries `55aa`.
     /// So the failure comes last and says what is missing.
     func testWithoutAScriptTheAdapterStillIdentifiesItselfFirst() async throws {
-        let fake = FakeSetupThinkDiag()
+        let fake = FakeThinkDiagOpening()
         let adapter = ThinkDiagAdapter(transport: fake, script: nil)
         do {
             try await adapter.open()
@@ -175,8 +175,10 @@ final class ThinkDiagSetupTests: XCTestCase {
     }
 }
 
-/// Enough of a ThinkDiag to get through the six opening queries.
-private final class FakeSetupThinkDiag: LinkTransport {
+/// Enough of a ThinkDiag to get through the six opening queries. Not private:
+/// `SessionTests` drives a session against it to check that the opening report
+/// reaches the screen.
+final class FakeThinkDiagOpening: LinkTransport {
     private let lock = NSLock()
     private var pending: [Data] = []
     private var link = LinkStats()

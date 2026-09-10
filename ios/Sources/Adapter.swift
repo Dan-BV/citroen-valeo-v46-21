@@ -45,4 +45,19 @@ protocol Adapter: Actor {
 
     /// Set once the link itself has failed.
     var linkFailure: TransportError? { get }
+
+    /// How bringing the link up went, in lines meant for a person to read.
+    ///
+    /// Nothing for an ELM327 clone: its opening is fourteen AT commands that
+    /// either work or leave the chip unreachable, and its one interesting
+    /// answer already shows as `ElmProbe`'s verdict. A ThinkDiag's opening is
+    /// eight exchanges of a protocol that was reverse-engineered, two of them
+    /// still open questions - and when it fails the only thing worth knowing
+    /// is *which step* it stopped answering at.
+    var openingReport: [String] { get }
+}
+
+extension Adapter {
+    /// Nothing to say unless a conformer has something to say.
+    var openingReport: [String] { [] }
 }

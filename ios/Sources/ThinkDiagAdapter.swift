@@ -56,7 +56,7 @@ actor ThinkDiagAdapter: Adapter {
     /// accepts a replayed activation response, and whether the engine handle
     /// works once the prologue is through - and in both cases the useful
     /// evidence is the same: which step it stopped answering at.
-    private(set) var report: [String] = []
+    private(set) var openingReport: [String] = []
 
     init(transport: any LinkTransport, script: ThinkDiagScript?) {
         self.transport = transport
@@ -86,7 +86,7 @@ actor ThinkDiagAdapter: Adapter {
         self.header = wanted
         link = Self.links[wanted]
         if link == nil {
-            report.append("заголовок \(wanted): нет известного канала адаптера")
+            openingReport.append("заголовок \(wanted): нет известного канала адаптера")
         }
     }
 
@@ -117,7 +117,7 @@ actor ThinkDiagAdapter: Adapter {
 
     private func performOpening() async throws {
         let plan = try ThinkDiagHandshake.plan(with: script)
-        report = []
+        openingReport = []
         for (index, step) in plan.enumerated() {
             let request = step.frame(seq: sequence.next())
             let reply = await exchange(request, timeout: Self.handshakeTimeout)
@@ -125,15 +125,15 @@ actor ThinkDiagAdapter: Adapter {
 
             switch result {
             case let .answered(payload):
-                report.append("\(index + 1). \(step.label): \(payload.count) Б")
+                openingReport.append("\(index + 1). \(step.label): \(payload.count) Б")
             case let .unexpected(payload):
                 // Not a failure. The expectations come from three sessions
                 // with one adapter, so an answer we did not predict is far
                 // more likely to be a gap in what we know.
-                report.append("\(index + 1). \(step.label): неожиданный ответ "
-                              + payload.hexString)
+                openingReport.append("\(index + 1). \(step.label): неожиданный ответ "
+                                     + payload.hexString)
             case .silent:
-                report.append("\(index + 1). \(step.label): нет ответа")
+                openingReport.append("\(index + 1). \(step.label): нет ответа")
                 throw ThinkDiagError.stopped(step: step.label,
                                              number: index + 1, of: plan.count)
             }
@@ -148,7 +148,7 @@ actor ThinkDiagAdapter: Adapter {
 
         // Checked last, so the report above survives to say how far it got.
         guard identity.isDiagMini else { throw ThinkDiagError.notDiagMini(identity.model) }
-        report.append("адаптер: " + identity.summary)
+        openingReport.append("адаптер: " + identity.summary)
 
         // Last of all. Without a script the six queries above still ran, and
         // what they proved is worth keeping: the adapter is the right one and
