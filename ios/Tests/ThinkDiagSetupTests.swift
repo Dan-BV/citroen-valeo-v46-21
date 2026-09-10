@@ -149,7 +149,7 @@ final class ThinkDiagSetupTests: XCTestCase {
 
         let identity = await adapter.identity
         XCTAssertEqual(identity.model, "diagmini")
-        let report = await adapter.report
+        let report = await adapter.openingReport
         XCTAssertEqual(report.count, 7, report.joined(separator: " | "))
         XCTAssertTrue(report.last?.contains("diagmini") == true, report.last ?? "")
     }

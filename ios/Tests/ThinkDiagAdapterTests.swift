@@ -23,7 +23,7 @@ final class ThinkDiagAdapterTests: XCTestCase {
         XCTAssertEqual(identity.firmware, "V1.00.000")
         XCTAssertEqual(identity.software, "V1.23.004")
 
-        let report = await adapter.report
+        let report = await adapter.openingReport
         // Six queries, two script steps, then the line naming the adapter.
         XCTAssertEqual(report.count, 9, report.joined(separator: " | "))
         XCTAssertTrue(report[6].contains("лицензия"), report[6])
@@ -49,7 +49,7 @@ final class ThinkDiagAdapterTests: XCTestCase {
                            "Адаптер молчит на шаге 7 из 8: «лицензия»")
         }
 
-        let report = await adapter.report
+        let report = await adapter.openingReport
         XCTAssertTrue(report.last?.contains("нет ответа") == true, report.last ?? "")
     }
 
@@ -75,7 +75,7 @@ final class ThinkDiagAdapterTests: XCTestCase {
         let adapter = ThinkDiagAdapter(transport: fake, script: script)
         try await adapter.open()
 
-        let report = await adapter.report
+        let report = await adapter.openingReport
         XCTAssertTrue(report[5].contains("неожиданный ответ 1106"), report[5])
     }
 
@@ -220,7 +220,7 @@ final class ThinkDiagAdapterTests: XCTestCase {
         XCTAssertTrue(Frames.isError(reply), reply)
         XCTAssertTrue(fake.sent.isEmpty, "nothing may go out with no handle to name")
 
-        let report = await adapter.report
+        let report = await adapter.openingReport
         XCTAssertTrue(report.contains { $0.contains("752") }, report.joined(separator: " | "))
     }
 
