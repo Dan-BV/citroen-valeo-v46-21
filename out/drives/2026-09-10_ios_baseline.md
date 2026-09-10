@@ -70,12 +70,29 @@ the cycle stretches because a page that answers `NO DATA` still costs its round
 trip, with the occasional full timeout on top — one 1200 ms read closes session
 153442.
 
-## Fixes this points to
+## What was changed in response
 
-1. **Keep the screen awake while a session is live** (`isIdleTimerDisabled`).
-   Cheapest, and it prevents the whole sequence rather than recovering from it.
-2. **Notice a dead session and re-open it.** A run of `NO DATA` across pages is
-   unambiguous — re-send `81`, and fall back to the full handshake if that does
-   not take. Today it needs a human.
-3. **Declare `bluetooth-central` background mode** if the stream should survive
-   a locked screen at all.
+- **The screen is held awake while a session runs** (`DeviceAwake`, held from
+  `connect` and released on either teardown path). This removes the cause
+  rather than recovering from it. The hold is dropped again once a session has
+  been quiet for a minute: nothing to read means nothing to look at.
+- **A dropped ECU session is re-opened** (`ElmSession.reopen`). Two consecutive
+  poll cycles in which every page asked came back an error is unambiguous, so
+  `81` is re-sent, and the full handshake follows if that does not take.
+- **The stream keeps running in the background** — `UIBackgroundModes:
+  [bluetooth-central]`, central role only.
+- **A reminder fires when the car goes quiet** (`StallReminder`): one condition,
+  no valid reading for 60 s, which covers ignition off, the adapter losing
+  power with the port, and walking out of range without having to tell them
+  apart. First reminder at a minute, then every ten, three at most, with a
+  "Остановить" button that ends the session from the lock screen. It fires
+  whatever state the app is in, because with the screen held awake the app is
+  usually still in the foreground when this happens.
+
+Still open, and it matters for background operation: `BleTransport.read` waits
+by polling a buffer every 2 ms. In the foreground that is a deliberate trade -
+the comment there explains why a continuation was avoided - but as a background
+busy-wait it burns CPU continuously and is the kind of thing iOS terminates for
+energy use. Worth replacing with a signalled wait before trusting long
+background sessions.
+

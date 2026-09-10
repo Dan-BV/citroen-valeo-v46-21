@@ -77,6 +77,21 @@ final class ElmSession: ObservableObject {
     private var skip: Set<String> = []
     private var cycle: Int64 = 0
 
+    /// When the ECU last gave a reading that parsed. A stalled session hangs
+    /// off this: whether to remind the user, and whether a lit screen is still
+    /// worth the battery.
+    private var lastValidAt = Date()
+    private var wasStalled = false
+    private var screenHeld = false
+
+    /// Quiet for this long and the car has stopped answering rather than
+    /// hesitating. Ordinary gaps of 7-11 s appear in the 2026-09-10 logs, so
+    /// the threshold sits well past them.
+    private let stallAfter: TimeInterval = 60
+
+    /// Consecutive poll cycles in which every page asked came back an error.
+    private var mutePasses = 0
+
     /// Adapter reply timeout, in ELM units of 4 ms: 0x19 = 100 ms. The default
     /// is 0x32 (200 ms) and the ceiling 0xFF (1020 ms); with adaptive timing on
     /// this is the cap, not the usual wait.
@@ -201,8 +216,17 @@ final class ElmSession: ObservableObject {
         cycle = 0
         values = [:]
         deadPages = []
+        lastValidAt = Date()
+        wasStalled = false
+        mutePasses = 0
         state = .connecting
         status = "Подключение…"
+
+        // The screen must not sleep while a session runs: a suspended app
+        // means a gap, and the ECU drops its session across a gap.
+        setScreenHeld(true)
+        StallReminder.shared.onStop = { [weak self] in self?.disconnect() }
+        Task { await StallReminder.shared.prepare() }
 
         let adapter = Adapter(transport: makeTransport(config))
         self.adapter = adapter
@@ -216,6 +240,8 @@ final class ElmSession: ObservableObject {
         adapter = nil
         state = .disconnected
         status = "Отключено"
+        setScreenHeld(false)
+        StallReminder.shared.sessionEnded()
     }
 
     private func run(_ adapter: Adapter) async {
@@ -233,6 +259,15 @@ final class ElmSession: ObservableObject {
         stopLogging()
         adapter.close()
         loop = nil
+        setScreenHeld(false)
+        StallReminder.shared.sessionEnded()
+    }
+
+    /// Idempotent, so the two teardown paths cannot leave the hold stuck on.
+    private func setScreenHeld(_ held: Bool) {
+        guard held != screenHeld else { return }
+        screenHeld = held
+        held ? DeviceAwake.hold() : DeviceAwake.release()
     }
 
     private func runProprietary(_ adapter: Adapter) async throws {
@@ -322,6 +357,8 @@ final class ElmSession: ObservableObject {
         while !Task.isCancelled {
             cycle += 1
             let started = Date()
+            var asked = 0
+            var answered = false
 
             for page in profile.pages {
                 if Task.isCancelled { break }
@@ -347,7 +384,10 @@ final class ElmSession: ObservableObject {
                 let took = Int(now.timeIntervalSince(sent) * 1000)
                 lastMs[page.request] = took
                 lastReply[page.request] = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+                asked += 1
                 if Frames.isError(reply) { continue }
+                answered = true
+                lastValidAt = now
                 skip.remove(page.request)
                 plan.record(took, for: page)
 
@@ -372,8 +412,51 @@ final class ElmSession: ObservableObject {
             record(live)
             let elapsed = Int(Date().timeIntervalSince(started) * 1000)
             status = "Подключено · цикл \(elapsed) мс"
+
+            // A cycle where every page asked came back an error is the ECU
+            // having dropped its diagnostic session, not a bad reply. Two in a
+            // row rules out a single glitch.
+            if asked > 0 {
+                mutePasses = answered ? 0 : mutePasses + 1
+            }
+            if mutePasses >= 2 { await reopen(adapter) }
+
+            let quiet = Date().timeIntervalSince(lastValidAt)
+            let stalled = quiet >= stallAfter
+            if stalled != wasStalled {
+                // Nothing to read means nothing to look at, so stop paying for
+                // a lit screen until the car answers again.
+                setScreenHeld(!stalled)
+                if !stalled { StallReminder.shared.reset() }
+                wasStalled = stalled
+            }
+            if stalled { StallReminder.shared.stalled(for: quiet) }
+
             await keepAliveIfIdle(adapter)
         }
+    }
+
+    /// Re-open a diagnostic session the ECU has dropped.
+    ///
+    /// `81` is what opens it, and until now that ran only at connect - so once
+    /// the car went quiet every page answered `NO DATA` for ever and the only
+    /// way out was a human reconnecting. Measured on 2026-09-10:
+    /// `out/drives/2026-09-10_ios_baseline.md`.
+    private func reopen(_ adapter: Adapter) async {
+        mutePasses = 0
+        status = "Сессия ЭБУ потеряна, переоткрываю…"
+        let opened = (try? await io.locked {
+            await adapter.applyHeader(self.profile.can.req, receive: self.profile.can.res)
+            return !Frames.isError(await self.at(adapter, "81", 2.5, note: "reopen"))
+        }) ?? false
+        if opened {
+            status = "Подключено"
+            return
+        }
+        // The adapter itself may have lost the thread - a power blip on the
+        // OBD port does that - so redo the handshake before giving up on the
+        // cycle.
+        _ = try? await io.locked { await self.initEcu(adapter) }
     }
 
     private func keepAliveIfIdle(_ adapter: Adapter) async {

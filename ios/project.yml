@@ -47,6 +47,12 @@ targets:
         # classic SPP needs MFi hardware.
         NSBluetoothAlwaysUsageDescription: >-
           Нужен для связи с адаптером ELM327, подключённым к машине.
+        # The stream has to survive a locked screen: without this the app is
+        # suspended, and across a suspension the ECU drops its diagnostic
+        # session (out/drives/2026-09-10_ios_baseline.md). Central role only -
+        # the app connects out to the adapter, it never advertises.
+        UIBackgroundModes:
+          - bluetooth-central
         # Drive logs land in Documents and are picked up from the Files app.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
@@ -71,6 +77,9 @@ targets:
       - path: Sources/AdapterStore.swift
       - path: Sources/ElmSession.swift
       - path: Sources/AsyncLock.swift
+      # Referenced by ElmSession, so the test bundle needs them to link.
+      - path: Sources/DeviceAwake.swift
+      - path: Sources/StallReminder.swift
       - path: Sources/Sample.swift
       - path: Sources/CsvLogger.swift
       - path: Sources/CsvFile.swift
