@@ -246,3 +246,76 @@ challenge-response has to be computed and the algorithm is in the APK - the
 kill condition.
 
 One attempt separates those.
+
+
+---
+
+# Third attempt — 2026-09-11, 10:23, app 1.0.42 (`108509c`), 18-step script
+
+The link setup was added, so the opening ran to 21 steps. The decisive line is
+step 10.
+
+    10. запрос активации: 10 Б 0100190b8e0a0319b808, 47 мс
+    11. ответ на запрос активации: 5 Б 01ff020002, 26 мс
+    12. блок активации: неожиданный ответ 01ff020200000004
+    13. подготовка канала 7: 3 Б 01ff00, 28 мс
+    14. подготовка канала 8: 3 Б 01ff00, 45 мс
+    15. подготовка канала 9: 9 Б 0100010555aa010001, 22 мс
+    16. подготовка канала 10: нет ответа — 5095 мс, 0 увед., 0 Б
+    16. подготовка канала 10: 1 Б 04, 30 мс
+    17. подготовка канала 11: 1 Б 04, 35 мс
+    18. открытие канала 2905: неожиданный ответ 04
+
+## The kill condition, reached and proven
+
+Step 10 is the adapter's **challenge**. We send a fixed request from the
+script; the adapter answers with a ten-byte value:
+
+| session | step-10 reply |
+|---------|---------------|
+| capture 13:02 | `0100890bef0a034c2508` |
+| **this drive** | `0100190b8e0a0319b808` |
+
+Our request was byte-for-byte identical both times, and the answer differs. So
+the ten bytes are a **fresh nonce the adapter generates per connection**, not a
+constant we can replay.
+
+Step 11 is our reply to it - the 32-byte value that was session-unique in every
+capture, flagged from the start as the one step that is not a replay. It was
+computed by the official app for the capture's nonce, so against a fresh nonce
+it is wrong, and the adapter refuses it: `01ff02`. Step 12 refuses in turn, and
+the link open at step 18 returns `04` - the module never activated.
+
+This is a genuine challenge-response: `response = f(nonce, secret)`, with `f`
+and the key inside the ThinkDiag APK. A replayed response can satisfy exactly
+one nonce, the one it was captured against, and that nonce never comes back. **No
+amount of capture makes this replayable** - it was the kill condition named in
+`out/thinkdiag_transport_plan.md`, and the drive proved it is real rather than
+hypothetical.
+
+## What is NOT in doubt
+
+Everything up to the challenge is correct and proven on hardware, three drives
+running:
+
+- connect by advertised name; `55aa` framing, length and XOR checksum accepted;
+  replies parsed, matched by sequence id and `cmd | 0x40`; byte-clean transport;
+  identity decoded (`diagmini`, `V1.23.004`);
+- the licence blobs replay (step 7: 525 B out, 8 B back, as captured);
+- the flaky `21/11` is handled by the retry;
+- the ELM-vocabulary translation works (the 22:38 technical log: every AT
+  command acknowledged at zero cost, every request reaching `27/01`);
+- the link-setup sequence is real and its frames are accepted up to the point
+  the un-activated state stops them.
+
+The protocol reconstruction is complete and right. The wall is not in our code;
+it is a vendor cryptographic gate, and it is where this line of work ends.
+
+## Decision
+
+Per the plan, this stops here. The capture keeps its documentary value, and the
+fallback for the same order of speed gain is the poll-period work in
+`out/engine_stream_pages.md`, deferred earlier by choice. Computing the response
+would mean reverse-engineering the crypto out of the APK's native libraries - a
+different and much larger undertaking, with no guarantee the key is even
+extractable, and out of scope for what this was.

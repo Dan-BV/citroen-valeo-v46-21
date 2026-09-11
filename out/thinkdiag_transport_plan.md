@@ -216,12 +216,26 @@ One `21CB8001` answering the right bytes over the ThinkDiag link. Then a full
 cycle measured against the 721 ms model and the 755 ms observed, with the same
 pages and periods, so the comparison means something.
 
-## Kill condition
+## Kill condition — reached, 2026-09-11
 
-W6 needing a setup sequence we cannot reproduce without Launch's vehicle
-software — or the activation response having to be computed rather than
-replayed. Then stop: the capture keeps its documentary value, and the
-poll-period work is the fallback for the same order of gain.
+The second of the two named conditions is what happened: **the activation
+response has to be computed, not replayed.** Proven on the car over three
+drives, recorded in `out/drives/2026-09-10_thinkdiag_first_attempt.md`.
+
+Step 10 of the opening is a challenge — the adapter returns a fresh ten-byte
+nonce on every connection (`0100890b…` in the capture, `0100190b…` on the car,
+to the same request). Step 11 is our reply, computed by the official app for
+the capture's nonce, so a fresh nonce refuses it (`01ff02`), and the module
+never activates (the link open returns `04`). `response = f(nonce, secret)`
+with `f` and the key inside the ThinkDiag APK; a replay satisfies exactly one
+nonce and that nonce never returns.
+
+Everything up to the challenge is complete and correct, proven on hardware:
+framing, checksum, transport, identity, the replayable licence, the ELM
+translation, the link-setup sequence. The wall is a vendor cryptographic gate,
+not our code. **This line of work stops here.** The capture keeps its
+documentary value; the fallback for the same order of gain is the poll-period
+work in `out/engine_stream_pages.md`.
 
 ## Deliberately out of scope
 
