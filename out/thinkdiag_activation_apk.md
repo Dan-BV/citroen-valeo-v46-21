@@ -156,3 +156,48 @@ But "use the binding" no longer means a small key extraction. It means one of:
 Recommendation: if we push on, do **A** next — it is the one bounded step that
 could still turn this into a quick win, and it uses the binding directly. If A
 shows the activation is deep VM crypto, **D** is the rational fallback.
+
+## Breakthrough — the phone's data + the exact function chain (2026-09-11)
+
+Pulled the ThinkDiag app's CITROEN package from the phone (adb, package
+`com.us.thinkdiag.plus`, at
+`/sdcard/Android/data/.../ThinkDiag/9TFD20257708/64/DIAGNOSTIC/VEHICLES/CITROEN/V10.34`).
+Kept local under `tools/thinkdiag/data/phone/` (git-ignored). The named vehicle
+libs — unlike the stripped app libs — carry symbols, and they map the activation
+exactly:
+
+- **The activation IS the "DBS Car Security Certificate" exchange.**
+  `DBSCarSecurCertf(mode, data, len, …)` in `libCOMM_ABSTRACT_LAYER.so` builds a
+  buffer `60 28 <mode> <len> <data>` — our `016028` — and sends it. So:
+  - `016028 01` (step 10) mode 1 → adapter returns the 10-byte **nonce**;
+  - `016028 00` (step 11) mode 0 → app sends the 32-byte **response = g(nonce, secret)**;
+  - `016028 02` (step 12) mode 2 → app sends the 1627-byte **dlicense block**.
+- **The secret comes from `CITROEN_dlicense.bin`** (1620 B, pulled) via
+  `PSA_Dlicense_Fun` → `AES_DBSCarSecurCertf` — AES over the dlicense.
+- **`lx`** (pulled) is the licence blob that replays as step 7 (`02 00 60 7d ab 90 …`),
+  visibly ECB (a repeating ciphertext block), so an AES/block key encrypts it.
+
+Files now local (all git-ignored): `CITROEN_dlicense.bin`, `EOBD2_dlicense.bin`,
+`LICENSE.DAT`, `lx`, `d`, `deviceInfo` (confirms `id=2e2d5335373636134e383632`),
+`libDEVICEID.so`, `libDIAG.so`, `libSTD.so`, `libCOMM_ABSTRACT_LAYER.so`.
+
+### The one remaining unknown
+
+`g` — how the 32-byte response is computed from the nonce and the dlicense-derived
+secret. It lives in the orchestrator that calls `DBSCarSecurCertf` — `libSTD.so`'s
+`Send_DBSCarSecurCertf` / `SendDlicense` (both exported there). Reverse that plus
+`AES_DBSCarSecurCertf`'s key, and we can reimplement `g` in Swift and validate
+against the three captured (nonce → response) pairs offline.
+
+This is no longer a kill condition. It is a bounded reverse with **every input
+already on disk**: the dlicense, the licence, the four named libs, and the
+three-pair oracle. What remains is decompiling `g` and the AES key out of
+`libSTD.so` — a focused continuation, not a search.
+
+## Tooling now installed on this machine
+
+- Temurin JRE 17 + JDK 21 (winget).
+- jadx 1.5.6 (winget) — APK → Java.
+- Ghidra 11.3.2 at `%TEMP%/ghidra_11.3.2_PUBLIC`, projects under `%TEMP%/ghproj`
+  (`enc`, `std`, `lic`, `diag`, `comm`). Headless: `analyzeHeadless <proj> <name>
+  -import <so> -postScript <py> -scriptPath <dir>` with `JAVA_HOME` = the JDK 21.
