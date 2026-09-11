@@ -201,3 +201,31 @@ three-pair oracle. What remains is decompiling `g` and the AES key out of
 - Ghidra 11.3.2 at `%TEMP%/ghidra_11.3.2_PUBLIC`, projects under `%TEMP%/ghproj`
   (`enc`, `std`, `lic`, `diag`, `comm`). Headless: `analyzeHeadless <proj> <name>
   -import <so> -postScript <py> -scriptPath <dir>` with `JAVA_HOME` = the JDK 21.
+
+## SOLVED — the activation response, validated (2026-09-11)
+
+Emulated the real `Encrypt`/`ExpandKey` (Unicorn) and confirmed the hand-written
+2-round AES matches on random vectors, then recovered the rest from the wire and
+the three-pair oracle:
+
+- The mode-1 request sends `g_stsc[0..7]` verbatim, so the **indices [2,0,6,5]
+  and key bytes `0a090c08`** are visible on the wire.
+- Decrypting the captured 32-byte responses with the nonce-derived key gave the
+  same plaintext for every session: **`CITROEN+1+V42.01$`** — exactly the
+  `%s+1+%s$` form (`CITROEN` is 7 chars, so the `$` variant applies).
+- Trailer `b3ab` is constant.
+
+The full computation, validated byte-for-byte against both captured pairs
+(`tools/thinkdiag/activation_ref.py`, `ALL MATCH`):
+
+    nonce8 = adapter mode-1 reply, 0100 status stripped (8 bytes)
+    key    = nonce8[2], nonce8[0], nonce8[6], nonce8[5], 0a,09,0c,08, 8×00
+    text   = "CITROEN+1+V42.01$" zero-padded to 32
+    resp   = AES2_ECB(key, text) + b3ab
+
+This is the kill condition undone. The response is now computable from the fresh
+nonce with no per-session secret we lack. What remains is engineering: port the
+17-line cipher to Swift and, at the activation step, compute the mode-0 response
+from the mode-1 reply instead of replaying the stale bytes. The mode-1 request
+and the mode-2 dlicense stay as replayed constants (both are stable and already
+in the script).
