@@ -436,3 +436,46 @@ exposes whether it was, and the UI does not show it yet.
 Captures from this session stay local by `.gitignore`: the ThinkDiag frame logs,
 the raw HCI snoops and the iPhone sysdiagnose all carry the adapter serial and
 its licence payload, and this repository is public.
+
+---
+
+## End of session, 2026-09-11 — ThinkDiag solved, works, not faster
+
+**ThinkDiag is a fully working second adapter in the iOS app, and its activation
+was reverse-engineered and cracked.** Choose it in settings (segmented control),
+import `thinkdiag_script.json` (12 steps, from `tools/thinkdiag/make_script.py`,
+pulled to the phone by cable; git-ignored), connect. On the car (app 1.0.43) the
+computed activation is accepted and live engine data flows through the ThinkDiag
+via our own client.
+
+**The activation, solved** (validated in `tools/thinkdiag/activation_ref.py`,
+ported to `ios/Sources/ThinkDiagActivation.swift`, `ALL MATCH`):
+
+    nonce8 = adapter mode-1 reply, 0100 status stripped (8 bytes)
+    key    = nonce8[2], nonce8[0], nonce8[6], nonce8[5], 0a 09 0c 08, then 8×00
+    text   = "CITROEN+1+V42.01$" zero-padded to 32
+    resp   = AES2_ECB(key, text) + b3ab     (2-round AES, standard S-box/Rcon)
+
+It is the `016028` "DBS Car Security Certificate" exchange from `libSTD.so`
+`Send_DBSCarSecurCertf`. The app computes the mode-0 response from the fresh
+nonce instead of replaying the stale script bytes; mode-1, licence and the
+mode-2 dlicense stay as stable replays. Full write-up:
+`out/thinkdiag_activation_apk.md`. The RE path: pulled the CITROEN V10.34 vehicle
+package off the phone (`tools/thinkdiag/data/phone/`, git-ignored), decompiled
+with Ghidra 11.3.2 + jadx, emulated the real cipher with Unicorn to confirm the
+port. All tooling is installed on this machine.
+
+**But it is NOT faster.** Cycle ~960 ms median vs the ELM327 baseline's ~883 ms.
+Every page arrives in one 93-byte notification (the MTU advantage is real) but
+per-page latency is 90–252 ms — the adapter's own on-board ECU-query time, not
+the BLE link. The 2.15x projection was wrong: the bottleneck is the adapter, not
+the notification count.
+
+**The real, still-open speedup:** the deferred poll-period optimisation in
+`out/engine_stream_pages.md` — adapter-independent, helps ELM327 and ThinkDiag
+equally. That is the ~2x, and it is the sensible next task if speed is still
+wanted.
+
+**Still open from before (unchanged):** the stall reminder needs a notification
+permission that may never have been granted; `StallReminder` exposes whether it
+was, the UI does not show it yet.
