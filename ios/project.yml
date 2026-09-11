@@ -92,6 +92,7 @@ targets:
       - path: Sources/ThinkDiagRequest.swift
       - path: Sources/ThinkDiagAdapter.swift
       - path: Sources/ThinkDiagActivation.swift
+      - path: Sources/ThinkDiagFastChannel.swift
       - path: Sources/ThinkDiagScriptStore.swift
       - path: Sources/Sample.swift
       - path: Sources/CsvLogger.swift

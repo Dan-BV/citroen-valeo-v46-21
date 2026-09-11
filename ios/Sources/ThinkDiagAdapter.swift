@@ -43,6 +43,15 @@ actor ThinkDiagAdapter: Adapter {
     private let transport: any LinkTransport
     private let script: ThinkDiagScript?
 
+    /// Whether to rewrite the channel-open flow control to STmin 0 - the "fast
+    /// channel" experiment. Off by default: it can only be validated on the
+    /// car. See `ThinkDiagFastChannel`.
+    private let fastChannel: Bool
+
+    /// Set once the open frame has actually been rewritten, so the report says
+    /// so exactly once rather than on every retry.
+    private var fastChannelApplied = false
+
     private var sequence = ThinkDiagSequence()
     private let reader = ThinkDiagFrameReader()
     private var header: String?
@@ -67,9 +76,10 @@ actor ThinkDiagAdapter: Adapter {
     /// evidence is the same: which step it stopped answering at.
     private(set) var openingReport: [String] = []
 
-    init(transport: any LinkTransport, script: ThinkDiagScript?) {
+    init(transport: any LinkTransport, script: ThinkDiagScript?, fastChannel: Bool = false) {
         self.transport = transport
         self.script = script
+        self.fastChannel = fastChannel
     }
 
     // MARK: - Adapter
@@ -129,6 +139,7 @@ actor ThinkDiagAdapter: Adapter {
     private func performOpening() async throws {
         let plan = try ThinkDiagHandshake.plan(with: script)
         openingReport = []
+        fastChannelApplied = false
         for (index, step) in plan.enumerated() {
             var result = await attempt(step)
             // One retry, and only after silence. It is what tells a dead step
@@ -189,7 +200,19 @@ actor ThinkDiagAdapter: Adapter {
         // nonce is fresh every connection, so the mode-0 step's captured bytes
         // are computed here from the nonce instead. Everything else - the
         // mode-1 request, the licence, the dlicense block - is a stable replay.
-        let payload = activationPayload(for: step)
+        var payload = activationPayload(for: step)
+
+        // The fast-channel experiment: on the channel-open frame, drop the
+        // ISO-TP separation time to 0 so the ECU streams its answer back to
+        // back. Only the open frame matches; every other step is left alone.
+        if fastChannel, let quick = ThinkDiagFastChannel.patched(payload) {
+            payload = quick
+            if !fastChannelApplied {
+                fastChannelApplied = true
+                openingReport.append("быстрый канал: STmin 10→0 мс")
+            }
+        }
+
         let request = ThinkDiagFrame.request(seq: sequence.next(), cmd: step.cmd, payload: payload)
 
         let reply = await exchange(request, timeout: timeout)
