@@ -319,3 +319,49 @@ fallback for the same order of speed gain is the poll-period work in
 would mean reverse-engineering the crypto out of the APK's native libraries - a
 different and much larger undertaking, with no guarantee the key is even
 extractable, and out of scope for what this was.
+
+---
+
+# Fourth attempt — 2026-09-11 21:24, app 1.0.43: IT WORKS, end to end
+
+The computed activation is accepted and the whole chain runs.
+
+    11. ответ на запрос активации: 18 Б 010097a485f51dbe9a9d51294c5119bb013c, 25 мс
+    12. блок активации: 3 Б 01ff00, 324 мс
+    13-17. подготовка канала: 01ff00 / 0100010555aa010001
+    18. открытие канала 2905: 3 Б 01ff00, 35 мс
+    адаптер: diagmini · V1.23.004 · V1.00.000 · 979865497037
+
+Step 11 got an 18-byte substantive reply (not `01ff02`), step 12 `01ff00`, the
+link opened, and the main screen showed **live engine data through the ThinkDiag
+adapter**: 12.4 V, coolant 46 °C, O2 "богата" / open loop, upstream O2 449 mV.
+The reversed-and-computed activation works. W6 is done; the ThinkDiag protocol
+is complete, our own client, no official app.
+
+## But the speed goal is not met — the honest number
+
+The whole ThinkDiag effort was motivated by the baseline's 2.15× projection.
+The drive disproves it.
+
+- Every page arrives in **one notification** (≤93 B) — the MTU advantage over
+  the ELM clone's 20-byte pieces is real, exactly as predicted.
+- But the **cycle is ~960 ms median** (min 721) for the seven pages, versus the
+  ELM327 baseline's ~883 ms. **No faster — slightly slower on median.**
+- Per-page: 90–252 ms, scaling with page size (21C2 93 B → 245 ms; 21C4 45 B →
+  94 ms). That is the **adapter's own ECU-query latency**, not the BLE link.
+
+The 2.15× model (`ms = 49 + 9.5 × notifications`) assumed the bottleneck was the
+notification count. It is not: the ThinkDiag adapter runs the diagnostic
+on-board and its per-page round-trip to the ECU dominates, so collapsing
+notifications to one buys nothing. The link was never the bottleneck for a
+1-notification adapter — the adapter is.
+
+## Where the speed actually is
+
+Unchanged by any of this: the deferred poll-period optimisation in
+`out/engine_stream_pages.md`. It cuts the cycle by polling fewer/smarter pages
+and is **adapter-independent** — it helps the ELM327 and the ThinkDiag equally.
+That is the real ~2× and always was.
+
+So: ThinkDiag is a fully working second adapter and a solved reverse-engineering
+problem, but not a faster one. The performance win is the poll optimisation.
