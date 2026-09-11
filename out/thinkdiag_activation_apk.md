@@ -57,15 +57,20 @@ way through is to **compute** `f(nonce, key)` ourselves.
 
 ## The plan, and the one cheap test that picks the branch
 
-**Decisive test (2 minutes, phone only):** put the phone in **airplane mode**
-and run the *official* ThinkDiag app against the car, reading live engine data.
+**Settled from the btsnoop, no test needed.** Parsing the RFCOMM stream of the
+13:00 session (`tools/btsnoop/parse_activation_timing` inline) timestamps the
+activation exchange:
 
-- **Works offline** → the response is computed on the phone from material
-  already there (licence + a key). Everything needed exists locally; the task
-  is to reverse `f` and locate the key. Expected outcome.
-- **Refuses without internet** → there is a per-session cloud step after all,
-  and we capture it with an HTTPS proxy while the official app runs, then
-  replicate it with the account. Different path, also workable.
+    t=0        out  запрос активации (step 10 request)
+    +41.5 ms   in   nonce 0100890bef0a034c2508 (adapter's challenge)
+    +50.3 ms   out  the 32-byte response (step 11)
+
+Between receiving the nonce and sending the response the app took **8.8 ms**.
+That is a local computation, not a network round-trip (which would be
+100–800 ms). So the response is `f(nonce, key)` computed on the phone, and the
+"requires internet" the vendor advertises is the app's login / subscription /
+download gate — **not** the activation crypto. Our own client needs neither
+login nor subscription: only the licence (have it) and the key.
 
 **If local (expected), the work is:**
 
