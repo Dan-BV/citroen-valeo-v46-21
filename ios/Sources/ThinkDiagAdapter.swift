@@ -49,6 +49,10 @@ actor ThinkDiagAdapter: Adapter {
     private var link: UInt16?
     private var lastCommand = Date.distantPast
 
+    /// The nonce from the last mode-1 activation reply, used to compute the
+    /// mode-0 response that follows.
+    private var lastNonce: Data?
+
     private(set) var identity = ThinkDiagIdentity()
     private(set) var lastStats = LinkStats()
     private(set) var lastMs = 0
@@ -180,9 +184,31 @@ actor ThinkDiagAdapter: Adapter {
         // 1629-byte write is 650 ms of inter-chunk pauses before the adapter
         // has even finished reading it.
         let timeout = step.required ? Self.handshakeTimeout : Self.statusTimeout
-        let request = step.frame(seq: sequence.next())
+
+        // The activation response cannot be replayed: the adapter's mode-1
+        // nonce is fresh every connection, so the mode-0 step's captured bytes
+        // are computed here from the nonce instead. Everything else - the
+        // mode-1 request, the licence, the dlicense block - is a stable replay.
+        let payload = activationPayload(for: step)
+        let request = ThinkDiagFrame.request(seq: sequence.next(), cmd: step.cmd, payload: payload)
+
         let reply = await exchange(request, timeout: timeout)
+        // Capture the nonce for the mode-0 step that follows.
+        if payload.starts(with: ThinkDiagActivation.mode1Prefix),
+           let answer = reply, answer.answers(request) {
+            lastNonce = ThinkDiagActivation.nonce(fromMode1Reply: answer.payload)
+        }
         return ThinkDiagHandshake.judge(step, request: request, reply: reply)
+    }
+
+    /// The bytes to actually send for a step. The mode-0 activation step is
+    /// computed from the last nonce; every other step is its own payload.
+    private func activationPayload(for step: ThinkDiagStep) -> Data {
+        guard step.payload.starts(with: ThinkDiagActivation.mode0Prefix),
+              let nonce = lastNonce else {
+            return step.payload
+        }
+        return ThinkDiagActivation.mode0Payload(forNonce8: nonce)
     }
 
     /// A request the adapter would not carry out.
