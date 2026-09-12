@@ -134,6 +134,14 @@ final class ElmSession: ObservableObject {
     /// the threshold sits well past them.
     private let stallAfter: TimeInterval = 60
 
+    /// How often the log buffers are written out to disk while a session runs.
+    /// Appends only buffer in memory; without this the whole drive sat unwritten
+    /// until the logs screen was opened or the session ended, so a crash or an
+    /// app kill lost it. Five seconds bounds both the loss and the buffer, and
+    /// the write is a few kilobytes off the poll's critical path.
+    private static let flushInterval: TimeInterval = 5
+    private var lastFlush = Date()
+
     /// Consecutive poll cycles in which every page asked came back an error.
     private var mutePasses = 0
     /// Re-opening is cheap but not free, and a silent ECU stays silent.
@@ -431,6 +439,7 @@ final class ElmSession: ObservableObject {
 
     private func pollLoop(_ adapter: any Adapter) async {
         var live: [String: Sample] = [:]
+        lastFlush = Date()
         while !Task.isCancelled {
             cycle += 1
             let started = Date()
@@ -516,6 +525,13 @@ final class ElmSession: ObservableObject {
             values = live
             record(live)
             lastCycleMs = Int(Date().timeIntervalSince(started) * 1000)
+
+            // Write the accumulated log buffers out now and then, so a crash or
+            // an app kill costs at most a few seconds rather than the whole drive.
+            if Date().timeIntervalSince(lastFlush) >= Self.flushInterval {
+                flushLog()
+                lastFlush = Date()
+            }
             if status != liveStatus { status = liveStatus }
 
             // The adapter being gone is not a page that failed to answer,
