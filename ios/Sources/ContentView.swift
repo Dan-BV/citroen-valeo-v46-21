@@ -50,8 +50,7 @@ struct SessionScreen: View {
                     // script imported since is the one to use, and one just
                     // removed must not go on working from memory.
                     return ThinkDiagAdapter(transport: BleTransport(config: config),
-                                            script: ThinkDiagScriptStore.current(),
-                                            fastChannel: ThinkDiagFastChannel.isEnabled())
+                                            script: ThinkDiagScriptStore.current())
                 }
             }
         ))

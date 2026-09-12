@@ -1,6 +1,6 @@
 import Foundation
 
-/// The "fast channel" experiment: lowering the ISO-TP separation time the
+/// The "fast channel": lowering the ISO-TP separation time the
 /// adapter imposes while it reads a module's answer.
 ///
 /// The engine channel is opened with a flow-control frame nested in a `27`
@@ -23,13 +23,14 @@ import Foundation
 /// a limit of the car. Rewriting it to `00` asks the ECU to send its
 /// consecutive frames back-to-back.
 ///
-/// Whether the adapter honours a value passed in this frame or clamps it in
-/// firmware can only be answered on the car, which is why this is a toggle and
-/// not the default. The change is a single byte, fully reversible, and touches
-/// only the pace of the answer, never what is asked.
+/// Proven on the car on 2026-09-12: the adapter passes the value through, the
+/// multi-frame pages halve (C0 248 -> 116 ms) and the cycle drops 930 -> 555 ms,
+/// which puts the ThinkDiag ahead of the ELM327 for the first time. So this is
+/// always on. The change is a single byte and touches only the pace of the
+/// answer, never what is asked. See out/drives/2026-09-12_thinkdiag_fast_channel.md.
 enum ThinkDiagFastChannel {
 
-    /// The separation time to ask for when the fast channel is on: `00` = 0 ms,
+    /// The separation time to ask for: `00` = 0 ms,
     /// the fastest the millisecond encoding expresses.
     static let fastStMin: UInt8 = 0x00
 
@@ -66,17 +67,5 @@ enum ThinkDiagFastChannel {
             return i
         }
         return nil
-    }
-
-    // MARK: - the setting
-
-    private static let key = "thinkDiagFastChannel"
-
-    static func isEnabled(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: key)
-    }
-
-    static func setEnabled(_ on: Bool, _ defaults: UserDefaults = .standard) {
-        defaults.set(on, forKey: key)
     }
 }

@@ -28,7 +28,6 @@ struct AdapterSheet: View {
     @State private var importing = false
     @State private var scriptProblem: String?
     @State private var reportOpen = false
-    @State private var fastChannel = ThinkDiagFastChannel.isEnabled()
 
     private enum Kind: Hashable { case elm, thinkDiag }
 
@@ -41,7 +40,6 @@ struct AdapterSheet: View {
                     scanSection
                 } else {
                     activationSection
-                    fastChannelSection
                 }
                 Section("Диагностика") {
                     NavigationLink {
@@ -273,31 +271,6 @@ struct AdapterSheet: View {
                  + "Сделай его командой tools/thinkdiag/make_script.py и перенеси "
                  + "на телефон по кабелю: он остаётся только здесь и в резервную "
                  + "копию не попадает.")
-        }
-    }
-
-    /// The fast-channel experiment: a toggle, because whether the adapter
-    /// honours a lowered separation time or clamps it in firmware can only be
-    /// found out on the car. What it changes is measured in the drive log's
-    /// per-page times, so there is nothing to show here but the switch and what
-    /// it does.
-    @ViewBuilder
-    private var fastChannelSection: some View {
-        Section {
-            Toggle("Быстрый канал", isOn: Binding(
-                get: { fastChannel },
-                set: { on in
-                    fastChannel = on
-                    ThinkDiagFastChannel.setEnabled(on)
-                }))
-            .disabled(session.isBusy)
-        } header: {
-            Text("Скорость")
-        } footer: {
-            Text("Просит ЭБУ отдавать многокадровый ответ без пауз между кадрами "
-                 + "(STmin 10→0 мс). На замерах это до ~7× быстрее на больших "
-                 + "страницах. Эксперимент: включается на следующем подключении, "
-                 + "откат мгновенный. Проверяй по времени страниц в журнале.")
         }
     }
 

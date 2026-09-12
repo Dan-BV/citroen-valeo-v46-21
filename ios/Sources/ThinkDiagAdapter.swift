@@ -43,13 +43,9 @@ actor ThinkDiagAdapter: Adapter {
     private let transport: any LinkTransport
     private let script: ThinkDiagScript?
 
-    /// Whether to rewrite the channel-open flow control to STmin 0 - the "fast
-    /// channel" experiment. Off by default: it can only be validated on the
-    /// car. See `ThinkDiagFastChannel`.
-    private let fastChannel: Bool
-
-    /// Set once the open frame has actually been rewritten, so the report says
-    /// so exactly once rather than on every retry.
+    /// Set once the channel-open frame has been rewritten to STmin 0 (see
+    /// `ThinkDiagFastChannel`), so the report says so exactly once rather than
+    /// on every retry.
     private var fastChannelApplied = false
 
     private var sequence = ThinkDiagSequence()
@@ -76,10 +72,9 @@ actor ThinkDiagAdapter: Adapter {
     /// evidence is the same: which step it stopped answering at.
     private(set) var openingReport: [String] = []
 
-    init(transport: any LinkTransport, script: ThinkDiagScript?, fastChannel: Bool = false) {
+    init(transport: any LinkTransport, script: ThinkDiagScript?) {
         self.transport = transport
         self.script = script
-        self.fastChannel = fastChannel
     }
 
     // MARK: - Adapter
@@ -202,10 +197,10 @@ actor ThinkDiagAdapter: Adapter {
         // mode-1 request, the licence, the dlicense block - is a stable replay.
         var payload = activationPayload(for: step)
 
-        // The fast-channel experiment: on the channel-open frame, drop the
-        // ISO-TP separation time to 0 so the ECU streams its answer back to
-        // back. Only the open frame matches; every other step is left alone.
-        if fastChannel, let quick = ThinkDiagFastChannel.patched(payload) {
+        // The fast channel: on the channel-open frame, drop the ISO-TP
+        // separation time to 0 so the ECU streams its answer back to back.
+        // Only the open frame matches; every other step is left alone.
+        if let quick = ThinkDiagFastChannel.patched(payload) {
             payload = quick
             if !fastChannelApplied {
                 fastChannelApplied = true
