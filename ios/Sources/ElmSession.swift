@@ -78,6 +78,14 @@ final class ElmSession: ObservableObject {
     private var adapter: (any Adapter)?
     private var loop: Task<Void, Never>?
 
+    /// Bumped by every `connect` and `disconnect`. A `run` task tears down
+    /// shared session state only while its own generation is still current, so
+    /// a cancelled session unwinding late cannot stop the logging - or nil the
+    /// loop handle - of the session that replaced it. Without this, a reconnect
+    /// right after a disconnect was clobbered by the old task's teardown, and
+    /// the only way back was to kill the app.
+    private var runGeneration = 0
+
     private var history: [String: [Point]] = [:]
     private let historyCap = 6000
 
@@ -251,16 +259,30 @@ final class ElmSession: ObservableObject {
         StallReminder.shared.onStop = { [weak self] in self?.disconnect() }
         Task { await StallReminder.shared.prepare() }
 
+        // A stale log from a session that has not finished tearing down must
+        // not be written into, nor left showing as "recording"; start clean.
+        stopLogging()
+
+        runGeneration += 1
+        let generation = runGeneration
         let adapter = makeAdapter(config)
         self.adapter = adapter
-        loop = Task { await run(adapter) }
+        loop = Task { await run(adapter, generation: generation) }
     }
 
     func disconnect() {
+        // Invalidate the running task's teardown before it runs: it may be
+        // parked in a read and unwind only seconds later, and by then this
+        // session is over. Everything it would do is done here, now, so the
+        // state is correct the instant the button is tapped.
+        runGeneration += 1
         loop?.cancel()
         loop = nil
         adapter?.close()
         adapter = nil
+        // Deterministically, not via the cancelled task's late teardown - which
+        // is why a stopped session used to still show a log as "recording".
+        stopLogging()
         state = .disconnected
         status = "Отключено"
         lastCycleMs = nil
@@ -268,7 +290,7 @@ final class ElmSession: ObservableObject {
         StallReminder.shared.sessionEnded()
     }
 
-    private func run(_ adapter: any Adapter) async {
+    private func run(_ adapter: any Adapter, generation: Int) async {
         openingReport = []
         do {
             try await adapter.open()
@@ -285,8 +307,13 @@ final class ElmSession: ObservableObject {
                 state = .failed
             }
         }
-        stopLogging()
+        // Always release what this task itself owns.
         adapter.close()
+        // But touch shared session state only if this task is still the current
+        // session: a `disconnect` or a `connect` that has since happened owns it
+        // now, and this task unwinding late must not stop its log or nil its loop.
+        guard generation == runGeneration else { return }
+        stopLogging()
         loop = nil
         setScreenHeld(false)
         StallReminder.shared.sessionEnded()
