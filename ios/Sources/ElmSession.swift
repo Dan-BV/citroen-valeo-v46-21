@@ -73,6 +73,14 @@ final class ElmSession: ObservableObject {
 
     var logURL: URL? { logger.url }
 
+    /// Whether polling backs a page off while its selected values hold still.
+    /// Off by default, so behaviour does not change until the reader asks for
+    /// it; persisted, because it is a setting, not a per-session choice. See
+    /// `AdaptivePoll`.
+    @Published var adaptivePoll: Bool = UserDefaults.standard.bool(forKey: "adaptivePoll") {
+        didSet { UserDefaults.standard.set(adaptivePoll, forKey: "adaptivePoll") }
+    }
+
     /// One adapter, several callers: the poll loop and any on-demand read.
     private let io = AsyncLock()
     private var adapter: (any Adapter)?
@@ -85,6 +93,15 @@ final class ElmSession: ObservableObject {
     /// right after a disconnect was clobbered by the old task's teardown, and
     /// the only way back was to kill the app.
     private var runGeneration = 0
+
+    /// Adaptive-poll state, keyed by page request. `staleness` counts consecutive
+    /// reads of a page that returned the same selected values; `pageSignature`
+    /// is those values folded to one number to compare against; `cyclesSinceRead`
+    /// counts cycles a page has been skipped, so it is read when its stretched
+    /// period is reached. All reset each connect. See `AdaptivePoll`.
+    private var staleness: [String: Int] = [:]
+    private var pageSignature: [String: Int] = [:]
+    private var cyclesSinceRead: [String: Int] = [:]
 
     private var history: [String: [Point]] = [:]
     private let historyCap = 6000
@@ -246,6 +263,9 @@ final class ElmSession: ObservableObject {
         cycle = 0
         values = [:]
         deadPages = []
+        staleness = [:]
+        pageSignature = [:]
+        cyclesSinceRead = [:]
         lastValidAt = Date()
         wasStalled = false
         mutePasses = 0
@@ -422,10 +442,21 @@ final class ElmSession: ObservableObject {
                 // A page that holds still is read now and then rather than
                 // every pass; dead ones get an occasional retry in case the
                 // failure was transient.
-                let period = periodOf(page)
-                if period > 1, cycle % Int64(period) != 1 { continue }
+                if adaptivePoll {
+                    // The stretched period grows while the page's values are
+                    // unchanged; count cycles skipped and read when it is due.
+                    cyclesSinceRead[page.request, default: 0] += 1
+                    let due = AdaptivePoll.period(base: periodOf(page),
+                                                  staleness: staleness[page.request] ?? 0)
+                    if cyclesSinceRead[page.request]! < due { continue }
+                } else {
+                    let period = periodOf(page)
+                    if period > 1, cycle % Int64(period) != 1 { continue }
+                }
                 if skip.contains(page.request), cycle % 20 != 0 { continue }
                 if !anyOn(page) { continue }
+                // Committed to reading it this cycle.
+                cyclesSinceRead[page.request] = 0
 
                 let sent = Date()
                 let reply: String
@@ -449,11 +480,17 @@ final class ElmSession: ObservableObject {
                 plan.record(took, for: page)
 
                 let clean = Frames.clean(reply)
+                // A signature of the page's selected raw values, folded as they
+                // are read, so adaptive polling can tell a page that changed
+                // from one that held still. djb2-style; order is stable because
+                // params are iterated in profile order.
+                var signature = 5381
                 for field in page.params where isOn(field) {
                     guard let (raw, _) = field.read(clean, marker: page.marker) else {
                         live[field.key] = Sample(value: 0, raw: 0, at: now, valid: false)
                         continue
                     }
+                    signature = (signature &* 33) ^ raw
                     let sample = Sample(value: field.value(fromMasked: raw),
                                         raw: raw, at: now, valid: true)
                     live[field.key] = sample
@@ -463,6 +500,17 @@ final class ElmSession: ObservableObject {
                         append(Point(at: now, value: sample.value), to: field.key)
                     }
                 }
+
+                // Unchanged since last read -> let the page back off; changed ->
+                // snap it back to every cycle. Only meaningful under adaptive
+                // polling, but kept current always so turning it on mid-drive
+                // does not start from a stale count.
+                if pageSignature[page.request] == signature {
+                    staleness[page.request, default: 0] += 1
+                } else {
+                    staleness[page.request] = 0
+                }
+                pageSignature[page.request] = signature
             }
 
             values = live

@@ -41,6 +41,7 @@ struct AdapterSheet: View {
                 } else {
                     activationSection
                 }
+                pollSection
                 Section("Диагностика") {
                     NavigationLink {
                         FaultsScreen(session: session)
@@ -271,6 +272,23 @@ struct AdapterSheet: View {
                  + "Сделай его командой tools/thinkdiag/make_script.py и перенеси "
                  + "на телефон по кабелю: он остаётся только здесь и в резервную "
                  + "копию не попадает.")
+        }
+    }
+
+    /// Adaptive polling: one switch that trades a little freshness on the
+    /// parameters that are not moving for a shorter cycle on the ones that are.
+    /// Applies to either adapter; safe to flip mid-session.
+    @ViewBuilder
+    private var pollSection: some View {
+        Section {
+            Toggle("Адаптивный опрос", isOn: $session.adaptivePoll)
+        } header: {
+            Text("Опрос")
+        } footer: {
+            Text("Реже опрашивает страницы, значения которых не меняются, и "
+                 + "мгновенно ускоряется, когда значение пошло. Ускоряет "
+                 + "обновление того, что реально движется; ничего лишнего в "
+                 + "машину не шлёт. Можно включать и выключать на ходу.")
         }
     }
 

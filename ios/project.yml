@@ -99,6 +99,7 @@ targets:
       - path: Sources/CsvFile.swift
       - path: Sources/TechLog.swift
       - path: Sources/PagePlan.swift
+      - path: Sources/AdaptivePoll.swift
       - path: Sources/Drive.swift
       - path: ../data/parity/golden.json
         type: file
