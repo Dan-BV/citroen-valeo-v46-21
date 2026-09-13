@@ -76,7 +76,7 @@ struct TilePicker: View {
             Spacer()
             Text(price(page))
                 .font(.caption2.monospacedDigit())
-                .foregroundStyle(polled(page) ? .secondary : .orange)
+                .foregroundStyle(polled(page) ? Color.secondary : Color.orange)
         }
     }
 
