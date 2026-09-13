@@ -100,6 +100,14 @@ targets:
       - path: Sources/TechLog.swift
       - path: Sources/PagePlan.swift
       - path: Sources/Drive.swift
+      # The dashboards. Pure value types and a UserDefaults store, with no
+      # SwiftUI under them on purpose: what a dashboard costs the cycle and
+      # what it puts in the log is arithmetic, and arithmetic is testable
+      # without a screen. `SelectionStore` comes along because `ElmSession`,
+      # compiled into this bundle, now reads its selection back from it.
+      - path: Sources/Dashboard.swift
+      - path: Sources/DashboardStore.swift
+      - path: Sources/SelectionStore.swift
       - path: ../data/parity/golden.json
         type: file
         buildPhase: resources

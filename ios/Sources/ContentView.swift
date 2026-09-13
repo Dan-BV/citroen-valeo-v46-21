@@ -20,25 +20,41 @@ struct ContentView: View {
     }
 }
 
-/// The app around a session: the parameter list, the four toolbar buttons and
-/// the strip under them that the poll loop writes its cycle time into.
+/// The app around a session: the screen being read, the four toolbar buttons
+/// and the strip under them that the poll loop writes its cycle time into.
+///
+/// Two kinds of screen sit under the same toolbar: the dashboards, swiped
+/// between, and the full parameter list. The title names the one on show and
+/// switches between them - the toolbar's right-hand side is full, and the name
+/// of the dashboard being read is worth the space anyway.
 ///
 /// Every button is an icon and all of them sit on the right, in two pairs:
 /// what to read and what to read it with (filter, settings), then the session
 /// itself (recording, start/stop). Start is the only filled one. The strip is
-/// owned here rather than by the list so that its two faces - status while
+/// owned here rather than by the screens so that its two faces - status while
 /// reading, the page-cost advice while choosing parameters - never stack.
 struct SessionScreen: View {
     let profile: Profile
 
+    /// Parameters by key, built once: a tile holds a key, not a field.
+    private let index: FieldIndex
+
     @StateObject private var session: ElmSession
+    @StateObject private var boards = DashboardStore()
     @State private var adapter: TransportConfig?
     @State private var settings = false
     @State private var logs = false
     @State private var editing = false
 
+    /// Which dashboard is on show, and whether the list is up instead.
+    @State private var boardID: UUID?
+    @State private var showingList = false
+    @State private var renaming = false
+    @State private var name = ""
+
     init(profile: Profile) {
         self.profile = profile
+        self.index = FieldIndex(profile)
         _session = StateObject(wrappedValue: ElmSession(
             profile: profile,
             makeAdapter: { config in
@@ -59,10 +75,11 @@ struct SessionScreen: View {
 
     var body: some View {
         NavigationStack {
-            ParameterList(session: session, profile: profile, editing: $editing)
-                .navigationTitle("Valeo V46.21")
+            screen
+                .navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItem(placement: .principal) { titleMenu }
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         filterButton
                         settingsButton
@@ -71,6 +88,13 @@ struct SessionScreen: View {
                     }
                 }
                 .safeAreaInset(edge: .top, spacing: 0) { strip }
+        }
+        // The dashboards are the session's other reader, and this is the whole
+        // of the wiring between them: a set of keys. The session merges it with
+        // the list's selection, so a parameter both want is read once, kept
+        // once and written to the log once.
+        .onChange(of: boards.keys, initial: true) { _, keys in
+            session.setDashboardKeys(keys)
         }
         .sheet(isPresented: $settings) {
             AdapterSheet(session: session, profile: profile, adapter: $adapter)
@@ -85,12 +109,147 @@ struct SessionScreen: View {
                     }
             }
         }
+        .alert("Название дашборда", isPresented: $renaming) {
+            TextField("Название", text: $name)
+            Button("Отмена", role: .cancel) {}
+            Button("Готово") {
+                if let board = currentBoard { boards.rename(board.id, to: name) }
+            }
+        }
+    }
+
+    // MARK: - what is on show
+
+    @ViewBuilder
+    private var screen: some View {
+        if onList {
+            ParameterList(session: session, profile: profile, editing: $editing)
+        } else {
+            DashboardPager(session: session,
+                           store: boards,
+                           profile: profile,
+                           index: index,
+                           boardID: $boardID,
+                           editing: $editing)
+        }
+    }
+
+    /// With every dashboard deleted there is nothing to swipe through, so the
+    /// list is what there is.
+    private var onList: Bool { showingList || boards.boards.isEmpty }
+
+    private var currentBoard: Dashboard? {
+        if let boardID, let board = boards.board(boardID) { return board }
+        return boards.boards.first
+    }
+
+    private var title: String {
+        onList ? "Параметры" : (currentBoard?.name ?? "Дашборд")
+    }
+
+    /// The title doubles as the switch between the screens and as the place
+    /// dashboards are managed from: there is no room for a fifth button, and a
+    /// menu under the name of the thing it acts on is where it would be looked
+    /// for anyway.
+    private var titleMenu: some View {
+        Menu {
+            Section {
+                ForEach(boards.boards) { board in
+                    Button {
+                        show(board.id)
+                    } label: {
+                        check(board.name, !onList && currentBoard?.id == board.id)
+                    }
+                }
+                Button {
+                    showingList = true
+                    editing = false
+                } label: {
+                    check("Все параметры", onList)
+                }
+            }
+            Section {
+                Button {
+                    addBoard()
+                } label: {
+                    Label("Новый дашборд", systemImage: "plus")
+                }
+                if !onList, let board = currentBoard {
+                    Button {
+                        name = board.name
+                        renaming = true
+                    } label: {
+                        Label("Переименовать", systemImage: "pencil")
+                    }
+                    Button {
+                        if let copy = boards.duplicate(board.id) { show(copy) }
+                    } label: {
+                        Label("Дублировать", systemImage: "plus.square.on.square")
+                    }
+                    Button(role: .destructive) {
+                        remove(board.id)
+                    } label: {
+                        Label("Удалить дашборд", systemImage: "trash")
+                    }
+                }
+            }
+            Section {
+                // The one lever that actually shortens a cycle is asking for
+                // fewer pages. This is it in a tap: read what the dashboards
+                // show and nothing else.
+                Button {
+                    session.readOnlyDashboards()
+                } label: {
+                    Label("Читать только дашборды", systemImage: "bolt")
+                }
+                .disabled(boards.keys.isEmpty)
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+            }
+            .foregroundStyle(.primary)
+        }
+    }
+
+    @ViewBuilder
+    private func check(_ title: String, _ on: Bool) -> some View {
+        if on {
+            Label(title, systemImage: "checkmark")
+        } else {
+            Text(title)
+        }
+    }
+
+    private func show(_ id: UUID) {
+        boardID = id
+        showingList = false
+        editing = false
+    }
+
+    private func addBoard() {
+        let board = Dashboard(name: "Дашборд \(boards.boards.count + 1)")
+        boards.add(board)
+        show(board.id)
+        // Straight into edit mode: an empty board has nothing else to offer.
+        editing = true
+    }
+
+    private func remove(_ id: UUID) {
+        boards.remove(id)
+        boardID = boards.boards.first?.id
+        editing = false
     }
 
     // MARK: - toolbar
 
-    /// Choosing which parameters are read. Same glyph the Mail app uses for
-    /// its filter, filled while the mode is on; a second tap is "done".
+    /// Choosing what is read, or what a dashboard shows - whichever screen is
+    /// up. Same glyph the Mail app uses for its filter, filled while the mode
+    /// is on; a second tap is "done".
     private var filterButton: some View {
         Button {
             withAnimation { editing.toggle() }
@@ -99,7 +258,8 @@ struct SessionScreen: View {
                   ? "line.3.horizontal.decrease.circle.fill"
                   : "line.3.horizontal.decrease.circle")
         }
-        .accessibilityLabel(editing ? "Готово" : "Выбор параметров")
+        .accessibilityLabel(editing ? "Готово"
+                            : onList ? "Выбор параметров" : "Правка плиток")
     }
 
     private var settingsButton: some View {
@@ -227,13 +387,20 @@ struct SessionScreen: View {
 
     /// The one thing worth saying out loud while choosing parameters: cycle
     /// time is paid per page, so the cheapest way to a fast screen is fewer
-    /// pages - not fewer parameters.
+    /// pages - not fewer parameters. With two screens asking for pages it also
+    /// has to say which of them the time is going on.
     private var advice: some View {
         let pages = session.polledPages
+        let held = session.dashboardOnlyPages
         return VStack(alignment: .leading, spacing: 2) {
-            HStack {
+            HStack(spacing: 6) {
                 Text("\(pages.count) стр. в круге")
                     .font(.footnote.monospacedDigit())
+                if !held.isEmpty {
+                    Text("· \(held.count) из-за дашбордов")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 if let ms = session.predictedCycleMs {
                     Text("~\(ms.formatted()) мс")

@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// The main screen: every parameter the profile knows, grouped by the page it
-/// is read from, with its live value.
+/// Every parameter the profile knows, grouped by the page it is read from,
+/// with its live value.
 ///
-/// No dashboard, like the web version - a scrollable list, and a tap on a
-/// numeric parameter opens its curve. The page header carries the switch that
-/// matters for speed: a page nothing is selected from is not asked for at all,
-/// and its measured round trip is shown right there so the cost is visible.
+/// The long form of what is being read: a scrollable list, and a tap on a
+/// numeric parameter opens its curve. The dashboards next door are the short
+/// form - the same values, a dozen at a time, arranged by hand. The page
+/// header carries the switch that matters for speed: a page nothing wants is
+/// not asked for at all, and its measured round trip is shown right there so
+/// the cost is visible.
 struct ParameterList: View {
     @ObservedObject var session: ElmSession
     let profile: Profile
@@ -98,6 +100,14 @@ struct ParameterList: View {
                 Text("\(use.wanted)/\(use.total)")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(use.wanted == 0 ? .secondary : .primary)
+                // A page a tile shows stays in the cycle whatever this switch
+                // says, and the switch on its own could not explain why.
+                if session.dashboardHolds(page) > 0 {
+                    Image(systemName: "square.grid.2x2")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("нужна дашборду")
+                }
                 periodMenu(page)
                 Toggle("", isOn: Binding(
                     get: { page.params.contains { session.isSelected($0.key) } },

@@ -71,6 +71,12 @@ final class ElmSession: ObservableObject {
     /// Rows written so far, for the recording indicator.
     @Published private(set) var loggedRows = 0
 
+    /// The columns the open recording has. Frozen when the file is opened - a
+    /// CSV cannot grow a column halfway down - so a parameter added to a
+    /// dashboard mid-drive is shown but not written, and the tile says so
+    /// rather than leaving it to be discovered in the file afterwards.
+    @Published private(set) var recordedKeys: Set<String> = []
+
     var logURL: URL? { logger.url }
 
     /// One adapter, several callers: the poll loop and any on-demand read.
@@ -97,10 +103,38 @@ final class ElmSession: ObservableObject {
     /// costs one adapter turnaround, the parameters inside it cost nothing.
     private var lastMs: [String: Int] = [:]
 
-    /// Which parameters the user wants. A page with nothing selected is not
-    /// asked for at all - that, not any adapter trick, is what shortens the
-    /// cycle. Published, because the switches on screen read it back.
-    @Published private(set) var selected: Set<String>
+    /// Which parameters the reader ticked in the list. A page with nothing on
+    /// it is not asked for at all - that, not any adapter trick, is what
+    /// shortens the cycle. Published, because the switches on screen read it
+    /// back.
+    ///
+    /// This is the list's half of the answer only; what the cycle goes by is
+    /// `polled`.
+    @Published private(set) var selected: Set<String> {
+        didSet {
+            selection.save(selected)
+            polled = selected.union(dashboardKeys)
+        }
+    }
+
+    /// What the dashboards need read, handed over by the screen that owns them.
+    ///
+    /// The session deliberately does not know what a dashboard is: it is given
+    /// a set of keys and merges it with the list's. That is the whole of the
+    /// duplication question - two screens wanting the same parameter are two
+    /// members of one set, so it is read once, kept once and logged once.
+    @Published private(set) var dashboardKeys: Set<String> = [] {
+        didSet { polled = selected.union(dashboardKeys) }
+    }
+
+    /// The union: the one set the poll loop and the recording go by.
+    ///
+    /// Stored rather than computed because the loop asks it once per parameter
+    /// per cycle, and a set union per question is a cost with nothing to show
+    /// for it.
+    @Published private(set) var polled: Set<String>
+
+    private let selection: SelectionStore
 
     private var skip: Set<String> = []
     private var cycle: Int64 = 0
@@ -169,14 +203,35 @@ final class ElmSession: ObservableObject {
     var isBusy: Bool { loop != nil }
 
     init(profile: Profile,
-         makeAdapter: @escaping (TransportConfig) -> any Adapter) {
+         makeAdapter: @escaping (TransportConfig) -> any Adapter,
+         selection: SelectionStore = SelectionStore()) {
         self.profile = profile
         self.makeAdapter = makeAdapter
-        self.selected = Self.defaultSelection(profile)    }
+        self.selection = selection
+        let chosen = selection.load(valid: Self.allKeys(profile))
+            ?? Self.defaultSelection(profile)
+        self.selected = chosen
+        // `didSet` does not run for an assignment inside `init`, so the union
+        // is seeded here; the dashboards' half arrives from the screen.
+        self.polled = chosen
+    }
 
     // MARK: - selection
 
     func setSelection(_ keys: Set<String>) { selected = keys }
+
+    /// Told by the screen that owns the dashboards, whenever they change.
+    func setDashboardKeys(_ keys: Set<String>) {
+        guard keys != dashboardKeys else { return }
+        dashboardKeys = keys
+    }
+
+    /// Read only what the dashboards show. The one lever that actually shortens
+    /// a cycle is asking for fewer pages, and this is it in a single tap.
+    func readOnlyDashboards() {
+        guard !dashboardKeys.isEmpty else { return }
+        selected = dashboardKeys
+    }
 
     func isSelected(_ key: String) -> Bool { selected.contains(key) }
 
@@ -197,7 +252,8 @@ final class ElmSession: ObservableObject {
 
     func toggle(_ field: Profile.Field) { toggle(field.key) }
 
-    private func isOn(_ field: Profile.Field) -> Bool { selected.contains(field.key) }
+    /// Whether anything wants this parameter - the list, a dashboard, or both.
+    private func isOn(_ field: Profile.Field) -> Bool { polled.contains(field.key) }
 
     private func anyOn(_ page: Profile.Page) -> Bool { page.params.contains(where: isOn) }
 
@@ -237,11 +293,56 @@ final class ElmSession: ObservableObject {
         return (wanted, page.params.count)
     }
 
+    /// How many of a page's parameters a dashboard holds. A page the list has
+    /// switched off but a tile still shows stays in the cycle, and the switch
+    /// alone cannot explain why - so the header says so.
+    func dashboardHolds(_ page: Profile.Page) -> Int {
+        page.params.lazy.filter { self.dashboardKeys.contains($0.key) }.count
+    }
+
+    /// Pages in the cycle only because a dashboard asks for them: what the
+    /// dashboards cost, in the only unit that matters.
+    var dashboardOnlyPages: [Profile.Page] {
+        profile.pages.filter { page in
+            page.params.contains(where: { self.dashboardKeys.contains($0.key) })
+                && !page.params.contains(where: { self.selected.contains($0.key) })
+        }
+    }
+
+    /// The recording's columns: every polled parameter, in profile order.
+    ///
+    /// Built by walking the profile rather than the selection, which is what
+    /// makes a duplicate column impossible: the profile names each key exactly
+    /// once and `polled` is a set, so a parameter shown in the list and on
+    /// three tiles is one column here.
+    var logKeys: [String] {
+        profile.pages.flatMap { $0.params.map(\.key).filter(polled.contains) }
+    }
+
     func rawReply(_ request: String) -> String? { lastReply[request] }
 
     func lastPageMs(_ request: String) -> Int? { lastMs[request] }
 
     func history(of key: String) -> [Point] { history[key] ?? [] }
+
+    /// The tail of a curve, for a tile that draws the last minute of it.
+    ///
+    /// A slice rather than the whole series: up to six thousand points are kept
+    /// per parameter and a dashboard redraws every tile every cycle, so handing
+    /// each of them the lot is the one way a dashboard could cost real time.
+    /// The points are appended in order, so the start of the window is a binary
+    /// search.
+    func history(of key: String, seconds: TimeInterval) -> [Point] {
+        guard let points = history[key], let last = points.last else { return [] }
+        let from = last.at.addingTimeInterval(-seconds)
+        var low = 0
+        var high = points.count
+        while low < high {
+            let middle = (low + high) / 2
+            if points[middle].at < from { low = middle + 1 } else { high = middle }
+        }
+        return Array(points[low...])
+    }
 
     // MARK: - session
 
@@ -343,9 +444,7 @@ final class ElmSession: ObservableObject {
         }
 
         state = .connected
-        startLogging(keys: profile.pages.flatMap { page in
-            page.params.map(\.key).filter(selected.contains)
-        })
+        startLogging(keys: logKeys)
         status = "Проверка доступных страниц…"
         let dead = try await io.locked { await self.probePages(adapter) }
         deadPages = dead
@@ -610,6 +709,7 @@ final class ElmSession: ObservableObject {
         do {
             try logger.start(keys: keys)
             loggedRows = 0
+            recordedKeys = Set(keys)
         } catch {
             status = "Запись не открылась: \(error.localizedDescription)"
         }
@@ -625,6 +725,7 @@ final class ElmSession: ObservableObject {
     private func stopLogging() {
         logger.stop()
         tech.stop()
+        recordedKeys = []
     }
 
     /// Push what is buffered, so a file can be shared without stopping.

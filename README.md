@@ -19,6 +19,27 @@ mothballed as of 2026-09-10 and no longer developed. It bundles the generated
 copied - so the byte maps cannot drift from what the generator emits. Classic Bluetooth SPP and K-line are absent by design:
 an iPhone can only reach an ELM327 clone over BLE.
 
+### Two screens, one set of keys
+The app reads the ECU on two screens: **dashboards** - hand-arranged tiles, a number, a
+gauge, a bar or a minute of a curve each, swiped between and kept in `UserDefaults` - and
+the **parameter list**, every reading the profile knows, grouped by the page it comes from.
+The title switches between them and manages the boards.
+
+Neither screen reads anything of its own. The dashboards hand the session a *set* of keys,
+the list contributes its ticks, and the union is the one thing the poll loop and the CSV
+recorder go by (`ElmSession.polled`). So a parameter shown in the list and on three tiles is
+one request on the wire, one entry in memory and **one column** in the drive log: the log's
+columns are built by walking the profile, which names each key exactly once
+(`ElmSession.logKeys`). The recording format is unchanged - `time_ms,iso,<keys>`, the same
+file `data/logs/README.md` describes.
+
+Two consequences worth knowing at the wheel. A page nothing is ticked from is still read if
+a tile shows it, so the list marks such a page rather than letting the switch look broken;
+and the column set is frozen when the recording opens, so a tile added mid-drive is shown
+but not written - the tile says so with an orange mark. "Читать только дашборды" in the
+title menu drops the list to exactly what the tiles need, which is the one lever that
+actually shortens a cycle: fewer pages.
+
 No Apple Developer account is involved:
 
 - `.github/workflows/ios.yml` builds an **unsigned** ipa on a macOS runner and publishes it,
