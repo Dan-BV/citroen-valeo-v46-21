@@ -15,7 +15,16 @@ import Foundation
 /// static every tenth.
 final class PagePlan {
 
-    static let choices = [1, 2, 3, 5, 10]
+    static let choices = [1, 2, 3, 5, 10, 20, 30]
+
+    /// The periods offered for one page: from its default (the fastest that
+    /// makes sense for it - a heavy page is not meant to be read every cycle) up
+    /// to the rarest. So the picker's minimum is the page's default, its maximum
+    /// the coarsest, exactly as the reader asked.
+    static func choices(for page: Profile.Page) -> [Int] {
+        let floor = defaultPeriod(page)
+        return choices.filter { $0 >= floor }
+    }
 
     private let defaults: UserDefaults
     private let periodsKey = "pagePeriods"
@@ -43,7 +52,10 @@ final class PagePlan {
     }
 
     func period(of page: Profile.Page) -> Int {
-        periods[page.request] ?? Self.defaultPeriod(page)
+        // Never below the page's default: that default is the fastest rate that
+        // makes sense for it, and it is the minimum the picker offers. A legacy
+        // stored value below it (from before that floor existed) is clamped up.
+        max(periods[page.request] ?? Self.defaultPeriod(page), Self.defaultPeriod(page))
     }
 
     func setPeriod(_ period: Int, for page: Profile.Page) {

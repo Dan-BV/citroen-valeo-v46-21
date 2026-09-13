@@ -47,6 +47,28 @@ final class PlanTests: XCTestCase {
         XCTAssertEqual(PagePlan(defaults: defaults).period(of: page), 1)
     }
 
+    /// The picker offers a page only its default rate and slower ones - the
+    /// default is the minimum, the coarsest choice the maximum.
+    func testChoicesForAPageStartAtItsDefault() throws {
+        XCTAssertEqual(PagePlan.choices(for: try page("C0")).first, 1)   // every cycle
+        XCTAssertEqual(PagePlan.choices(for: try page("C4")).first, 2)   // not faster than its default
+        XCTAssertEqual(PagePlan.choices(for: try page("CB")).first, 3)
+        XCTAssertEqual(PagePlan.choices(for: try page("B0")).first, 10)  // a static page starts rare
+        XCTAssertEqual(PagePlan.choices(for: try page("C0")).last, PagePlan.choices.last)
+        XCTAssertFalse(PagePlan.choices(for: try page("CB")).contains(1), "no faster than the default")
+    }
+
+    /// A rate below the page's default - a legacy value, or a bad write - is
+    /// clamped up to the default rather than polling a heavy page too fast.
+    func testARateBelowTheDefaultIsClampedUp() throws {
+        let plan = PagePlan(defaults: defaults)
+        let page = try page("CB")                 // default 3
+        plan.setPeriod(1, for: page)
+        XCTAssertEqual(plan.period(of: page), 3, "clamped up to the default floor")
+        plan.setPeriod(10, for: page)
+        XCTAssertEqual(plan.period(of: page), 10, "above the floor is kept")
+    }
+
     // MARK: - what it costs
 
     func testTheFirstMeasurementIsTakenAsIsAndLaterOnesAveraged() throws {

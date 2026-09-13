@@ -119,7 +119,7 @@ struct ParameterList: View {
     /// this number.
     private func periodMenu(_ page: Profile.Page) -> some View {
         Menu {
-            ForEach(PagePlan.choices, id: \.self) { choice in
+            ForEach(PagePlan.choices(for: page), id: \.self) { choice in
                 Button {
                     session.setPeriod(choice, for: page)
                 } label: {
