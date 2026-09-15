@@ -145,16 +145,37 @@ struct ScanProfile: Decodable {
         case targets = "ecus"
     }
 
-    /// One probe list per CAN address, in the order the file gives them - which
-    /// is ascending address, so the sweep reads like Diagbox's own.
-    var byAddress: [(address: String, targets: [Target])] {
+    /// One CAN address and everything that might answer on it.
+    struct Probe: Equatable {
+        let address: String
+        let targets: [Target]
+    }
+
+    /// One probe per CAN address, in the order the file gives them - which is
+    /// ascending address, so the sweep reads like Diagbox's own.
+    var byAddress: [Probe] {
         var order: [String] = []
         var groups: [String: [Target]] = [:]
         for target in targets {
             if groups[target.request] == nil { order.append(target.request) }
             groups[target.request, default: []].append(target)
         }
-        return order.map { ($0, groups[$0] ?? []) }
+        return order.map { Probe(address: $0, targets: groups[$0] ?? []) }
+    }
+
+    /// The same list narrowed to the modules a car was found to have.
+    ///
+    /// The map covers every variant of the platform, so a car answers on a
+    /// fraction of it and the rest is paid for in adapter timeouts - about a
+    /// minute of them. Once a full sweep has said which addresses are fitted,
+    /// later sweeps walk only those, and only the candidate that answered
+    /// rather than all of an address's candidates.
+    func probes(fittedTo inventory: [String: String]) -> [Probe] {
+        byAddress.compactMap { probe in
+            guard let name = inventory[probe.address] else { return nil }
+            let narrowed = probe.targets.filter { $0.name == name }
+            return narrowed.isEmpty ? probe : Probe(address: probe.address, targets: narrowed)
+        }
     }
 
     enum LoadError: Error, LocalizedError {

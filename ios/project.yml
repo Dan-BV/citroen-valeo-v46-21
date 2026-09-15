@@ -88,6 +88,7 @@ targets:
       - path: Sources/ScanProfile.swift
       - path: Sources/DtcDictionary.swift
       - path: Sources/Faults.swift
+      - path: Sources/EcuInventoryStore.swift
       - path: Sources/Reading.swift
       - path: Sources/LinkTransport.swift
       - path: Sources/AdapterStore.swift

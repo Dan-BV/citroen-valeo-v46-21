@@ -70,6 +70,16 @@ Clearing one fault is the same service with the fault itself as the group of DTC
 the "everything" group. Not every ECU accepts that; one that does not answers `7F 14 31`,
 and the refusal is passed on as it came.
 
+The first sweep is the slow one. The map is the whole platform and a given car answers on a
+fraction of it, the rest being paid for one adapter timeout at a time - so what answered is
+written down, and every sweep after it walks that list instead: seconds rather than a minute,
+and only the candidate that answered rather than all of an address's. "Полный обход" walks
+the platform again and rewrites the map, which is what a car that has gained or lost a module
+needs; a short sweep never rewrites it, or one module that failed to answer once would erase
+itself for good. The sweep can also be shared as a page of text - every module, its
+identification bytes and its faults - which is the right grain for reading away from the car;
+the technical log has the individual exchanges.
+
 No Apple Developer account is involved:
 
 - `.github/workflows/ios.yml` builds an **unsigned** ipa on a macOS runner and publishes it,

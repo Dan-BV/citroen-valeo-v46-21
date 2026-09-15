@@ -69,6 +69,66 @@ final class FaultCatalogueTests: XCTestCase {
         }
     }
 
+    // MARK: - the car's own modules
+
+    /// The point of the map: a car answers on a fraction of the platform, and
+    /// the rest is a minute of adapter timeouts. Once a full sweep has said
+    /// which addresses are fitted, later sweeps walk only those.
+    func testAFittedListNarrowsTheWalkToTheCarsOwnModules() throws {
+        let scan = try loadScan()
+        let profile = try loadProfile()
+        let fitted = [profile.can.req: "V46_21", "744": "RBG_UDS"]
+
+        let probes = scan.probes(fittedTo: fitted)
+        XCTAssertEqual(probes.map { $0.address }, [profile.can.req, "744"])
+        XCTAssertLessThan(probes.count, scan.byAddress.count / 10)
+        // And only the candidate that answered, not all of an address's.
+        let airbag = try XCTUnwrap(probes.first { $0.address == "744" })
+        XCTAssertEqual(airbag.targets.map { $0.name }, ["RBG_UDS"])
+    }
+
+    /// The engine's address is ambiguous and the name stored for it is the
+    /// profile's, which is none of the candidates. Dropping the address would
+    /// lose the engine, so a name that matches nothing keeps every candidate.
+    func testAStoredNameThatMatchesNoCandidateKeepsTheAddress() throws {
+        let scan = try loadScan()
+        let profile = try loadProfile()
+
+        let probes = scan.probes(fittedTo: [profile.can.req: profile.ecu])
+        let engine = try XCTUnwrap(probes.first)
+        XCTAssertEqual(engine.address, profile.can.req)
+        XCTAssertFalse(engine.targets.isEmpty)
+    }
+
+    func testTheInventorySurvivesARestart() throws {
+        let suite = "EcuInventoryTests-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = EcuInventoryStore(defaults: defaults)
+        XCTAssertNil(store.load())
+
+        let found = EcuInventory(present: ["6A8": "V46_21", "744": "RBG_UDS"],
+                                 scannedAt: Date(timeIntervalSince1970: 1_700_000_000),
+                                 walked: 41)
+        store.save(found)
+        XCTAssertEqual(EcuInventoryStore(defaults: defaults).load(), found)
+
+        store.forget()
+        XCTAssertNil(store.load())
+    }
+
+    /// A sweep that found nothing says something about the ignition or the
+    /// adapter, not about the car. Storing it would leave every later sweep
+    /// walking an empty list and finding nothing for ever.
+    func testAnEmptyInventoryIsNotStored() throws {
+        let suite = "EcuInventoryTests-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = EcuInventoryStore(defaults: defaults)
+        store.save(EcuInventory(present: [:], scannedAt: Date(), walked: 41))
+        XCTAssertNil(store.load())
+    }
+
     // MARK: - the dictionary
 
     func testTheDictionaryNamesTheEnginesOwnCodes() throws {

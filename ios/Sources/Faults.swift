@@ -20,8 +20,13 @@ struct EcuNode: Identifiable, Equatable {
 /// read so the screen can say "nothing there" and "cannot get there" with
 /// different words.
 struct ScanSummary: Equatable {
-    /// Addresses that answered nothing. Normal: the platform's map covers every
-    /// variant of the car, and this one has a fraction of them fitted.
+    /// Whether the whole platform was walked, or only the modules a previous
+    /// sweep found fitted. A short sweep's silence means one known module did
+    /// not answer, not that the rest of the car is absent.
+    var full = true
+    /// Addresses that answered nothing. Normal on a full sweep: the platform's
+    /// map covers every variant of the car, and this one has a fraction of
+    /// them fitted.
     var silent: [ScanProfile.Target] = []
     /// Addresses this adapter cannot speak to at all.
     var unreachable: [ScanProfile.Target] = []

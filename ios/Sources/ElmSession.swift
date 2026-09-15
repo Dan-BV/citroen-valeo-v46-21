@@ -741,9 +741,13 @@ final class ElmSession: ObservableObject {
     var engineName: String { profile.ecu }
     var engineRequest: String { profile.can.req }
 
-    /// Walk every diagnostic address of the platform: point the adapter at it,
+    /// Walk the diagnostic addresses of the platform: point the adapter at each,
     /// open a session, ask the recognition frame, and read the fault memory of
     /// whatever answers.
+    ///
+    /// `fitted` narrows the walk to a car's own modules, as an earlier full
+    /// sweep found them - the difference between a minute and a few seconds,
+    /// since every address nothing sits on costs an adapter timeout.
     ///
     /// Several ECUs share one address and only one of them is fitted, so the
     /// candidates are tried in turn and the first that replies wins. Modules
@@ -752,13 +756,14 @@ final class ElmSession: ObservableObject {
     /// fills as it goes instead of holding a spinner for a minute. Everything
     /// runs under the poll loop's lock, so live values freeze for the duration.
     func scanFaults(_ scan: ScanProfile,
+                    fitted: [String: String]? = nil,
                     onProbe: (Int, Int, String) -> Void,
                     onModule: (EcuNode) -> Void) async throws -> ScanSummary {
         guard let adapter else { throw TransportError.notOpen }
         let reachable = await adapter.addressableHeaders
         return try await io.locked {
-            var summary = ScanSummary()
-            let addresses = scan.byAddress
+            var summary = ScanSummary(full: fitted == nil)
+            let addresses = fitted.map { scan.probes(fittedTo: $0) } ?? scan.byAddress
             for (i, entry) in addresses.enumerated() {
                 onProbe(i + 1, addresses.count, entry.address)
                 // A ThinkDiag speaks Launch's own framing and reaches only the

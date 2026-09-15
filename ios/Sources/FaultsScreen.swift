@@ -32,12 +32,19 @@ final class FaultTreeModel: ObservableObject {
     @Published var onlyFaulty = false
     @Published private var expanded: Set<String> = []
 
+    /// Which modules this car was found to have. Present from the first full
+    /// sweep onwards, and what every later sweep walks instead of the platform.
+    @Published private(set) var inventory: EcuInventory?
+
     private var scan: ScanProfile?
     /// Why the address map is missing, if it is. Without it there is nothing
     /// to walk, and that is worth saying plainly.
     private(set) var scanFailure: String?
+    private let inventoryStore: EcuInventoryStore
 
-    init() {
+    init(inventoryStore: EcuInventoryStore = EcuInventoryStore()) {
+        self.inventoryStore = inventoryStore
+        inventory = inventoryStore.load()
         do {
             scan = try ScanProfile.bundled()
         } catch {
@@ -61,6 +68,9 @@ final class FaultTreeModel: ObservableObject {
     var faultCount: Int { nodes.reduce(0) { $0 + $1.faults.count } }
     var faultyCount: Int { nodes.filter { !$0.faults.isEmpty }.count }
     var canClearEverything: Bool { nodes.contains { $0.clearable } }
+    /// How many addresses a full sweep has to walk, for the button that offers
+    /// one. Zero only if the address map did not load.
+    var platformAddresses: Int { scan?.byAddress.count ?? 0 }
 
     func expansion(_ id: String) -> Binding<Bool> {
         Binding(get: { [weak self] in self?.expanded.contains(id) ?? false },
@@ -71,12 +81,15 @@ final class FaultTreeModel: ObservableObject {
 
     // MARK: -
 
-    func sweep(_ session: ElmSession) async {
+    /// `full` walks the whole platform; otherwise the car's own modules, if a
+    /// full sweep has already said which those are.
+    func sweep(_ session: ElmSession, full: Bool = false) async {
         guard !busy else { return }
         guard let scan else {
             failure = scanFailure
             return
         }
+        let fitted = full ? nil : inventory?.present
         busy = true
         failure = nil
         nodes = []
@@ -86,6 +99,7 @@ final class FaultTreeModel: ObservableObject {
         do {
             summary = try await session.scanFaults(
                 scan,
+                fitted: fitted,
                 onProbe: { [weak self] i, total, address in
                     self?.progress = "Опрос \(i) из \(total) — адрес \(address)"
                 },
@@ -99,11 +113,78 @@ final class FaultTreeModel: ObservableObject {
                     self.nodes.append(node)
                 })
             swept = true
+            if fitted == nil { rememberInventory(walked: scan.byAddress.count) }
         } catch {
             failure = error.localizedDescription
         }
         progress = nil
         busy = false
+    }
+
+    /// Only a full sweep writes the map: a short one walks the map itself, so
+    /// letting it rewrite the map would let one module that failed to answer
+    /// erase itself for good.
+    private func rememberInventory(walked: Int) {
+        let present = Dictionary(nodes.map { ($0.target.request, $0.target.name) },
+                                 uniquingKeysWith: { first, _ in first })
+        guard !present.isEmpty else { return }
+        let found = EcuInventory(present: present, scannedAt: Date(), walked: walked)
+        inventoryStore.save(found)
+        inventory = found
+    }
+
+    /// Back to walking the whole platform next time - for a car that has
+    /// gained or lost a module, or a map taken with the ignition off.
+    func forgetInventory() {
+        inventoryStore.forget()
+        inventory = nil
+    }
+
+    /// The sweep as a page of text, for reading away from the car or sending
+    /// on. The technical log has every exchange of it, which is the wrong
+    /// grain for "what does this car have".
+    func report() -> String {
+        var lines: [String] = []
+        let stamp = DateFormatter()
+        stamp.dateFormat = "yyyy-MM-dd HH:mm"
+        lines.append("Опрос блоков, \(stamp.string(from: Date()))")
+        lines.append(summary.full
+            ? "Полный обход платформы"
+            : "Обход по сохранённой карте машины")
+        lines.append("")
+        for node in nodes {
+            let head = "\(catalogue.title(of: node.target)) [\(node.target.family)] "
+                + "\(node.target.request)/\(node.target.response) "
+                + catalogue.names(of: node.target).joined(separator: " / ")
+            lines.append(head)
+            if !node.identHex.isEmpty { lines.append("    ид.: \(node.identHex)") }
+            if let failure = node.failure {
+                lines.append("    чтение ошибок: \(failure)")
+            } else if !node.readable {
+                lines.append("    чтение ошибок не описано")
+            } else if node.faults.isEmpty {
+                lines.append("    ошибок нет")
+            } else {
+                for fault in node.faults {
+                    let detail = catalogue.detail(fault, of: node.target)
+                    var line = "    \(fault.display)  "
+                        + (detail.description ?? "нет описания в базе Diagbox")
+                    if let failureText = detail.failureText { line += " · \(failureText)" }
+                    line += " · " + (detail.statusText ?? "байт статуса \(fault.status)")
+                    lines.append(line)
+                }
+            }
+        }
+        if !summary.unreachableFamilies.isEmpty {
+            lines.append("")
+            lines.append("Адаптер не умеет обращаться к: "
+                         + summary.unreachableFamilies.joined(separator: ", "))
+        }
+        if !summary.silentFamilies.isEmpty {
+            lines.append("")
+            lines.append("Не ответили: " + summary.silentFamilies.joined(separator: ", "))
+        }
+        return lines.joined(separator: "\n")
     }
 
     func reread(_ node: EcuNode, session: ElmSession) async {
@@ -191,6 +272,7 @@ struct FaultsScreen: View {
     @ObservedObject private var model = FaultTreeModel.shared
 
     @State private var confirmingClearAll = false
+    @State private var confirmingForget = false
 
     var body: some View {
         List {
@@ -242,6 +324,14 @@ struct FaultsScreen: View {
             if !model.swept, !model.busy, session.isConnected {
                 await model.sweep(session)
             }
+        }
+        .confirmationDialog("Забыть карту машины?",
+                            isPresented: $confirmingForget, titleVisibility: .visible) {
+            Button("Забыть", role: .destructive) { model.forgetInventory() }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Следующий опрос снова пройдёт по всем адресам платформы и "
+                 + "займёт около минуты, зато найдёт блок, которого раньше не было.")
         }
         .confirmationDialog("Стереть ошибки во всех блоках?",
                             isPresented: $confirmingClearAll, titleVisibility: .visible) {
@@ -374,8 +464,18 @@ struct FaultsScreen: View {
                     .foregroundStyle(.orange)
             }
             if !model.summary.silentFamilies.isEmpty {
-                Text("Не ответили: "
+                Text((model.summary.full ? "Не ответили: " : "Из карты не ответили: ")
                      + model.summary.silentFamilies.joined(separator: ", "))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            ShareLink(item: model.report()) {
+                Label("Поделиться отчётом", systemImage: "square.and.arrow.up")
+            }
+            if let inventory = model.inventory {
+                Button("Забыть карту машины") { confirmingForget = true }
+                    .disabled(model.busy)
+                Text(mapNote(inventory))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -386,18 +486,40 @@ struct FaultsScreen: View {
         }
     }
 
+    private func mapNote(_ inventory: EcuInventory) -> String {
+        let stamp = DateFormatter()
+        stamp.dateFormat = "d MMMM, HH:mm"
+        stamp.locale = Locale(identifier: "ru_RU")
+        let blocks = plural(inventory.count, "блок", "блока", "блоков")
+        return "Карта машины: \(inventory.count) \(blocks) из \(inventory.walked) "
+            + "адресов, снята \(stamp.string(from: inventory.scannedAt))."
+    }
+
+    @ViewBuilder
     private var actionsSection: some View {
         Section {
-            Button(model.swept ? "Опросить заново" : "Опросить блоки") {
-                Task { await model.sweep(session) }
+            if let inventory = model.inventory {
+                Button("Опросить свои блоки (\(inventory.count))") {
+                    Task { await model.sweep(session) }
+                }
+                .disabled(model.busy || !session.isConnected)
+            }
+            Button(model.inventory == nil
+                   ? "Опросить блоки"
+                   : "Полный обход (\(model.platformAddresses) адресов)") {
+                Task { await model.sweep(session, full: true) }
             }
             .disabled(model.busy || !session.isConnected)
             Button("Стереть все ошибки", role: .destructive) { confirmingClearAll = true }
                 .disabled(model.busy || !model.canClearEverything || !session.isConnected)
         } footer: {
-            Text("Опрос идёт по 41 диагностическому адресу платформы и занимает "
-                 + "около минуты: за каждый адрес, на котором никого нет, "
-                 + "адаптер платит таймаутом.")
+            Text(model.inventory == nil
+                 ? "Опрос идёт по всем диагностическим адресам платформы и занимает "
+                   + "около минуты: за каждый адрес, на котором никого нет, адаптер "
+                   + "платит таймаутом. Что ответило, запомнится — дальше можно "
+                   + "опрашивать только свои блоки."
+                 : "Карта машины снята полным обходом; опрос по ней идёт секунды. "
+                   + "Полный нужен, если в машине что-то появилось или пропало.")
         }
     }
 
