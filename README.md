@@ -40,6 +40,36 @@ but not written - the tile says so with an orange mark. "Читать тольк
 title menu drops the list to exactly what the tiles need, which is the one lever that
 actually shortens a cycle: fewer pages.
 
+### Faults, on every module of the car
+"Ошибки" is not the engine's fault memory any more: it walks the 41 diagnostic CAN addresses
+of the platform and gives every module that answers a node of its own, with its fault list
+underneath. Three ways to clear, because three are useful - the whole car at once, one
+module, or a single fault opened from the list.
+
+The address map is `data/profile/scan_B7.json` (`tools/diagbox/make_scan.py`): per module,
+the CAN pair, the frame that opens a session, the frame that identifies it, and the frames
+that read and clear its faults - `17 FF 00` / `14 FF 00` on a KWP module, `19 02 09` /
+`14 FF FF FF` on a UDS one. Several ECUs share one address and only the identification bytes
+tell them apart, so such an address reports every candidate rather than picking one; the
+engine is the exception, since the loaded profile already names it.
+
+What the codes mean is `data/profile/dtc_B7.json` (`tools/diagbox/make_dtc.py`): 15 103
+codes over 74 ECUs, plus the per-code failure-type byte that turns `$8001` into
+"$8001-11, short to ground" and the module names Diagbox itself shows. It is 0.7 MB - more
+than the rest of the app - so it is read off the main thread on the first sweep, and nothing
+depends on it: a code it cannot name is still read, shown and cleared.
+
+Two things the screen will tell you rather than hide. A UDS status byte is the ISO 14229 bit
+field and PSA asks for mask `09`, so a fault is marked present, stored, or awaiting
+confirmation; a KWP status byte has no published meaning and is shown raw instead of being
+given one. And a ThinkDiag reaches only the modules whose handles its capture proved - no CAN
+identifier crosses that wire - so with one connected the sweep says which addresses the
+adapter cannot speak to rather than reporting the whole car as silent.
+
+Clearing one fault is the same service with the fault itself as the group of DTC instead of
+the "everything" group. Not every ECU accepts that; one that does not answers `7F 14 31`,
+and the refusal is passed on as it came.
+
 No Apple Developer account is involved:
 
 - `.github/workflows/ios.yml` builds an **unsigned** ipa on a macOS runner and publishes it,
@@ -114,6 +144,9 @@ longer have to be guessed. Every frame below is what the official tool sends.
   identification, fault handling, freeze frames, 16 actuator tests, 14 learned-value
   resets, security access and the full telecoding read/write layout.
 - `out/diagbox_v46_21_dtc.md` — all 291 fault codes for this ECU.
+- `data/profile/dtc_B7.json` — the same, for all 74 ECUs of the platform: 15 103 codes
+  with their descriptions, the per-code failure-type bytes and the module names, as the
+  iOS fault screen reads them (`tools/diagbox/make_dtc.py`).
 - `out/diagbox_b7_ecu_map.md` — every module on the B7 platform with its CAN ids
   and its init/recognition frames, i.e. a complete scan list.
 - `out/diagbox_extraction_method.md` — how the databases and the `.DU8` string

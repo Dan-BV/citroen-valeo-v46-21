@@ -736,49 +736,188 @@ final class ElmSession: ObservableObject {
 
     // MARK: - on demand
 
-    /// `17 FF 00` -> `57 <count> [ code(2) status(1) ] x count`.
-    func readDtc() async throws -> [Dtc] {
+    /// The engine's own identity, for the screens that now show it beside the
+    /// other modules of the car rather than on its own.
+    var engineName: String { profile.ecu }
+    var engineRequest: String { profile.can.req }
+
+    /// Walk every diagnostic address of the platform: point the adapter at it,
+    /// open a session, ask the recognition frame, and read the fault memory of
+    /// whatever answers.
+    ///
+    /// Several ECUs share one address and only one of them is fitted, so the
+    /// candidates are tried in turn and the first that replies wins. Modules
+    /// are handed back one at a time rather than all at the end: the walk pays
+    /// an adapter timeout for every address nothing sits on, so the screen
+    /// fills as it goes instead of holding a spinner for a minute. Everything
+    /// runs under the poll loop's lock, so live values freeze for the duration.
+    func scanFaults(_ scan: ScanProfile,
+                    onProbe: (Int, Int, String) -> Void,
+                    onModule: (EcuNode) -> Void) async throws -> ScanSummary {
+        guard let adapter else { throw TransportError.notOpen }
+        let reachable = await adapter.addressableHeaders
+        return try await io.locked {
+            var summary = ScanSummary()
+            let addresses = scan.byAddress
+            for (i, entry) in addresses.enumerated() {
+                onProbe(i + 1, addresses.count, entry.address)
+                // A ThinkDiag speaks Launch's own framing and reaches only the
+                // modules its capture proved; saying so beats reporting the
+                // whole car as silent.
+                guard reachable.isEmpty || reachable.contains(entry.address) else {
+                    if let first = entry.targets.first { summary.unreachable.append(first) }
+                    continue
+                }
+                guard let hit = await self.probe(entry.targets, adapter) else {
+                    if let first = entry.targets.first { summary.silent.append(first) }
+                    continue
+                }
+                var node = EcuNode(target: hit.target, identHex: hit.ident,
+                                   faults: [], failure: nil)
+                if let layout = hit.target.faults {
+                    do {
+                        node.faults = try await self.readFaults(layout, adapter)
+                    } catch {
+                        node.failure = error.localizedDescription
+                    }
+                }
+                onModule(node)
+            }
+            await self.backToEngine(adapter)
+            return summary
+        }
+    }
+
+    /// Read the fault memory of one module on its own. The session opened
+    /// during the sweep has long timed out, so this opens it again.
+    func faults(of target: ScanProfile.Target) async throws -> [Dtc] {
+        guard let layout = target.faults else { return [] }
+        return try await withModule(target) { try await self.readFaults(layout, $0) }
+    }
+
+    /// Clear the whole fault memory of one module.
+    func clearFaults(of target: ScanProfile.Target) async throws {
+        guard let frame = target.clear else {
+            throw SessionError.refused("стирание для этого блока не описано")
+        }
+        try await withModule(target) { try await self.clear(frame, $0) }
+    }
+
+    /// Clear one fault and leave the rest. It is the same service with the
+    /// fault itself as the group of DTC instead of the "everything" group:
+    /// `14 <code>` on a KWP module, `14 <code> <failure type>` on a UDS one,
+    /// whose groups are three bytes wide.
+    ///
+    /// Not every ECU accepts a single fault there; one that does not answers
+    /// `7F 14 31` and the refusal is passed on as it came.
+    func clear(_ dtc: Dtc, of target: ScanProfile.Target) async throws {
+        guard target.clear != nil else {
+            throw SessionError.refused("стирание для этого блока не описано")
+        }
+        var frame = "14" + dtc.code
+        if target.clearGroupBytes >= 3 {
+            frame += dtc.failureType.isEmpty ? "00" : dtc.failureType
+        }
+        try await withModule(target) { try await self.clear(frame, $0) }
+    }
+
+    // MARK: -
+
+    /// Try the candidates of one address in turn, stopping at the first that
+    /// answers both the session frame and the recognition frame.
+    private func probe(_ candidates: [ScanProfile.Target],
+                       _ adapter: any Adapter) async
+        -> (target: ScanProfile.Target, ident: String)? {
+        guard let first = candidates.first else { return nil }
+        await point(adapter, at: first)
+        for target in candidates {
+            if !target.openSession.isEmpty, !target.openAnswer.isEmpty {
+                let answer = Frames.clean(await at(adapter, target.openSession, 1.2))
+                guard answer.hasPrefix(String(target.openAnswer.prefix(2))) else { continue }
+            }
+            let reply = Frames.clean(await at(adapter, target.reco, 1.5))
+            guard reply.hasPrefix(target.recoAnswer) else { continue }
+            return (target, String(reply.dropFirst(target.recoAnswer.count)))
+        }
+        return nil
+    }
+
+    /// Point the adapter at one module: the header pair, and the flow-control
+    /// header that goes with it. Without the second one a multi-frame answer
+    /// from anything but the engine is never assembled - the adapter would
+    /// send its flow control to the engine's address.
+    private func point(_ adapter: any Adapter, at target: ScanProfile.Target) async {
+        await adapter.applyHeader(target.request, receive: target.response)
+        await at(adapter, "ATFCSH" + target.request, 0.6)
+    }
+
+    /// Put the adapter back where the poll loop expects it - and re-open the
+    /// engine's diagnostic session while doing so. A sweep spends a minute
+    /// talking to other modules, by the end of which the engine has dropped
+    /// the session `81` opened, and without it the proprietary pages answer
+    /// nothing at all. The loop does have a `reopen` path, but it costs
+    /// several mute cycles before it fires; this costs one command.
+    private func backToEngine(_ adapter: any Adapter) async {
+        await adapter.applyHeader(profile.can.req, receive: profile.can.res)
+        await at(adapter, "ATFCSH" + profile.can.req, 0.6)
+        await at(adapter, "81", 2.5, note: "после опроса блоков")
+    }
+
+    /// One module at a time, with the adapter handed back to the poll loop
+    /// however it ends.
+    private func withModule<T>(_ target: ScanProfile.Target,
+                               _ body: (any Adapter) async throws -> T) async throws -> T {
         guard let adapter else { throw TransportError.notOpen }
         return try await io.locked {
-            await adapter.applyHeader(self.profile.can.req, receive: self.profile.can.res)
-            let reply = await at(adapter, "17FF00", 3.0)
-            return try Self.parseDtc(reply, dictionary: self.profile.dtc)
-        }
-    }
-
-    /// Split out of `readDtc` so the parsing can be tested without an adapter.
-    static func parseDtc(_ reply: String, dictionary: [String: String]) throws -> [Dtc] {
-        if Frames.isError(reply) {
-            throw SessionError.noAnswer("17FF00")
-        }
-        let clean = Frames.clean(reply)
-        guard clean.hasPrefix("57") else {
-            throw SessionError.unexpected(String(clean.prefix(24)))
-        }
-        let digits = Array(clean)
-        guard digits.count >= 4, let count = Int(String(digits[2..<4]), radix: 16) else {
-            return []
-        }
-        var out: [Dtc] = []
-        for i in 0..<count {
-            let at = 4 + i * 6
-            guard at + 6 <= digits.count else { break }
-            let code = String(digits[at..<(at + 4)])
-            let status = String(digits[(at + 4)..<(at + 6)])
-            out.append(Dtc(code: code, status: status, label: dictionary[code]))
-        }
-        return out
-    }
-
-    func clearDtc() async throws {
-        guard let adapter else { throw TransportError.notOpen }
-        try await io.locked {
-            await adapter.applyHeader(self.profile.can.req, receive: self.profile.can.res)
-            let clean = Frames.clean(await at(adapter, "14FF00", 3.0))
-            guard clean.hasPrefix("54") else {
-                throw SessionError.notCleared(clean.isEmpty ? "нет ответа" : String(clean.prefix(24)))
+            do {
+                await self.point(adapter, at: target)
+                if !target.openSession.isEmpty {
+                    await self.at(adapter, target.openSession, 1.2)
+                }
+                let value = try await body(adapter)
+                await self.backToEngine(adapter)
+                return value
+            } catch {
+                await self.backToEngine(adapter)
+                throw error
             }
         }
+    }
+
+    /// Read the fault memory of the module the adapter is already pointed at.
+    ///
+    /// The poll loop runs the adapter on a 100 ms timeout, which is right for
+    /// a page and far too short for a fault list that can run to several
+    /// frames, so the timeout goes back to the ELM default for this exchange
+    /// and returns to the loop's afterwards.
+    private func readFaults(_ layout: ScanProfile.FaultFrames,
+                            _ adapter: any Adapter) async throws -> [Dtc] {
+        await at(adapter, "ATSTFF", 0.6)
+        let reply = await at(adapter, layout.request, 3.0)
+        await at(adapter, "ATST" + Self.pollST, 0.6)
+        return try Self.parseFaults(reply, layout)
+    }
+
+    private func clear(_ frame: String, _ adapter: any Adapter) async throws {
+        await at(adapter, "ATSTFF", 0.6)
+        let clean = Frames.clean(await at(adapter, frame, 4.0))
+        await at(adapter, "ATST" + Self.pollST, 0.6)
+        guard clean.hasPrefix("54") else {
+            if let why = Frames.negativeResponse(clean) { throw SessionError.refused(why) }
+            throw SessionError.notCleared(clean.isEmpty ? "нет ответа" : String(clean.prefix(24)))
+        }
+    }
+
+    /// Split out of the reads so the parsing can be tested without an adapter.
+    static func parseFaults(_ reply: String,
+                            _ layout: ScanProfile.FaultFrames) throws -> [Dtc] {
+        if Frames.isError(reply) { throw SessionError.noAnswer(layout.request) }
+        let clean = Frames.clean(reply)
+        guard clean.hasPrefix(layout.answer) else {
+            if let why = Frames.negativeResponse(clean) { throw SessionError.refused(why) }
+            throw SessionError.unexpected(clean.isEmpty ? "нет ответа" : String(clean.prefix(24)))
+        }
+        return Frames.dtcRecords(clean, layout)
     }
 
     func readIdent() async throws -> [IdentBlock] {
@@ -828,6 +967,11 @@ enum SessionError: LocalizedError, Equatable {
     case noAnswer(String)
     case unexpected(String)
     case notCleared(String)
+    /// The ECU answered, and the answer was "no". Carries its own sentence,
+    /// because a negative response code says why and the why is the whole
+    /// difference between a module that cannot do it and one that will not
+    /// right now.
+    case refused(String)
 
     var errorDescription: String? {
         switch self {
@@ -837,6 +981,8 @@ enum SessionError: LocalizedError, Equatable {
             return "Неожиданный ответ: \(what)"
         case let .notCleared(what):
             return "ЭБУ не подтвердил стирание: \(what)"
+        case let .refused(why):
+            return why
         }
     }
 }

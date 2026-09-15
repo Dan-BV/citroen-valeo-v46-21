@@ -329,41 +329,96 @@ final class SessionTests: XCTestCase {
 
     // MARK: - fault codes
 
-    func testFaultCodesAreParsedWithTheirDescriptions() throws {
-        let profile = try loadProfile()
-        let code = try XCTUnwrap(profile.dtc.keys.sorted().first)
-        let reply = "57 01 " + code + " 08\r>"
+    /// The engine's KWP layout: `57 <count>` then three-byte records.
+    private var kwp: ScanProfile.FaultFrames {
+        ScanProfile.FaultFrames(request: "17FF00", answer: "57", header: 2,
+                                record: 3, codeAt: 0, codeLength: 2, statusAt: 2)
+    }
 
-        let faults = try ElmSession.parseDtc(reply, dictionary: profile.dtc)
+    /// A UDS layout: `59 02 <mask>` then four-byte records, the third byte
+    /// being the failure type.
+    private var uds: ScanProfile.FaultFrames {
+        ScanProfile.FaultFrames(request: "190209", answer: "5902", header: 3,
+                                record: 4, codeAt: 0, codeLength: 2, statusAt: 3)
+    }
+
+    func testAKwpFaultRecordIsParsed() throws {
+        let faults = try ElmSession.parseFaults("57 01 0071 08\r>", kwp)
         XCTAssertEqual(faults.count, 1)
-        XCTAssertEqual(faults[0].code, code)
+        XCTAssertEqual(faults[0].code, "0071")
         XCTAssertEqual(faults[0].status, "08")
-        XCTAssertEqual(faults[0].label, profile.dtc[code])
+        XCTAssertEqual(faults[0].failureType, "")
+        XCTAssertEqual(faults[0].display, "$0071")
+    }
+
+    /// A UDS record carries the failure type between the code and the status,
+    /// and it belongs to the code: clearing that one fault has to name it.
+    func testAUdsFaultRecordKeepsItsFailureType() throws {
+        let faults = try ElmSession.parseFaults("5902FF 0560 11 09\r>", uds)
+        XCTAssertEqual(faults.count, 1)
+        XCTAssertEqual(faults[0].code, "0560")
+        XCTAssertEqual(faults[0].failureType, "11")
+        XCTAssertEqual(faults[0].status, "09")
+        XCTAssertEqual(faults[0].display, "$0560-11")
     }
 
     func testAnEmptyFaultMemoryReadsAsNoFaults() throws {
-        XCTAssertEqual(try ElmSession.parseDtc("5700\r>", dictionary: [:]).count, 0)
+        XCTAssertEqual(try ElmSession.parseFaults("5700\r>", kwp).count, 0)
+        XCTAssertEqual(try ElmSession.parseFaults("5902FF\r>", uds).count, 0)
     }
 
     /// A count larger than the frame must not be trusted: a truncated reply
     /// would otherwise read past its end.
     func testATruncatedFaultListStopsAtTheEndOfTheFrame() throws {
-        let faults = try ElmSession.parseDtc("5703007108\r>", dictionary: [:])
+        let faults = try ElmSession.parseFaults("5703007108\r>", kwp)
         XCTAssertEqual(faults.count, 1)
         XCTAssertEqual(faults[0].code, "0071")
     }
 
+    /// CAN pads the last frame of an answer with zeroes, and a UDS reply has no
+    /// count to stop at. Reading the padding as a fault would invent a `$0000`
+    /// on any module whose list does not fill the frame.
+    func testZeroPaddingIsNotReadAsAFault() throws {
+        let faults = try ElmSession.parseFaults("5902FF" + "8001CC09" + "00000000\r>", uds)
+        XCTAssertEqual(faults.count, 1)
+        XCTAssertEqual(faults[0].code, "8001")
+    }
+
     func testAnErrorReplyToTheFaultRequestThrows() {
-        XCTAssertThrowsError(try ElmSession.parseDtc("NO DATA\r>", dictionary: [:])) { error in
+        XCTAssertThrowsError(try ElmSession.parseFaults("NO DATA\r>", kwp)) { error in
             XCTAssertEqual(error as? SessionError, .noAnswer("17FF00"))
         }
     }
 
+    /// A refusal says why, and the why is the difference between "this module
+    /// cannot do it" and "try again with the ignition on".
+    func testANegativeResponseIsReadAsARefusal() {
+        XCTAssertThrowsError(try ElmSession.parseFaults("7F1922\r>", uds)) { error in
+            guard case let .refused(why) = error as? SessionError else {
+                return XCTFail("expected a refusal, got \(error)")
+            }
+            XCTAssertTrue(why.contains("22"), why)
+            XCTAssertTrue(why.contains("зажигание"), why)
+        }
+    }
+
     func testAWrongServiceIdInTheFaultReplyThrows() {
-        XCTAssertThrowsError(try ElmSession.parseDtc("7F1712\r>", dictionary: [:])) { error in
+        XCTAssertThrowsError(try ElmSession.parseFaults("6100\r>", kwp)) { error in
             guard case .unexpected = error as? SessionError else {
                 return XCTFail("expected an unexpected-answer error, got \(error)")
             }
         }
+    }
+
+    /// PSA asks for status mask `09`, so bit 0 says the fault is failing now
+    /// and bit 3 that it has been confirmed. A KWP status byte has no published
+    /// meaning and must not be given one.
+    func testTheUdsStatusByteIsReadByItsStandardBits() {
+        XCTAssertEqual(Frames.dtcIsPresent("09", uds), true)
+        XCTAssertEqual(Frames.dtcIsPresent("08", uds), false)
+        XCTAssertNotNil(Frames.dtcStatusText("09", uds))
+        XCTAssertNotEqual(Frames.dtcStatusText("09", uds), Frames.dtcStatusText("08", uds))
+        XCTAssertNil(Frames.dtcStatusText("2F", kwp))
+        XCTAssertFalse(Frames.dtcIsPresent("2F", kwp))
     }
 }

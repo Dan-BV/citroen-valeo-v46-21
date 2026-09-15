@@ -46,6 +46,15 @@ protocol Adapter: Actor {
     /// Set once the link itself has failed.
     var linkFailure: TransportError? { get }
 
+    /// Which CAN request headers this adapter can address at all.
+    ///
+    /// Empty means "any", which is what an ELM327 is: it sends whatever header
+    /// `ATSH` was given. A ThinkDiag cannot - no CAN identifier crosses its
+    /// wire, so it only reaches the modules whose handles are in its table -
+    /// and the whole-car fault sweep needs to say so rather than report every
+    /// module on the car as silent.
+    var addressableHeaders: Set<String> { get }
+
     /// How bringing the link up went, in lines meant for a person to read.
     ///
     /// Nothing for an ELM327 clone: its opening is fourteen AT commands that
@@ -60,4 +69,7 @@ protocol Adapter: Actor {
 extension Adapter {
     /// Nothing to say unless a conformer has something to say.
     var openingReport: [String] { [] }
+
+    /// No restriction unless a conformer has one.
+    var addressableHeaders: Set<String> { [] }
 }

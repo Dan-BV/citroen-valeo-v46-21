@@ -15,13 +15,28 @@ struct Point: Equatable {
     let value: Double
 }
 
-/// A fault code as the ECU reports it, with the description from the profile.
+/// A fault code exactly as the ECU reports it: the two-byte PSA identifier,
+/// the failure-type byte a UDS module puts after it (empty on a KWP one), and
+/// the status byte. What it *means* is the dictionary's business, not the
+/// session's - see `DtcDictionary`.
 struct Dtc: Equatable, Identifiable {
     let code: String
+    let failureType: String
     let status: String
-    let label: String?
 
-    var id: String { code + status }
+    init(code: String, failureType: String = "", status: String) {
+        self.code = code
+        self.failureType = failureType
+        self.status = status
+    }
+
+    var id: String { code + failureType + status }
+
+    /// How the code is written on screen: `$8001-11` for a UDS fault, `$0011`
+    /// for a KWP one.
+    var display: String {
+        "$" + code + (failureType.isEmpty ? "" : "-" + failureType)
+    }
 }
 
 struct IdentBlock: Identifiable {

@@ -33,6 +33,15 @@ targets:
       - path: ../data/profile/v46_21_profile.json
         type: file
         buildPhase: resources
+      # The diagnostic address map of the platform and the fault-code
+      # dictionary that names what its modules answer with, both from
+      # tools/diagbox. Same rule as the profile: referenced in place.
+      - path: ../data/profile/scan_B7.json
+        type: file
+        buildPhase: resources
+      - path: ../data/profile/dtc_B7.json
+        type: file
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.fap.modern
@@ -73,6 +82,12 @@ targets:
       - path: Tests
       - path: Sources/Frames.swift
       - path: Sources/Profile.swift
+      # The whole-car fault sweep: the address map, the code dictionary and the
+      # value types that join them. Pure value types, so what a fault record
+      # means is provable without a car.
+      - path: Sources/ScanProfile.swift
+      - path: Sources/DtcDictionary.swift
+      - path: Sources/Faults.swift
       - path: Sources/Reading.swift
       - path: Sources/LinkTransport.swift
       - path: Sources/AdapterStore.swift
@@ -112,6 +127,12 @@ targets:
         type: file
         buildPhase: resources
       - path: ../data/profile/v46_21_profile.json
+        type: file
+        buildPhase: resources
+      - path: ../data/profile/scan_B7.json
+        type: file
+        buildPhase: resources
+      - path: ../data/profile/dtc_B7.json
         type: file
         buildPhase: resources
     settings:

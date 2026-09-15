@@ -94,6 +94,11 @@ actor ThinkDiagAdapter: Adapter {
 
     /// Free, unlike the ELM path's two writes: pointing this adapter at a
     /// module is choosing which handle the next request names.
+    /// Only what `links` knows: a handle is not a CAN identifier and cannot be
+    /// derived from one, so an address missing from that table is a module
+    /// this adapter cannot reach at all.
+    var addressableHeaders: Set<String> { Set(Self.links.keys) }
+
     func applyHeader(_ header: String, receive: String) async {
         let wanted = header.uppercased()
         guard self.header != wanted else { return }
