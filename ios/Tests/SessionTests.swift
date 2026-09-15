@@ -75,6 +75,13 @@ final class SessionTests: XCTestCase {
         try Profile.bundled(in: bundle)
     }
 
+    /// The engine as the address map describes it - which is how every read on
+    /// demand names a module now, the engine included.
+    private func engineTarget(_ profile: Profile) throws -> ScanProfile.Target {
+        let scan = try ScanProfile.bundled(in: bundle)
+        return try XCTUnwrap(scan.targets.first { $0.request == profile.can.req })
+    }
+
     /// One real recorded frame per page, taken from the parity fixture so the
     /// session test and the decoder test cannot disagree about what a frame
     /// means.
@@ -260,11 +267,28 @@ final class SessionTests: XCTestCase {
         session.connect(.ble(id: UUID(), name: "scripted"))
         try await settle({ !session.values.isEmpty }, 10, "the loop to be running")
 
-        let faults = try await session.readDtc()
+        let faults = try await session.faults(of: try engineTarget(profile))
         XCTAssertEqual(faults.map(\.code), ["0071", "1234"])
         XCTAssertEqual(faults.map(\.status), ["08", "20"])
-        XCTAssertEqual(faults[0].label, profile.dtc["0071"],
-                       "the description comes from the profile's own 291 codes")
+        session.disconnect()
+    }
+
+    /// The engine's own session has to be back when a module read is over: a
+    /// minute spent on other addresses outlives it, and without `81` every
+    /// proprietary page then answers nothing.
+    func testAModuleReadHandsTheAdapterBackToTheEngine() async throws {
+        let profile = try loadProfile()
+        let transport = try scripted(profile)
+        transport.script["17FF00"] = "5700"
+        let session = makeSession(profile, transport)
+
+        session.connect(.ble(id: UUID(), name: "scripted"))
+        try await settle({ !session.values.isEmpty }, 10, "the loop to be running")
+
+        _ = try await session.faults(of: try engineTarget(profile))
+        let after = transport.sent.drop { $0 != "17FF00" }
+        XCTAssertTrue(after.contains("ATFCSH" + profile.can.req), "\(Array(after))")
+        XCTAssertTrue(after.contains("81"), "\(Array(after))")
         session.disconnect()
     }
 
@@ -278,10 +302,13 @@ final class SessionTests: XCTestCase {
         try await settle({ !session.values.isEmpty }, 10, "the loop to be running")
 
         do {
-            try await session.clearDtc()
+            try await session.clearFaults(of: try engineTarget(profile))
             XCTFail("a negative response must not read as success")
         } catch {
-            XCTAssertTrue(error.localizedDescription.contains("не подтвердил"))
+            // Not merely "it did not work": the code says the ECU was busy,
+            // which is a retry rather than a module that cannot do it.
+            XCTAssertTrue(error.localizedDescription.contains("78"),
+                          error.localizedDescription)
         }
         session.disconnect()
     }
@@ -294,7 +321,26 @@ final class SessionTests: XCTestCase {
 
         session.connect(.ble(id: UUID(), name: "scripted"))
         try await settle({ !session.values.isEmpty }, 10, "the loop to be running")
-        try await session.clearDtc()
+        try await session.clearFaults(of: try engineTarget(profile))
+        session.disconnect()
+    }
+
+    /// Clearing one fault puts the fault itself where the "everything" group
+    /// goes. The engine is a KWP module, so that group is two bytes wide and
+    /// the failure type has no place in it.
+    func testClearingOneFaultNamesItAsTheGroup() async throws {
+        let profile = try loadProfile()
+        let transport = try scripted(profile)
+        transport.script["140071"] = "54"
+        let session = makeSession(profile, transport)
+
+        session.connect(.ble(id: UUID(), name: "scripted"))
+        try await settle({ !session.values.isEmpty }, 10, "the loop to be running")
+
+        try await session.clear(Dtc(code: "0071", status: "08"),
+                                of: try engineTarget(profile))
+        XCTAssertTrue(transport.sent.contains("140071"), "\(transport.sent)")
+        XCTAssertFalse(transport.sent.contains("14FF00"))
         session.disconnect()
     }
 
