@@ -34,7 +34,16 @@ python extract_vehicle.py --platform B7 --work ./work --fbdir ./fb25 \
     --trans C:/AWRoot/dtrd/trans --out ../../data/diagbox/vehicle_B7.json
 python make_docs.py --ecu-json ../../data/diagbox/V46_21_B7.json \
     --vehicle-json ../../data/diagbox/vehicle_B7.json --out ../../out
+python make_scan.py --vehicle-json ../../data/diagbox/vehicle_B7.json \
+    --out ../../data/diagbox/scan_B7.js --json-out ../../data/profile/scan_B7.json
+python make_dtc.py --platform B7 --work ./work --fbdir ./fb25 \
+    --trans C:/AWRoot/dtrd/trans --scan-json ../../data/diagbox/vehicle_B7.json \
+    --out ../../data/profile/dtc_B7.json
 ```
+
+The last two are what the app's fault screen stands on: `make_scan.py` says how to reach
+every module of the platform, `make_dtc.py` says what the codes they answer with mean. The
+second needs the databases, the first only the already-extracted vehicle JSON.
 
 `extract_ecu.py` writes one file per vehicle platform the ECU is fitted to.
 Any ECU name from `GPC.ECUTYPE.ECUNAME` works — `BSI2010`, `ESP90`,
@@ -59,5 +68,7 @@ values for one answer.
 - `prepare.py` - fetch Firebird, copy the databases
 - `extract_ecu.py` - full model of one ECU
 - `extract_vehicle.py` - ECU inventory of one platform, for scanning
+- `make_scan.py` - the platform's diagnostic address map, for the fault sweep
+- `make_dtc.py` - the fault-code dictionary of every ECU on the platform
 - `make_docs.py` - Markdown references
 - `decode.py` - decode live or recorded answers

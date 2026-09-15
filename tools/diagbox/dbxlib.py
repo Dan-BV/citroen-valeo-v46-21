@@ -7,6 +7,36 @@ installed data files (from copies) and turns them into JSON.
 import os
 import struct
 
+# ------------------------------------------------------------- vocabulary
+
+# Diagbox's Russian translation calls the ECU a "computer" and electronic
+# loading an "electronic download", neither of which is what the car's own
+# documentation - or its owner - says. The substitutions are applied to every
+# label that reaches a screen, so the parameter list, the fault descriptions
+# and the module names all speak with one voice.
+RU_SUBS = [
+    ('Режим работы двигателя', 'Обороты двигателя'),
+    ('Заданная частота холостого хода двигателя', 'Заданные обороты холостого хода'),
+    ('Давление в системе охлаждения', 'Давление хладагента кондиционера'),
+    ('компьютера управления двигателем', 'ЭБУ'),
+    ('Электронная загрузка', 'Обучение'),
+    ('электронной загрузки', 'обучения'),
+    ('электронной загрузке', 'обучения'),
+    ('электронную загрузку', 'обучение'),
+    ('электронная загрузка', 'обучение'),
+    ('Компьютер', 'ЭБУ'),
+    ('компьютером', 'ЭБУ'),
+    ('компьютера', 'ЭБУ'),
+    ('компьютер', 'ЭБУ'),
+]
+
+
+def fix_ru(text):
+    for a, b in RU_SUBS:
+        text = text.replace(a, b)
+    return text
+
+
 # ---------------------------------------------------------------- dictionary
 
 

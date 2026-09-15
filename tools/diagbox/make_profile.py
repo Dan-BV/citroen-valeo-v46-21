@@ -13,6 +13,10 @@ response to the app's 0-based offset from the start of the marker.
 import argparse
 import json
 import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from dbxlib import fix_ru  # noqa: E402
 
 LANG = ('ru_RU', 'en_GB')
 
@@ -73,21 +77,6 @@ IDENT = [
 # работы двигателя" (mode, not speed) and "apprentissage" became "электронная
 # загрузка" (download, not learning). Fix those, and shorten "компьютер" to the
 # usual "ЭБУ". Longest patterns first so they win.
-RU_SUBS = [
-    ('Режим работы двигателя', 'Обороты двигателя'),
-    ('Заданная частота холостого хода двигателя', 'Заданные обороты холостого хода'),
-    ('Давление в системе охлаждения', 'Давление хладагента кондиционера'),
-    ('компьютера управления двигателем', 'ЭБУ'),
-    ('Электронная загрузка', 'Обучение'),
-    ('электронной загрузки', 'обучения'),
-    ('электронной загрузке', 'обучения'),
-    ('электронную загрузку', 'обучение'),
-    ('электронная загрузка', 'обучение'),
-    ('Компьютер', 'ЭБУ'),
-    ('компьютером', 'ЭБУ'),
-    ('компьютера', 'ЭБУ'),
-    ('компьютер', 'ЭБУ'),
-]
 
 # Fields the dictionary leaves untranslated or unlabelled altogether.
 RU_NAMES = {
@@ -135,12 +124,6 @@ def extra_fields(page_id):
             'dec': 0, 'lo': -100.0, 'hi': 155.0,
         })
     return out
-
-
-def fix_ru(text):
-    for a, b in RU_SUBS:
-        text = text.replace(a, b)
-    return text
 
 
 def cap(text):
