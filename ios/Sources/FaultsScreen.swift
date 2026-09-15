@@ -113,7 +113,11 @@ final class FaultTreeModel: ObservableObject {
                     self.nodes.append(node)
                 })
             swept = true
-            if fitted == nil { rememberInventory(walked: scan.byAddress.count) }
+            // Only a sweep that could actually reach the whole platform may
+            // write the map. A ThinkDiag reaches one module, so a map written
+            // from its sweep would say this car has one module - and every
+            // later sweep, on any adapter, would believe it.
+            if summary.mapsTheCar { rememberInventory(walked: scan.byAddress.count) }
         } catch {
             failure = error.localizedDescription
         }
@@ -458,8 +462,7 @@ struct FaultsScreen: View {
             Text(summaryText)
                 .font(.callout)
             if !model.summary.unreachableFamilies.isEmpty {
-                Text("Адаптер не умеет обращаться к: "
-                     + model.summary.unreachableFamilies.joined(separator: ", "))
+                Text(adapterLimitNote)
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
@@ -484,6 +487,26 @@ struct FaultsScreen: View {
                 Text("Словарь описаний не загрузился — коды показаны без расшифровки.")
             }
         }
+    }
+
+    /// A ThinkDiag reaches one module, so this is 40 families out of 41 - a
+    /// wall of names that says nothing. The number and the way out say more.
+    private var adapterLimitNote: String {
+        let blocked = model.summary.unreachable.count
+        let names = model.summary.unreachableFamilies
+        let reachable = model.nodes.map { model.catalogue.title(of: $0.target) }
+        var text = "Этот адаптер обращается только к "
+            + (reachable.isEmpty ? "части блоков" : reachable.joined(separator: ", "))
+            + ": остальные \(blocked) "
+            + plural(blocked, "адрес", "адреса", "адресов")
+            + " платформы ему недоступны, поэтому карта машины не сохранена."
+        if blocked <= 6 {
+            text += " Недоступны: " + names.joined(separator: ", ") + "."
+        }
+        text += " Чтобы опросить всю машину, нужен ELM327-совместимый адаптер"
+            + " — у ThinkDiag нет способа назвать блок, которого нет в его"
+            + " собственной таблице."
+        return text
     }
 
     private func mapNote(_ inventory: EcuInventory) -> String {

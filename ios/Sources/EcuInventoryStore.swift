@@ -25,7 +25,11 @@ struct EcuInventory: Codable, Equatable {
 final class EcuInventoryStore {
 
     private let defaults: UserDefaults
-    private let storeKey = "ecuInventory"
+    /// Versioned, because the first build wrote a map from any sweep at all -
+    /// including one where the adapter could reach a single module - and a car
+    /// whose map says "one block" would never ask for the others again. A map
+    /// written by that build is not worth keeping.
+    private let storeKey = "ecuInventory.v2"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults

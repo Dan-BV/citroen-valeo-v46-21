@@ -76,7 +76,9 @@ written down, and every sweep after it walks that list instead: seconds rather t
 and only the candidate that answered rather than all of an address's. "Полный обход" walks
 the platform again and rewrites the map, which is what a car that has gained or lost a module
 needs; a short sweep never rewrites it, or one module that failed to answer once would erase
-itself for good. The sweep can also be shared as a page of text - every module, its
+itself for good. Neither does a sweep the adapter could not carry out: with a ThinkDiag
+connected only the engine is reachable, and a map made from that would tell every later
+sweep - on any adapter - that this car has one module. The sweep can also be shared as a page of text - every module, its
 identification bytes and its faults - which is the right grain for reading away from the car;
 the technical log has the individual exchanges.
 

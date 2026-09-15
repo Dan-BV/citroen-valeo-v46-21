@@ -100,6 +100,21 @@ final class FaultCatalogueTests: XCTestCase {
         XCTAssertFalse(engine.targets.isEmpty)
     }
 
+    /// The rule that a ThinkDiag broke on the car: it reaches one module, so a
+    /// map made from its sweep would tell every later sweep - on any adapter -
+    /// that this car has one module.
+    func testOnlyASweepTheAdapterCouldCarryOutBecomesTheMap() throws {
+        let scan = try loadScan()
+        let engine = try XCTUnwrap(scan.targets.first)
+        XCTAssertTrue(ScanSummary(full: true).mapsTheCar)
+        XCTAssertFalse(ScanSummary(full: false).mapsTheCar,
+                       "a short sweep walks the map, so it cannot rewrite it")
+        XCTAssertFalse(ScanSummary(full: true, unreachable: [engine]).mapsTheCar)
+        // Addresses nothing sits on are the normal case and say nothing about
+        // the adapter: that sweep is exactly what the map is made of.
+        XCTAssertTrue(ScanSummary(full: true, silent: [engine]).mapsTheCar)
+    }
+
     func testTheInventorySurvivesARestart() throws {
         let suite = "EcuInventoryTests-" + UUID().uuidString
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

@@ -31,6 +31,12 @@ struct ScanSummary: Equatable {
     /// Addresses this adapter cannot speak to at all.
     var unreachable: [ScanProfile.Target] = []
 
+    /// Whether this sweep is fit to be written down as the car's own module
+    /// list. Only a full walk the adapter could actually carry out is: a
+    /// ThinkDiag reaches one module, and a map made from its sweep would say
+    /// this car has one module - to every later sweep, on any adapter.
+    var mapsTheCar: Bool { full && unreachable.isEmpty }
+
     var silentFamilies: [String] { families(of: silent) }
     var unreachableFamilies: [String] { families(of: unreachable) }
 
