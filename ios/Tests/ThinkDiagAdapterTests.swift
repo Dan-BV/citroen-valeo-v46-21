@@ -296,6 +296,26 @@ final class ThinkDiagAdapterTests: XCTestCase {
         XCTAssertTrue(report.contains { $0.contains("752") }, report.joined(separator: " | "))
     }
 
+    /// The other side of that: a handle named outright *is* addressable, which
+    /// is what lets the sweep walk the adapter's own module list. Its channel
+    /// has to be opened first - the replay script opens the engine's only - and
+    /// that frame is built here rather than replayed.
+    func testAHandleNamedOutrightOpensItsChannelAndThenCarriesRequests() async throws {
+        let fake = FakeThinkDiag()
+        let adapter = ThinkDiagAdapter(transport: fake, script: script)
+        try await adapter.open()
+        fake.forget()
+
+        await adapter.applyHeader(ThinkDiagLink.header(for: 0x2546), receive: "")
+        XCTAssertEqual(fake.sent.first?.payload.hexString,
+                       ThinkDiagLink.openChannel(0x2546).hexString,
+                       "nothing may be asked of a channel that was never opened")
+
+        _ = await adapter.send("17FF00", 0.2)
+        let wanted = ThinkDiagRequest.payload(link: 0x2546, request: Data(hex: "17FF00")!)
+        XCTAssertEqual(fake.sent.last?.payload.hexString, wanted?.hexString)
+    }
+
     func testSomethingThatIsNotHexIsRefusedRatherThanSent() async throws {
         let fake = FakeThinkDiag()
         let adapter = ThinkDiagAdapter(transport: fake, script: script)

@@ -59,6 +59,25 @@ codes over 74 ECUs, plus the per-code failure-type byte that turns `$8001` into
 than the rest of the app - so it is read off the main thread on the first sweep, and nothing
 depends on it: a code it cannot name is still read, shown and cleared.
 
+### Reaching the other modules with a ThinkDiag
+A ThinkDiag has no CAN identifiers at all: it names modules by handles its own
+downloaded vehicle software hands out, and the capture only ever proved one of them -
+the engine's `2905`. So with that adapter the whole-car sweep can reach the engine and
+says so, rather than reporting the rest of the car as absent.
+
+There is a way out, and it starts in the capture. The official app's system scan opened a
+channel to **thirty-four** handles, each with the same frame that opens the engine's -
+`55 aa 08 61 01 03 <handle> 30 <bs> <stmin>` plus an XOR checksum over the nested frame,
+which reproduces all 68 opens in the captures byte for byte. So any handle can be opened;
+what the capture does not say is which module each one is.
+
+"Каналы адаптера" settles the first half on the car: open each handle in turn, ask the
+eleven distinct recognition frames the scan profile knows, and record what answered - the
+class of module (several answer the same frames, and only the CAN address tells them apart),
+its identification bytes and its fault memory. The second half is arithmetic done off the
+car: sweep the same vehicle over CAN with an ELM327, and the address whose identification
+bytes match a handle's is that handle's module.
+
 Two things the screen will tell you rather than hide. A UDS status byte is the ISO 14229 bit
 field and PSA asks for mask `09`, so a fault is marked present, stored, or awaiting
 confirmation; a KWP status byte has no published meaning and is shown raw instead of being

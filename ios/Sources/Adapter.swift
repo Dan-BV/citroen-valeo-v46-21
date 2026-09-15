@@ -55,6 +55,15 @@ protocol Adapter: Actor {
     /// module on the car as silent.
     var addressableHeaders: Set<String> { get }
 
+    /// The module handles this adapter addresses modules by, when it does not
+    /// use CAN identifiers at all.
+    ///
+    /// Empty for an ELM327, which has no such notion. A ThinkDiag's whole
+    /// vocabulary is these, and which of them is which module is not written
+    /// anywhere - so the fault sweep has a second shape for this adapter:
+    /// walk the handles, and let the recognition frames say what answered.
+    var knownLinks: [UInt16] { get }
+
     /// How bringing the link up went, in lines meant for a person to read.
     ///
     /// Nothing for an ELM327 clone: its opening is fourteen AT commands that
@@ -72,4 +81,7 @@ extension Adapter {
 
     /// No restriction unless a conformer has one.
     var addressableHeaders: Set<String> { [] }
+
+    /// CAN identifiers, unless a conformer says otherwise.
+    var knownLinks: [UInt16] { [] }
 }

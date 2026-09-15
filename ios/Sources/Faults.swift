@@ -46,6 +46,30 @@ struct ScanSummary: Equatable {
     }
 }
 
+/// One of the adapter's own module handles, as the reconnaissance found it.
+///
+/// A ThinkDiag names modules by handle and nothing else, so this is the shape
+/// a sweep takes there: what answered on each handle, and which class of
+/// module that makes it. Turning a class into a name needs the same car swept
+/// over CAN as well - the identification bytes are what pair them.
+struct LinkProbe: Identifiable, Equatable {
+    let link: UInt16
+    /// The recognition frame that answered; empty when nothing did.
+    var reco = ""
+    /// What that frame answered, after its fixed prefix. This is the half of
+    /// the pairing that a CAN sweep can be matched against.
+    var identHex = ""
+    /// Every module of the platform whose recognition frames these are.
+    var candidates: [ScanProfile.Target] = []
+    var layout: ScanProfile.FaultFrames?
+    var faults: [Dtc] = []
+    var failure: String?
+
+    var id: UInt16 { link }
+    var answered: Bool { !reco.isEmpty }
+    var name: String { String(format: "#%04X", link) }
+}
+
 /// Everything the databases can say about one stored fault.
 struct FaultDetail {
     let dtc: Dtc

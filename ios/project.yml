@@ -89,6 +89,9 @@ targets:
       - path: Sources/DtcDictionary.swift
       - path: Sources/Faults.swift
       - path: Sources/EcuInventoryStore.swift
+      # The ThinkDiag handle table and the frame that opens one. Pure bytes
+      # with no transport under them, which is exactly what CI can prove.
+      - path: Sources/ThinkDiagLink.swift
       - path: Sources/Reading.swift
       - path: Sources/LinkTransport.swift
       - path: Sources/AdapterStore.swift

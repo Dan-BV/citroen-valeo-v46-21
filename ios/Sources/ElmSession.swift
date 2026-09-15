@@ -42,6 +42,11 @@ final class ElmSession: ObservableObject {
     /// has to reach the screen, not only the actor that recorded it.
     @Published private(set) var openingReport: [String] = []
 
+    /// The module handles the open adapter addresses modules by, empty for an
+    /// ELM327. A screen offers the handle sweep only when there is one to
+    /// offer, and only the open adapter knows.
+    @Published private(set) var adapterLinks: [UInt16] = []
+
     // MARK: -
 
     private let profile: Profile
@@ -404,6 +409,7 @@ final class ElmSession: ObservableObject {
         do {
             try await adapter.open()
             openingReport = await adapter.openingReport
+            adapterLinks = await adapter.knownLinks
             status = "Адаптер открыт, инициализация ЭБУ…"
             if techToFile { try? tech.start() }
             try await runProprietary(adapter)
@@ -740,6 +746,64 @@ final class ElmSession: ObservableObject {
     /// other modules of the car rather than on its own.
     var engineName: String { profile.ecu }
     var engineRequest: String { profile.can.req }
+
+    /// Walk the adapter's own module handles instead of the platform's CAN
+    /// addresses, and see what answers on each.
+    ///
+    /// This is the second shape of the fault sweep, for an adapter that has no
+    /// CAN identifiers at all. It cannot name a module: several modules answer
+    /// the same recognition frames and only the address tells them apart. What
+    /// it can do is say which handles are alive, what class of module each is,
+    /// and what each one's fault memory holds - and record the identification
+    /// bytes, which is what pairs a handle with an address once the same car
+    /// has been swept over CAN.
+    func probeLinks(_ scan: ScanProfile,
+                    onProgress: (Int, Int, UInt16) -> Void,
+                    onLink: (LinkProbe) -> Void) async throws {
+        guard let adapter else { throw TransportError.notOpen }
+        let links = await adapter.knownLinks
+        guard !links.isEmpty else {
+            throw SessionError.refused("У этого адаптера нет собственных каналов: "
+                                       + "он адресует блоки по CAN, и обход идёт по адресам")
+        }
+        let classes = scan.recognitionClasses
+        try await io.locked {
+            for (i, link) in links.enumerated() {
+                onProgress(i + 1, links.count, link)
+                await adapter.applyHeader(ThinkDiagLink.header(for: link), receive: "")
+                var probe = LinkProbe(link: link)
+                for group in classes {
+                    if !group.openSession.isEmpty, !group.openAnswer.isEmpty {
+                        let answer = Frames.clean(
+                            await self.at(adapter, group.openSession, 1.2))
+                        guard answer.hasPrefix(String(group.openAnswer.prefix(2))) else {
+                            continue
+                        }
+                    }
+                    let reply = Frames.clean(await self.at(adapter, group.reco, 1.5))
+                    guard reply.hasPrefix(group.recoAnswer) else { continue }
+                    probe.reco = group.reco
+                    probe.identHex = String(reply.dropFirst(group.recoAnswer.count))
+                    probe.candidates = group.members
+                    // The members of a class do not always read faults the same
+                    // way, so try each layout and keep the first that answers.
+                    for layout in group.faultLayouts {
+                        do {
+                            probe.faults = try await self.readFaults(layout, adapter)
+                            probe.layout = layout
+                            probe.failure = nil
+                            break
+                        } catch {
+                            probe.failure = error.localizedDescription
+                        }
+                    }
+                    break
+                }
+                onLink(probe)
+            }
+            await self.backToEngine(adapter)
+        }
+    }
 
     /// Walk the diagnostic addresses of the platform: point the adapter at each,
     /// open a session, ask the recognition frame, and read the fault memory of

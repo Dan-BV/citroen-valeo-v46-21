@@ -99,14 +99,35 @@ actor ThinkDiagAdapter: Adapter {
     /// this adapter cannot reach at all.
     var addressableHeaders: Set<String> { Set(Self.links.keys) }
 
+    /// Every handle the official app's system scan opened a channel to. Which
+    /// module each one is, only the car can say - see `ElmSession.probeLinks`.
+    var knownLinks: [UInt16] { ThinkDiagLink.known }
+
     func applyHeader(_ header: String, receive: String) async {
         let wanted = header.uppercased()
         guard self.header != wanted else { return }
         self.header = wanted
+        // A handle named outright, for the sweep that walks the adapter's own
+        // module list rather than the platform's CAN addresses. Its channel
+        // has to be opened first: the replay script opens the engine's and
+        // nothing else.
+        if let handle = ThinkDiagLink.link(inHeader: wanted) {
+            link = handle
+            await openChannel(handle)
+            return
+        }
         link = Self.links[wanted]
         if link == nil {
             openingReport.append("заголовок \(wanted): нет известного канала адаптера")
         }
+    }
+
+    /// Open a module's channel the way the opening opens the engine's - the
+    /// same frame, with the handle and the checksum changed.
+    private func openChannel(_ handle: UInt16) async {
+        let payload = ThinkDiagLink.openChannel(handle)
+        let frame = ThinkDiagFrame.request(seq: sequence.next(), cmd: 0x27, payload: payload)
+        _ = await exchange(frame, timeout: Self.statusTimeout)
     }
 
     @discardableResult

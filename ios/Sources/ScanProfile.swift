@@ -16,7 +16,7 @@ struct ScanProfile: Decodable {
 
     /// How a fault-read answer is laid out. `header` bytes of service id plus a
     /// count or an availability mask, then fixed-length records.
-    struct FaultFrames: Decodable, Equatable {
+    struct FaultFrames: Decodable, Hashable {
         let request: String
         let answer: String
         let header: Int
@@ -176,6 +176,50 @@ struct ScanProfile: Decodable {
             let narrowed = probe.targets.filter { $0.name == name }
             return narrowed.isEmpty ? probe : Probe(address: probe.address, targets: narrowed)
         }
+    }
+
+    /// A class of modules that answer the very same recognition frames.
+    ///
+    /// On CAN the address tells them apart. An adapter that has no CAN
+    /// identifiers - a ThinkDiag - can only learn the class, so this is what a
+    /// handle probe can name: "one of these ten", plus the fault frames they
+    /// share.
+    struct RecognitionClass: Equatable {
+        let openSession: String
+        let openAnswer: String
+        let reco: String
+        let recoAnswer: String
+        var members: [Target]
+        /// The fault-read layouts the members use, in order of how many use
+        /// each - the probe tries them in that order and keeps the first that
+        /// answers.
+        var faultLayouts: [FaultFrames]
+    }
+
+    /// The classes, most populous first, so a probe tries the likeliest first.
+    var recognitionClasses: [RecognitionClass] {
+        var order: [String] = []
+        var groups: [String: [Target]] = [:]
+        for target in targets {
+            let key = [target.openSession, target.openAnswer,
+                       target.reco, target.recoAnswer].joined(separator: "|")
+            if groups[key] == nil { order.append(key) }
+            groups[key, default: []].append(target)
+        }
+        return order.compactMap { key -> RecognitionClass? in
+            guard let members = groups[key], let first = members.first else { return nil }
+            var layouts: [FaultFrames] = []
+            for layout in members.compactMap(\.faults) where !layouts.contains(layout) {
+                layouts.append(layout)
+            }
+            return RecognitionClass(openSession: first.openSession,
+                                    openAnswer: first.openAnswer,
+                                    reco: first.reco,
+                                    recoAnswer: first.recoAnswer,
+                                    members: members,
+                                    faultLayouts: layouts)
+        }
+        .sorted { $0.members.count > $1.members.count }
     }
 
     enum LoadError: Error, LocalizedError {

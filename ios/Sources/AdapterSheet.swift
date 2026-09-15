@@ -52,6 +52,16 @@ struct AdapterSheet: View {
                     } label: {
                         needsLink("Идентификация ЭБУ")
                     }
+                    // Only for an adapter that has module handles of its own -
+                    // an ELM327 walks CAN addresses and has nothing to show
+                    // here.
+                    if !session.adapterLinks.isEmpty {
+                        NavigationLink {
+                            LinkProbeScreen(session: session)
+                        } label: {
+                            needsLink("Каналы адаптера")
+                        }
+                    }
                 }
                 aboutSection
             }
